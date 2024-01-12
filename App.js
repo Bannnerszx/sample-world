@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useMemo, useContext, StrictMode } from 'react'
 import { AppState, StyleSheet, Text, View, Dimensions, useWindowDimensions } from 'react-native';
 import { Box, NativeBaseProvider } from 'native-base';
-import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import { projectExtensionAuth } from './firebaseConfig';
 import SplashScreen from './components/SplashScreen';

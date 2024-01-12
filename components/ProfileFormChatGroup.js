@@ -123,7 +123,7 @@ const TextInputForChat = ({ scrollViewRef }) => {
     const handleSend = async () => {
 
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -205,7 +205,7 @@ const TextInputForChat = ({ scrollViewRef }) => {
     };
     const updateCustomerFiles = async () => {
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -624,7 +624,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
     const handleSend = async () => {
 
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -778,7 +778,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
     };
     const updateCustomerFiles = async () => {
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -1378,7 +1378,7 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
     const handleSend = async () => {
 
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -1532,7 +1532,7 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
     };
     const updateCustomerFiles = async () => {
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -2872,7 +2872,7 @@ const InvoiceAmendment = () => {
     const [inputEmailNotify, setInputEmailNotify] = useState('');
     const setOrderInvoice = async () => {
 
-        const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
         const { datetime } = response.data;
 
         const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -3795,7 +3795,7 @@ const PaymentNotification = ({ handleButtonClick }) => {
     };
     const updateRemitter = async () => {
         try {
-            const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
             const { datetime } = response.data;
 
             const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
@@ -4254,7 +4254,7 @@ const ReceiverInformation = () => {
     const [inputEmailNotify, setInputEmailNotify] = useState('');
 
     const setDeliveryInfo = async () => {
-        const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
         const { datetime } = response.data;
         const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
 
@@ -4960,7 +4960,7 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick }) => {
         setCurrentStep(currentStep + 1);
     };
     const setOrderInvoice = async () => {
-        const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
         const { datetime } = response.data;
         const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
         const randomNumber = Math.floor(10000 + Math.random() * 90000);
