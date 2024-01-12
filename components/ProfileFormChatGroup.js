@@ -3921,8 +3921,13 @@ ${messageText}
                     <View style={{ backgroundColor: '#f5f5f5', width: '30%', height: '60%', padding: 5 }}>
                         <View style={{ flex: 1 }}>
                             <View style={{ borderBottomWidth: 1, borderBottomColor: '#fff' }}>
-                                <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 20, fontWeight: '700' }}>PAYMENT NOTIFICATIONS</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{ flex: 1, alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 20, fontWeight: '700' }}>PAYMENT NOTIFICATIONS</Text>
+                                    </View>
+                                    <TouchableOpacity style={{ position: 'absolute', right: 10 }} onPress={toggleModal}>
+                                        <Text style={{ fontSize: 20, fontWeight: '700' }}>X</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </View>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10 }}>
@@ -4324,6 +4329,9 @@ Customer Information
                     <View style={{ backgroundColor: 'white', width: 400, height: 450, padding: 10, borderRadius: 10 }}>
                         <ScrollView>
                             <View style={{ flex: 1, marginTop: 5 }}>
+                                <TouchableOpacity style={{ alignSelf: 'flex-end' }} onPress={openModalRequest}>
+                                    <Text style={{ fontSize: 20, fontWeight: '700' }}>X</Text>
+                                </TouchableOpacity>
                                 <View style={{ flexDirection: 'row' }}>
                                     <Text style={{ fontSize: 16, fontWeight: '500', color: '#4169E1' }}>
                                         Delivery Address & Customer Information
@@ -6669,7 +6677,7 @@ const ProfileFormChatGroup = () => {
     const [hideLeft, setHideLeft] = useState(false)
     const [activeChatId, setActiveChatId] = useState(null);
     //
-    
+
     const [chatField, setChatField] = useState([]);
     console.log('CHAT FIELD ID ON MAIN', chatField.stepIndicator)
 
