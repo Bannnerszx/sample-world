@@ -1,0 +1,53 @@
+{
+  "homepage": "https://Bannnerszx.github.io/sample-world",
+  "name": "samplermjver2",
+  "version": "1.0.0",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "predeploy":"npm run build",
+    "deploy": "gh-pages -d build",
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/webpack-config": "^19.0.0",
+    "@react-native-async-storage/async-storage": "^1.19.4",
+    "@react-native-community/slider": "^4.5.0",
+    "axios": "^1.6.2",
+    "country-state-city": "^3.2.1",
+    "dotenv": "^16.3.1",
+    "expo": "~49.0.15",
+    "expo-document-picker": "^11.2.2",
+    "expo-status-bar": "~1.6.0",
+    "file-type": "^18.7.0",
+    "firebase": "^10.5.2",
+    "gh-pages": "^6.1.1",
+    "jspdf": "^2.5.1",
+    "moment": "^2.29.4",
+    "native-base": "^3.4.28",
+    "normalize-css-color": "^1.0.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.72.6",
+    "react-native-calendars": "^1.1302.0",
+    "react-native-dotenv": "^3.4.9",
+    "react-native-gesture-handler": "^2.13.4",
+    "react-native-hyperlink": "^0.0.22",
+    "react-native-reanimated": "~3.3.0",
+    "react-native-reanimated-carousel": "^3.5.1",
+    "react-native-super-grid": "^5.0.0",
+    "react-native-svg": "^13.14.0",
+    "react-native-vector-icons": "^10.0.1",
+    "react-native-web": "~0.19.6",
+    "react-phone-input-2": "^2.15.1",
+    "react-phone-number-input": "^3.3.7",
+    "react-router-dom": "^6.18.0",
+    "react-select": "^5.7.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0"
+  },
+  "private": true
+}

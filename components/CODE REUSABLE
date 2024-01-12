@@ -1,0 +1,161 @@
+{/* <FlatList
+    nestedScrollEnabled
+    windowSize={200}
+    data={chatMessages
+        .filter((item) => item.timestamp)
+        .sort((a, b) => {
+            const dateA = new Date(b.timestamp.replace(/-/g, '/').replace(' at ', ' '));
+            const dateB = new Date(a.timestamp.replace(/-/g, '/').replace(' at ', ' '));
+            return dateA - dateB;
+        })
+        .reverse()}
+    keyExtractor={(item, index) => index.toString()}
+    renderItem={({ item }) => (
+
+        <View>
+            <View
+
+                style={[
+                    styles.chatContainer,
+                    {
+                        alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                        backgroundColor: item.sender === userEmail ? (item.fileType !== 'image' ? 'blue' : 'transparent') : 'green',
+                    },
+                ]}
+            >
+                <Hyperlink linkDefault={true} linkStyle={{ color: 'white', textDecorationLine: 'underline' }}>
+
+                    <Text style={{ color: 'white' }}>{item.text}</Text>
+                    {item.file && (
+                        <>
+                            {item.file.type === 'image' ? (
+                                <Pressable
+                                    style={({ pressed, hovered }) => [
+                                        {
+                                            backgroundColor: hovered ? '#f5f5f5' : 'transparent',
+                                            borderRadius: hovered ? 10 : 0,
+                                        },
+                                    ]}
+                                    onPress={() => handleOpenLink(item.file.url)}
+                                >
+                                    <Image
+                                        source={{ uri: item.file.url }}
+                                        style={{ width: 350, height: 350, resizeMode: 'contain' }}
+                                    />
+                                </Pressable>
+                            ) : item.file.type === 'pdf' ? (
+                                <TouchableOpacity onPress={() => handleOpenLink(item.file.url)}>
+                                    <Text style={{ color: 'red', textDecorationLine: 'underline' }}>
+                                        {item.file.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : item.file.type === 'doc' ? (
+                                <TouchableOpacity onPress={() => handleOpenLink(item.file.url)}>
+                                    <Text style={{ color: '#f5f5f5', textDecorationLine: 'underline' }}>
+                                        {item.file.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : item.file.type === 'xlsx' ? (
+                                <TouchableOpacity onPress={() => handleOpenLink(item.file.url)}>
+                                    <Text style={{ color: 'white', textDecorationLine: 'underline' }}>
+                                        {item.file.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : null}
+                        </>
+                    )}
+                </Hyperlink>
+
+
+                {item.setOrderButton === true ? (
+                    <View>
+
+                        <View style={{ alignSelf: 'flex-start', marginTop: 16, marginLeft: 10 }}>
+                            <TouchableOpacity
+                                style={{
+                                    height: 50,
+                                    backgroundColor: '#FAA000',
+                                    borderRadius: 10,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    padding: 10
+                                }}
+                                onPress={() => openModalRequest()}
+                            >
+                                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>
+                                    ORDER ITEM BUTTON HERE
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* <PaymentNotification /> */}
+                    </View>
+                ) : (
+                    <></>
+                )}
+
+                {item.setPaymentNotification === true && (
+                    <View>
+                        <PaymentNotification />
+                    </View>
+                )}
+
+                {item.orderInvoiceIssue === true && (
+                    <View>
+                        <ViewOrderInvoice />
+                    </View>
+                )}
+
+                {item.proformaIssue === true ? (
+                    <ViewInvoice />
+                ) : null}
+
+
+                {item.amendedInvoiceIssue === true ? (
+                    <ViewOrderInvoice />
+                ) : null}
+
+                {item.shippingInstruction === true ? (
+                    <TouchableOpacity onPress={() => handleDownloadShippingIns(chatId, chatField?.ShippingInstructions)}>
+                        <Text style={{ color: 'red', textDecorationLine: 'underline' }}>
+                            {`${chatField?.ShippingInstructions}.pdf`}
+                        </Text>
+                    </TouchableOpacity>
+                ) : <></>}
+
+                {item.billOfLading === true ? (
+                    <TouchableOpacity onPress={() => handleDownloadBL(chatId, chatField?.BillOfLading)}>
+                        <Text style={{ color: 'red', textDecorationLine: 'underline' }}>
+                            {`${chatField?.BillOfLading}.pdf`}
+                        </Text>
+                    </TouchableOpacity>
+                ) : <></>}
+
+                {item.receiverInfoIssue === true ? (
+                    <ReceiverInformation />
+                ) : null}
+                {/* 
+            {item.sender !== userEmail && item.requestAmendInvoice === true ? (
+                <AcceptRequestAmendment customerInfo={item.customerInfo} infoCustomerInput={item.infoCustomerInput} />
+            ) : null} */}
+            </View>
+
+
+            <Text
+                style={{
+                    color: 'black',
+                    fontStyle: 'italic',
+                    fontSize: 9,
+                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                    padding: 10,
+                    paddingTop: -5,
+                    borderRadius: 10,
+                    maxWidth: '80%',
+                }}
+            >
+                {item.timestamp}
+            </Text>
+        </View>
+
+    )}
+/> */}
