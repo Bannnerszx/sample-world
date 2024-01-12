@@ -1,0 +1,41 @@
+{
+  "files": {
+    "main.js": "/sample-world/static/js/main.ddedb0df.js",
+    "static/js/120.d49ea698.chunk.js": "/sample-world/static/js/120.d49ea698.chunk.js",
+    "static/js/856.7a270e76.chunk.js": "/sample-world/static/js/856.7a270e76.chunk.js",
+    "static/js/469.26e43d68.chunk.js": "/sample-world/static/js/469.26e43d68.chunk.js",
+    "static/css/444.ef8dfe03.css": "/sample-world/static/css/444.ef8dfe03.css",
+    "static/js/444.a9e8c04d.js": "/sample-world/static/js/444.a9e8c04d.js",
+    "static/media/Thank Followers (Facebook Cover) (facebook cover photo).png": "/sample-world/static/media/Thank Followers (Facebook Cover) (facebook cover photo).9736a6319b01b17fa321.png",
+    "static/media/MaterialCommunityIcons.ttf": "/sample-world/static/media/MaterialCommunityIcons.5d42b4e60858731e7b65.ttf",
+    "static/media/RMJ logo for flag.jpg": "/sample-world/static/media/RMJ logo for flag.58aee57b72633bba0afc.jpg",
+    "static/media/RMJ logo for flag transparent.png": "/sample-world/static/media/RMJ logo for flag transparent.0e9e92abe8ff52464828.png",
+    "static/media/BLANK PDF.png": "/sample-world/static/media/BLANK PDF.1f309b22c326cc0205c3.png",
+    "static/media/RMZ Logo.png": "/sample-world/static/media/RMZ Logo.ff3a6a08734231fbadb1.png",
+    "static/media/Fontisto.ttf": "/sample-world/static/media/Fontisto.c0edd68811e0237502fe.ttf",
+    "static/media/Ionicons.ttf": "/sample-world/static/media/Ionicons.3517aeaa34b2f8cd8eef.ttf",
+    "static/media/MaterialIcons.ttf": "/sample-world/static/media/MaterialIcons.120b4c7bbd155bd0a04d.ttf",
+    "static/media/FontAwesome5_Solid.ttf": "/sample-world/static/media/FontAwesome5_Solid.07c3313b24f7b1ca85ee.ttf",
+    "static/media/ORDER INVOICE PDF.png": "/sample-world/static/media/ORDER INVOICE PDF.ec7f7b7558091f6dab4f.png",
+    "static/media/FontAwesome.ttf": "/sample-world/static/media/FontAwesome.1e59d2330b4c6deb84b3.ttf",
+    "static/media/RMJ Cover Photo for Facebook.jpg": "/sample-world/static/media/RMJ Cover Photo for Facebook.bc631d97994d3f2928ce.jpg",
+    "static/media/FontAwesome5_Brands.ttf": "/sample-world/static/media/FontAwesome5_Brands.9e138496e8f1719c6ebf.ttf",
+    "static/media/AntDesign.ttf": "/sample-world/static/media/AntDesign.163adab9dbd7cb1ed12a.ttf",
+    "static/media/Entypo.ttf": "/sample-world/static/media/Entypo.fc6169344c041cffcdae.ttf",
+    "static/media/Foundation.ttf": "/sample-world/static/media/Foundation.c0cbb004854f9c746f89.ttf",
+    "static/media/Feather.ttf": "/sample-world/static/media/Feather.0f5d9cede2e831f3fc80.ttf",
+    "static/media/rename.gif": "/sample-world/static/media/rename.da5427de16fb28995b30.gif",
+    "static/media/FontAwesome5_Regular.ttf": "/sample-world/static/media/FontAwesome5_Regular.1017bce89c72f95bcf8e.ttf",
+    "favicon.ico": "/sample-world/favicon.ico",
+    "index.html": "/sample-world/index.html",
+    "favicon-32.png": "/sample-world/favicon-32.png",
+    "favicon-16.png": "/sample-world/favicon-16.png",
+    "manifest.json": "/sample-world/manifest.json",
+    "serve.json": "/sample-world/serve.json"
+  },
+  "entrypoints": [
+    "static/css/444.ef8dfe03.css",
+    "static/js/444.a9e8c04d.js",
+    "static/js/main.ddedb0df.js"
+  ]
+}
