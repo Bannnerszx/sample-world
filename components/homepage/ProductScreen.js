@@ -196,7 +196,7 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
     }, []);
 
     const handleClear = () => {
-        setSelectCountry(null);
+        setSelectCountry('');
         setSelectPort('');
     }
     //countries and ports ends here
@@ -425,7 +425,7 @@ const Insurance = () => {
         </View>
     )
 }
-const Inspection = () => {
+const Inspection = ({ isToggleDisabled, toggle, handleToggleInspection, selectedCountry, setToggle, toggleAnim, switchTranslate, switchColor, handleToggle }) => {
     const styles = StyleSheet.create({
         switch: {
             width: 50, // Width of the outer switch component
@@ -444,33 +444,11 @@ const Inspection = () => {
 
 
 
-    const [toggle, setToggle] = useState(false);
-    const toggleAnim = useRef(new Animated.Value(0)).current;
 
-    const handleToggle = () => {
-        Animated.timing(toggleAnim, {
-            toValue: toggle ? 0 : 1,
-            duration: 10,
-            useNativeDriver: false,
-        }).start();
-
-        setToggle(!toggle);
-    };
-
-    // Interpolate values for moving the switch and changing the background color
-    const switchTranslate = toggleAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [2, 22], // Adjust these values based on the size of your switch
-    });
-
-    const switchColor = toggleAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['grey', '#7b9cff'] // Change colors as needed
-    });
 
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-            <Pressable onPress={handleToggle}>
+            <Pressable onPress={handleToggle} disabled={isToggleDisabled || !selectedCountry}>
                 <Animated.View style={[styles.switch, { backgroundColor: switchColor }]}>
                     <Animated.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
                 </Animated.View>
@@ -533,14 +511,22 @@ const Warranty = () => {
         </View>
     )
 }
-const Calculate = () => {
+const Calculate = ({ selectedPort, setProfitMap, totalPriceCalculation, setCalculatePrice }) => {
+
+    const handleCalculate = () => {
+        const formattedTotalPrice = totalPriceCalculation ? parseInt(totalPriceCalculation).toLocaleString() : '000';
+        setCalculatePrice(formattedTotalPrice);
+    }
+
+
     return (
         <View style={{
             flexDirection: 'row',
             justifyContent: 'center', // Center the buttons
             alignItems: 'center', // Vertically center items in the container
             padding: 10,
-            flex: 3// Add some padding around the container
+            flex: 3
+            , zIndex: -5// Add some padding around the container
         }}>
             <Pressable
                 onPress={() => {
@@ -565,7 +551,7 @@ const Calculate = () => {
             </Pressable>
             <Pressable
                 onPress={() => {
-                    // Your onPress handler code for calculate
+                    handleCalculate()
                 }}
                 style={({ pressed, hovered }) => ({
                     flex: 2, // Takes twice the space compared to Reset
@@ -907,7 +893,7 @@ const GetDataFeature = () => {
 
 
     return (
-        <View>
+        <View style={{ flex: 1 }}>
             <View style={{ width: '100%', paddingRight: 5, height: 50, padding: 5, flexDirection: 'row', alignItems: 'center', backgroundColor: '#7b9cff', paddingLeft: 10 }} >
                 <View style={{ flex: 1 }}>
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 22 }}>Features</Text>
@@ -1079,7 +1065,7 @@ const GetDataSpecifications = () => {
     };
 
     return (
-        <View>
+        <View style={{ flex: 1 }}>
             <FlatList
                 data={specsData}
                 renderItem={renderSpecificationCategory}
@@ -1091,7 +1077,7 @@ const GetDataSpecifications = () => {
 };
 
 
-const MakeAChat = ({ carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency }) => {
+const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
     //MAKE MODAL
 
 
@@ -1191,9 +1177,6 @@ const MakeAChat = ({ carId, carName, userEmail, inspectionIsRequired, inspection
     }, [carId]);
     const [userTransactions, setUserTransactions] = useState([]);
     const handleCreateConversation = async () => {
-
-
-
         //MAKE INQUIRY
         if (!userEmail) {
             // If not logged in, redirect to the login form
@@ -1240,11 +1223,11 @@ const MakeAChat = ({ carId, carName, userEmail, inspectionIsRequired, inspection
 
             // Add the product to the "Transactions" collection in Firebase
 
-            await setDoc(transactionRefExtension, {
-                ...carData,
-                productId: productIdString,
+            // await setDoc(transactionRefExtension, {
+            //     ...carData,
+            //     productId: productIdString,
 
-            });
+            // });
 
             const chatId = `chat_${carId}_${userEmail}`;
             //NEW DATE FEATURE
@@ -1309,12 +1292,14 @@ const MakeAChat = ({ carId, carName, userEmail, inspectionIsRequired, inspection
             },
             inspectionIsRequired: inspectionIsRequired,
             inspectionName: inspectionName,
-            inspection: toggleInspection,
-            warranty: toggleWarranty,
-            insurance: toggleInsurance,
-            currency: currentCurrency,
-            freightPrice: portPrice,
-            dateOfTransaction: formattedTime
+            inspection: toggle,
+            warranty: false,
+            insurance: false,
+            currency: currency,
+            freightPrice: profitMap,
+            dateOfTransaction: formattedTime,
+            country: selectedCountry,
+            port: selectedPort
         });
 
         // Navigate to the ChatScreen with the chat ID
@@ -1334,7 +1319,7 @@ const MakeAChat = ({ carId, carName, userEmail, inspectionIsRequired, inspection
                 style={{
                     backgroundColor: '#FA4D4D', justifyContent: 'center',
                     alignItems: 'center',
-                    height: 40,
+                    height: 50,
                     shadowColor: '#000', // Set the shadow color for iOS
                     shadowOffset: { width: 0, height: 4 }, // Set the shadow offset (y = 4)
                     shadowOpacity: 0.25, // Set the shadow opacity (25%)
@@ -1342,7 +1327,7 @@ const MakeAChat = ({ carId, carName, userEmail, inspectionIsRequired, inspection
                 }}>
                 <Text style={{ textAlign: 'center', color: 'white' }}>Send Inquiry</Text>
             </TouchableOpacity>
-            {/* "Already Inquired" modal */}
+
             <Modal
                 animationType="fade"
                 transparent={true}
@@ -1404,51 +1389,11 @@ const ProductDetailScreen = () => {
     const { carId } = useParams();
     const navigate = useNavigate();
     const [carData, setCarData] = useState({});
+    console.log('CAR NAME',);
+    const carName = carData.carName;
     const { userEmail } = useContext(AuthContext);
     const [userTransactions, setUserTransactions] = useState([]);
-    //get inspection
-    const [inspectionName, setInspectionName] = useState('');
-    const [inspectionIsRequired, setInspectionIsRequired] = useState('');
-    const [toggleInspection, setToggleInspection] = useState(false);
 
-    const getInspection = ({ inspection, nameInspection }) => {
-        setInspectionIsRequired(inspection);
-        setInspectionName(nameInspection);
-    };
-    console.log('TRUE OR FLASE', toggleInspection)
-    useEffect(() => {
-        setInspectionStatus(inspectionIsRequired);
-
-        if (inspectionIsRequired === 'Not-Required') {
-            setToggleInspection(false);
-        }
-    }, [inspectionIsRequired, toggleInspection]);
-    const [inspectionStatus, setInspectionStatus] = useState('');
-
-    const handleTick = () => {
-        if (inspectionStatus === 'Optional') {
-            setToggleInspection((prev) => !prev);
-        } else if (inspectionStatus === 'Required') {
-            setToggleInspection(true)
-        } else {
-            setToggleInspection(false)
-        }
-    };
-    const [toggleWarranty, setToggleWarranty] = useState(false);
-    const handleTickWarranty = () => {
-        setToggleWarranty((prev) => !prev);
-    };
-    const [toggleInsurance, setToggleInsurance] = useState(false);
-    const handleTickInsurance = () => {
-        setToggleInsurance((prev) => !prev);
-    };
-    useEffect(() => {
-        handleTick()
-    }, [inspectionStatus])
-    console.log('INSPECTION STATUS', inspectionStatus) // Set the default status
-
-
-    //get inspection
     //SEND INQUIRY
     const [modalVisible, setModalVisible] = useState(false);
     const [alreadyInquiredModalVisible, setAlreadyInquiredModalVisible] = useState(false);
@@ -1767,7 +1712,7 @@ const ProductDetailScreen = () => {
     const [selectedCountry, setSelectCountry] = useState(null);
     const handleSelectCountry = (option) => {
         setSelectCountry(option)
-    }
+    };
     //COUNTRY PICKER
 
     //PORT PICKER
@@ -1802,13 +1747,13 @@ const ProductDetailScreen = () => {
         fetchCurrency();
     }, []);
     //FETCH PORTS DOC
-    const [profitMap, setProfitMap] = useState([]);
-    console.log('PROFIT MAP', profitMap.profitPrice)
-    const portPrice = profitMap.profitPrice
+    const [profitMap, setProfitMap] = useState('');
     //FETCH PORTS DOC
     //DOLLAR CONVERSION
     const fobDollar = currentCurrency.jpyToUsd * parseFloat(carData.fobPrice);
-    const totalPriceCalculation = (parseFloat(carData.fobPrice) * currentCurrency.jpyToUsd) + (parseFloat(carData.dimensionCubicMeters) * parseFloat(profitMap.profitPrice));
+    const formattedFobDollar = fobDollar ? parseInt(fobDollar).toLocaleString() : '000';
+    const [calculatePrice, setCalculatePrice] = useState('');
+    const totalPriceCalculation = (parseFloat(carData.fobPrice) * currentCurrency.jpyToUsd) + (parseFloat(carData.dimensionCubicMeters) * parseFloat(profitMap));
     //DOLLAR CONVERSION
     const getFlexDirection = (screenWidth) => {
         if (screenWidth <= 523) {
@@ -1822,110 +1767,329 @@ const ProductDetailScreen = () => {
         }
     };
 
+
+
+    //check inspection
+    const [toggle, setToggle] = useState(false);
+    const handleToggleInspection = (item) => {
+        setToggle(item);
+
+    };
+
+    const toggleAnim = useRef(new Animated.Value(0)).current;
+    const [isToggleDisabled, setIsToggleDisabled] = useState(false);
+    const handleToggle = () => {
+        Animated.timing(toggleAnim, {
+            toValue: toggle ? 0 : 1,
+            duration: 100, // Increased duration for a more noticeable animation
+            useNativeDriver: true, // Change this based on what you are animating
+        }).start();
+
+        setToggle(prevToggle => !prevToggle); // Using a callback for the state update
+    };
+
+    // Interpolate values for moving the switch and changing the background color
+    const switchTranslate = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [2, 22], // Adjust these values based on the size of your switch
+    });
+
+    const switchColor = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['grey', '#7b9cff'] // Change colors as needed
+    });
+
+    const [inspectionIsRequired, setInspectionIsRequired] = useState('');
+    const [inspectionName, setInspectionName] = useState('');
+    console.log('PRODUCT DETAILS SCREEN', inspectionIsRequired)
+    console.log('PRODUCT DETAILS SCREEN INSPECTION NAME', inspectionName)
+
+    useEffect(() => {
+        const fetchInspection = async () => {
+            if (selectedCountry === '') {
+                setToggle(false);
+                return;
+            }
+
+            const countriesDocRef = doc(projectExtensionFirestore, 'CustomerCountryPort', 'CountriesDoc');
+
+            try {
+                const docSnap = await getDoc(countriesDocRef);
+                if (docSnap.exists()) {
+                    const selectedCountryData = docSnap.data()[selectedCountry];
+
+                    if (selectedCountryData) {
+                        setInspectionIsRequired(selectedCountryData.inspectionIsRequired);
+                        setInspectionName(selectedCountryData.inspectionName);
+                        switch (selectedCountryData.inspectionIsRequired) {
+                            case "Required":
+                                setToggle(true); // Ensure the toggle is on for "Required"
+                                setIsToggleDisabled(true); // Disable toggle interaction for "Required"
+                                break;
+                            case "Not-Required":
+                                setToggle(false); // Ensure the toggle is off for "Not-Required"
+                                setIsToggleDisabled(true); // Disable toggle interaction for "Not-Required"
+                                break;
+                            case "Optional":
+                            default:
+                                setIsToggleDisabled(false); // Enable toggle interaction otherwise
+                                break;
+                        }
+                    } else {
+                        setToggle(false);
+                        setIsToggleDisabled(false);
+                    }
+                } else {
+                    console.log("CountriesDoc does not exist, setting toggle to false");
+                    setToggle(false);
+                    setIsToggleDisabled(false);
+                }
+            } catch (error) {
+                console.error("Error fetching document:", error);
+                setToggle(false);
+                setIsToggleDisabled(false);
+            }
+        };
+
+        fetchInspection();
+    }, [selectedCountry]);
+
+    // Separate effect for handling the animation when the toggle state changes
+    useEffect(() => {
+        Animated.timing(toggleAnim, {
+            toValue: toggle ? 1 : 0,
+            duration: 100,
+            useNativeDriver: true,
+        }).start();
+    }, [toggle, toggleAnim]);
+
+
+    //check inspection
+
+    //get currency I HAVE ALREADY THIS ONE
+    const [currency, setCurrency] = useState({})
+    useEffect(() => {
+        const fetchCurrencyData = async () => {
+            const currencyDocRef = doc(projectExtensionFirestore, 'currency', 'currency');
+
+            try {
+                const docSnap = await getDoc(currencyDocRef);
+                if (docSnap.exists()) {
+                    const currency = docSnap.data()
+                    setCurrency(currency);
+                } else {
+                    console.log('No such document in the database!');
+                }
+            } catch (error) {
+                console.error('Error fetching currency data:', error);
+            }
+        };
+
+        fetchCurrencyData();
+    }, [])
+
+
+    //get currency
+
+    //profit map
+    console.log('PROFIT PRICE', profitMap)
+    useEffect(() => {
+        const fetchInspection = async () => {
+
+            const portDocRef = doc(projectExtensionFirestore, 'CustomerCountryPort', 'PortsDoc');
+
+            try {
+                const docSnap = await getDoc(portDocRef);
+
+                if (docSnap.exists()) {
+                    const selectedPortData = docSnap.data()[selectedPort];
+
+                    if (selectedPortData) {
+                        const profitPrice = selectedPortData.profitPrice;
+                        setProfitMap(profitPrice);
+
+                    } else {
+                    }
+                } else {
+                    console.log("PortDoc does not exist, setting toggle to false");
+
+                }
+            } catch (error) {
+                console.error("Error fetching document:", error);
+            }
+        };
+
+        fetchInspection();
+    }, [selectedPort]);
+    //profit map
+
     return (
         <View style={{ height: '100vh', flex: 3 }}>
             <StickyHeader />
 
             <ScrollView ref={scrollViewRef}>
-                <View style={{ flex: 1, flexDirection: 'column' }}>
-                    <View style={{ flexDirection: screenWidth <= 992 ? 'column' : 'row', flex: 3 }}>
-                        <View style={{ padding: 10, flex: 1 }}>
 
-                            <View style={{ maxWidth: screenWidth <= 992 ? '100%' : 750, width: '100%', alignSelf: screenWidth <= 992 ? 'center' : 'flex-end' }}>
+                <View style={{ flexDirection: screenWidth <= 992 ? null : 'row', alignItems: screenWidth <= 992 ? null : 'center', maxWidth: 1550, alignSelf: 'center', width: '100%', justifyContent: 'space-between' }}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 28, textAlign: 'left', marginBottom: 5 }}>
+                            {vehicleData.carName} C CLASS
+                        </Text>
+                        <View style={{ flexDirection: 'row', width: '100%' }}>
+                            <View style={{ maxWidth: screenWidth <= 992 ? '100%' : 500, flex: 3 }}>
+                                <Image
+                                    source={{ uri: imageUrl }}
+                                    style={{ borderRadius: 5, maxWidth: screenWidth <= 992 ? '100%' : 500, height: 370, resizeMode: screenWidth <= 1280 ? 'contain' : 'cover' }}
 
-                                <Text style={{ fontWeight: 'bold', fontSize: 28, textAlign: 'left', marginBottom: 5 }}>
-                                    {vehicleData.carName} C CLASS
-                                </Text>
-
-                                <View style={{ flexDirection: 'row', width: '100%' }}>
-                                    <View style={{ maxWidth: screenWidth <= 992 ? '100%' : 500, flex: 3 }}>
-                                        <Image
-                                            source={{ uri: imageUrl }}
-                                            style={{ borderRadius: 5, maxWidth: screenWidth <= 992 ? '100%' : 500, height: 370, resizeMode: screenWidth <= 1280 ? 'contain' : 'cover' }}
-
-                                        />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <CarouselSample allImageUrl={allImageUrl} />
-                                    </View>
-                                </View>
+                                />
                             </View>
-
-                        </View>
-
-
-
-                        <View style={{ flex: screenWidth <= 992 ? 1 : 1, padding: 10, }}>
-                            <View style={{ padding: 5, flex: 1 }}>
-                                <View style={{ flex: 1, maxWidth: screenWidth <= 992 ? '100%' : 750, width: '100%', alignSelf: screenWidth <= 992 ? 'center' : 'flex-start' }}>
-                                    <Text style={{ fontWeight: 'bold', fontSize: 28, textAlign: 'left', marginBottom: 5 }}>
-                                        {vehicleData.carName} C CLASS
-                                    </Text>
-                                    <View style={{ flexDirection: 'row', padding: 10, zIndex: 50, flex: 1 }}>
-                                        <View style={{ flex: 1 }}>
-                                            <Text>Current FOB Price</Text>
-                                            <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: 22, fontWeight: '700' }}>000</Text></Text>
-
-
-                                            <SearchCountry setSelectPort={setSelectPort} handleSelectCountry={handleSelectCountry} selectedCountry={selectedCountry} setSelectCountry={setSelectCountry} />
-                                        </View>
-
-
-
-
-                                        <View style={{ flex: 1 }}>
-                                            <Text>Total Estimated Price</Text>
-                                            <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: 22, fontWeight: '700' }}>000</Text></Text>
-
-                                            <SearchPort selectedCountry={selectedCountry} handleSelectPort={handleSelectPort} selectedPort={selectedPort} />
-                                        </View>
-                                    </View>
-                                    <View style={{ flexDirection: 'row', padding: 10 }}>
-                                        <View style={{ flex: 1, zIndex: -2 }}>
-                                            <Text>Additional</Text>
-                                            <View style={{ flexDirection: getFlexDirection(screenWidth), alignItems: screenWidth <= 1075 ? 'flex-start' : 'center', justifyContent: 'space-between' }}>
-                                                <View>
-                                                    <Inspection />
-                                                </View>
-                                                <View style={{ marginTop: 5 }}>
-                                                    <Insurance />
-                                                </View>
-                                            </View>
-
-                                        </View>
-
-                                        <View style={{ flex: 1 }}>
-                                            <Calculate />
-                                        </View>
-                                    </View>
-                                    {/* <View style={{ paddingLeft: 10 }}>
-                                        <Warranty />
-                                    </View> */}
-                                    <View>
-                                        <ChatWithUs />
-                                    </View>
-                                </View>
+                            <View style={{ flex: 1 }}>
+                                <CarouselSample allImageUrl={allImageUrl} />
                             </View>
                         </View>
-
                     </View>
 
-                </View>
-                <View style={{
-                    paddingHorizontal: 100,
-                    maxWidth: 1550,
-                    borderBottomWidth: 2,
-                    borderBottomColor: '#ccc',
-                    alignSelf: 'center',
-                    width: '100%'
 
-                }} />
+                    <View style={{ padding: 5, flex: 1 }}>
+                        <View style={{ maxWidth: screenWidth <= 992 ? '100%' : 750, width: '100%', alignSelf: screenWidth <= 992 ? 'center' : null, height: '100%', justifyContent: 'center' }}>
+                            <Text style={{ fontWeight: 'bold', fontSize: 28, textAlign: 'left', marginBottom: 5 }}>
+                                {vehicleData.carName} C CLASS
+                            </Text>
+                            <View style={{ backgroundColor: '#E5EBFD' }}>
+                                <View style={{ flexDirection: 'row', padding: 10, zIndex: 50, flex: 1, paddingHorizontal: 20 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text>Current FOB Price</Text>
+                                        <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: 22, fontWeight: '700' }}>{formattedFobDollar}</Text></Text>
+
+
+
+                                    </View>
+
+
+
+
+                                    <View style={{ flex: 1 }}>
+                                        <Text>Total Estimated Price</Text>
+                                        <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: 22, fontWeight: '700' }}>{calculatePrice ? calculatePrice : '000'}</Text></Text>
+
+
+                                    </View>
+                                </View>
+
+
+
+                            </View>
+
+
+                            <View style={{ flexDirection: 'row', padding: 10, backgroundColor: '#F2F5FE', paddingHorizontal: 20, zIndex: 5 }}>
+                                <View style={{ flex: 1, zIndex: -2 }}>
+                                    <SearchCountry setSelectPort={setSelectPort} handleSelectCountry={handleSelectCountry} selectedCountry={selectedCountry} setSelectCountry={setSelectCountry} />
+                                    <View style={{ flexDirection: getFlexDirection(screenWidth), alignItems: screenWidth <= 1075 ? 'flex-start' : 'center', justifyContent: 'space-between', zIndex: -2 }}>
+                                        <View>
+                                            <Inspection
+                                                isToggleDisabled={isToggleDisabled}
+                                                toggleAnim={toggleAnim}
+                                                handleToggle={handleToggle}
+                                                switchTranslate={switchTranslate}
+                                                switchColor={switchColor}
+                                                setToggle={setToggle} toggle={toggle}
+                                                handleToggleInspection={handleToggleInspection}
+                                                selectedCountry={selectedCountry} />
+                                        </View>
+                                        <View style={{ marginTop: 5 }}>
+                                            <Insurance />
+                                        </View>
+                                    </View>
+
+                                </View>
+
+                                <View style={{ flex: 1, zIndex: 5 }}>
+                                    <SearchPort selectedCountry={selectedCountry} handleSelectPort={handleSelectPort} selectedPort={selectedPort} />
+                                    <Calculate selectedPort={selectedPort} setProfitMap={setProfitMap} setCalculatePrice={setCalculatePrice} totalPriceCalculation={totalPriceCalculation} />
+                                </View>
+                            </View>
+                            {/* <View style={{ paddingLeft: 10 }}>
+                                        <Warranty />
+                                    </View> */}
+                            <View style={{ padding: 16, backgroundColor: '#f5f5f5', flex: 1 }}>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 16
+                                }}>
+                                    <Text style={{ fontSize: 16, color: '#333' }}>
+                                        Please sign up before initiating a chat with us
+                                    </Text>
+                                    <TouchableOpacity style={{
+                                        backgroundColor: '#FFA500', // Orange color for the 'Sign Up Free' button
+                                        paddingHorizontal: 20,
+                                        paddingVertical: 10,
+                                        borderRadius: 5
+                                    }}>
+                                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                                            Sign Up Free
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <TextInput
+                                    style={{
+                                        borderWidth: 1,
+                                        borderColor: '#ddd',
+                                        padding: 10,
+                                        borderRadius: 5,
+                                        marginBottom: 16,
+                                        fontSize: 16,
+                                        textAlignVertical: 'top'
+                                    }}
+                                    placeholder="Write your message here"
+                                    multiline={true}
+                                    numberOfLines={4}
+                                />
+
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: 16
+                                }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+                                        <Text style={{ marginLeft: 8, fontSize: 16 }}>I agree to Privacy Policy and Terms of Agreement</Text>
+                                    </View>
+                                </View>
+                                <View style={{
+                                    marginHorizontal: '20%',
+                                    justifyContent: 'center',
+
+                                }}>
+                                    <MakeAChat
+                                        selectedCountry={selectedCountry}
+                                        selectedPort={selectedPort}
+                                        currency={currency}
+                                        profitMap={profitMap}
+                                        inspectionIsRequired={inspectionIsRequired}
+                                        inspectionName={inspectionName}
+                                        carId={carId} carName={carName} userEmail={userEmail} setToggle={setToggle} toggle={toggle} />
+                                </View>
+
+                            </View>
+
+                        </View>
+                    </View>
+
+
+                </View>
+
                 <View style={{
+
                     marginRight: screenWidth > 1600 ? 20 : 0,
-                    flexDirection: screenWidth <= 992 ? 'column' : 'row',
+                    flexDirection: screenWidth <= 992 ? null : 'row',
                     maxWidth: 1500,
                     alignSelf: 'center',
                     width: screenWidth > 1600 ? '100%' : '97%',
+
+
                 }}>
                     <View style={{ marginTop: 10, width: '100%', flexShrink: 1, marginRight: 5 }}>
                         <GetDataSpecifications />

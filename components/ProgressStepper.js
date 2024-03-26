@@ -3982,7 +3982,7 @@ const ProgressStepper = ({ currentStep, totalSteps, updateSteps }) => {
 
   ];
   if (stepData.length === 0) {
-    return null; // Or you can render an error message or loading indicator
+    return null; 
   }
 
   return (
@@ -4011,8 +4011,6 @@ const ProgressStepper = ({ currentStep, totalSteps, updateSteps }) => {
           );
         })}
       </View>
-
-      {/* Buttons and other components */}
     </View>
   );
 };

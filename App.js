@@ -18,6 +18,12 @@ import ProfileForm from './components/ProfileForm';
 import EmailVerificationHandler from './components/EmailVerificationHandle';
 import HomePage from './components/homepage/HomePage';
 import SearchCarDesignAlpha from './components/homepage/SearchCarDesignAlpha';
+import AboutUs from './components/homepage/AboutUs';
+import LocalIntroduction from './components/homepage/LocalIntroduction';
+import LocalInformation from './components/homepage/LocalInformation';
+import HowToBuy from './components/homepage/HowToBuy';
+import UploadCsv from './components/UploadCsv';
+import TestServer from './TestServerCodes/DatabaseServer';
 const widthSize = Dimensions.get('window').width
 const HEADER_HEIGHT = 160;
 const styles = StyleSheet.create({
@@ -115,6 +121,7 @@ const App = () => {
   if (isLoading) {
     return <SplashScreen />;
   }
+
   return (
     <AuthProvider>
       <Router>
@@ -125,13 +132,23 @@ const App = () => {
             element={userEmails ? <Navigate to="/" /> : <LoginForm />}
           />
           <Route exact path="/SignUp" element={<SignUpForm />} />
-          <Route exact path="/" element={<ThreeContainers />} />
-          <Route exact path="/Home" element={<HomePage />} />
+          <Route exact path="/AboutUs" element={<AboutUs />} />
+          <Route path="/LocalIntroduction" element={<LocalIntroduction />} />
+          <Route path="/LocalInformation" element={<LocalInformation />} />
+          <Route path="/HowToBuy" element={<HowToBuy />} />
+          <Route exact path="/Sample" element={<ThreeContainers />} />
+          <Route exact path="/" element={<HomePage />} />
+          <Route exact path="/Upload" element={<UploadCsv />} />
           <Route exact path="/ProfileFormChatGroup/:chatId" element={userEmails ? <ProfileFormChatGroup /> : <Navigate to="/LoginForm" />} />
           <Route
             exact
             path="/SearchCar"
             element={<SearchCar />}
+          />
+           <Route
+            exact
+            path="/TestServer"
+            element={<TestServer />}
           />
           <Route
             exact

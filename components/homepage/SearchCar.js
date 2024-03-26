@@ -604,10 +604,10 @@ const SearchCar = () => {
     };
     const renderItem = useCallback(({ item }) => (
         <View>
-            <Text>{item.carName}</Text> {/* Customize this based on your data structure */}
-            {/* Additional item details */}
+            <Text>{item.carName}</Text> 
         </View>
     ), []);
+   
     const renderCarItems = useCallback(({ item }) => {
 
         return (
@@ -619,7 +619,7 @@ const SearchCar = () => {
                     },
 
                 ]}
-            // onPress={handlePress}
+                onPress={handlePress}
             >
                 <View style={[{ width: '100%', borderRadius: 5, overflow: 'hidden', zIndex: -2, aspectRatio: screenWidth > 729 ? 600 / 900 : 0.7 }]}>
                     {/* <Image
