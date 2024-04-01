@@ -1,16 +1,36 @@
 import React, { useEffect, useState, useContext, useRef, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Dimensions, FlatList, Pressable, TextInput, Modal, Animated, useWindowDimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Linking, FlatList, Pressable, TextInput, Modal, Animated as AnimatedRN, useWindowDimensions } from 'react-native';
 import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, Fontisto, MaterialCommunityIcons } from 'react-native-vector-icons';
-import { firebaseConfig, db, query, where, getFirestore } from '../../firebaseConfig';
+import { firebaseConfig, db, where, getFirestore } from '../../firebaseConfig';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { doc, getDoc, onSnapshot, serverTimestamp, addDoc, collection, getDocs, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, addDoc, collection, getDocs, setDoc, query, orderBy, limit } from "firebase/firestore";
 import { AuthContext } from '../../context/AuthProvider';
 import logo4 from '../../assets/RMJ logo for flag transparent.png'
+import carSample from '../../assets/2.jpg'
 import { projectExtensionFirestore, projectExtensionFirebase, projectExtensionStorage } from '../../firebaseConfig';
 import { getStorage, ref, listAll, getDownloadURL, } from 'firebase/storage';
 import axios from 'axios';
+import { FlatGrid } from 'react-native-super-grid';
+import gifLogo from '../../assets/rename.gif'
 import moment from 'moment';
-import Carousel from 'react-native-reanimated-carousel';
+import Animated, {
+    Extrapolate,
+    interpolate,
+    interpolateColor,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+
+} from "react-native-reanimated"
+import ImageGallery from "react-image-gallery";
+import 'react-image-gallery/styles/css/image-gallery.css'; // Import the default styles
+import '../../assets/reactimage.css'
+import { GestureHandlerRootView, enableLegacyWebImplementation } from "react-native-gesture-handler";
+import Carousel from "react-native-reanimated-carousel"
+import logo1 from '../../assets/RMJ Cover Photo for Facebook.jpg';
+import { Feather } from '@expo/vector-icons';
+
+
 
 const StickyHeader = () => {
     const { user, logout } = useContext(AuthContext);
@@ -23,7 +43,7 @@ const StickyHeader = () => {
             navigate(`/SearchCar/${searchQueryWorld}`);
         }
     };
-    const [scrollY] = useState(new Animated.Value(0));
+    const [scrollY] = useState(new AnimatedRN.Value(0));
     //BREAKPOINT
     const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
     useEffect(() => {
@@ -39,7 +59,7 @@ const StickyHeader = () => {
 
     return (
 
-        <Animated.View
+        <AnimatedRN.View
             style={{
                 borderBottomWidth: 1,
                 borderBottomColor: '#aaa',
@@ -115,7 +135,7 @@ const StickyHeader = () => {
                     </>
                 )}
             </View>
-        </Animated.View>
+        </AnimatedRN.View>
     );
 };
 const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry, setSelectPort }) => {
@@ -201,14 +221,20 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
     }
     //countries and ports ends here
     return (
-        <View style={{ flex: 1, padding: 5, minWidth: 150 }}>
+        <View style={{
+            flex: 3, padding: 5, minWidth: 150,
+
+        }}>
             <Pressable
                 onPress={handleIsActive}
                 style={{
                     padding: 10, // Adjust padding as needed
-                    backgroundColor: '#f0f0f0',
+                    backgroundColor: '#fff',
                     flexDirection: 'row',
                     alignItems: 'center',
+                    borderColor: '#d5d5d5',
+                    borderWidth: 1,
+                    borderRadius: 3
                 }}
             >
                 <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
@@ -216,7 +242,7 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
                     <TouchableOpacity onPress={handleClear}>
-                        <AntDesign name="close" size={15} />
+                        <AntDesign name="close" size={15} color="blue" />
                     </TouchableOpacity>
                     <AntDesign
                         name="down"
@@ -227,6 +253,7 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
                                 transform: [{ rotate: '180deg' }],
                             },
                         ]}
+                        color="blue"
                     />
                 </View>
             </Pressable>
@@ -308,14 +335,17 @@ const SearchPort = ({ selectedCountry, handleSelectPort, selectedPort }) => {
 
     const [checkCountry, setCheckCountry] = useState(null);
     return (
-        <View style={{ flex: 1, padding: 5, minWidth: 150 }}>
+        <View style={{ flex: 3, padding: 5, minWidth: 150 }}>
             <Pressable
                 onPress={handleIsActive}
                 style={{
                     padding: 10, // Adjust padding as needed
-                    backgroundColor: '#f0f0f0',
+                    backgroundColor: '#fff',
                     flexDirection: 'row',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    borderColor: '#d5d5d5',
+                    borderWidth: 1,
+                    borderRadius: 3
                 }}
             >
                 <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
@@ -331,6 +361,7 @@ const SearchPort = ({ selectedCountry, handleSelectPort, selectedPort }) => {
                                 transform: [{ rotate: '180deg' }],
                             },
                         ]}
+                        color="blue"
                     />
                 </View>
             </Pressable>
@@ -391,10 +422,10 @@ const Insurance = () => {
 
 
     const [toggle, setToggle] = useState(false);
-    const toggleAnim = useRef(new Animated.Value(0)).current;
+    const toggleAnim = useRef(new AnimatedRN.Value(0)).current;
 
     const handleToggle = () => {
-        Animated.timing(toggleAnim, {
+        AnimatedRN.timing(toggleAnim, {
             toValue: toggle ? 0 : 1,
             duration: 10,
             useNativeDriver: false,
@@ -417,9 +448,9 @@ const Insurance = () => {
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', }}>
             <Pressable onPress={handleToggle}>
-                <Animated.View style={[styles.switch, { backgroundColor: switchColor }]}>
-                    <Animated.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
-                </Animated.View>
+                <AnimatedRN.View style={[styles.switch, { backgroundColor: switchColor }]}>
+                    <AnimatedRN.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
+                </AnimatedRN.View>
             </Pressable>
             <Text style={{ fontSize: 16, marginLeft: 5 }}>Insurance</Text>
         </View>
@@ -449,9 +480,9 @@ const Inspection = ({ isToggleDisabled, toggle, handleToggleInspection, selected
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', }}>
             <Pressable onPress={handleToggle} disabled={isToggleDisabled || !selectedCountry}>
-                <Animated.View style={[styles.switch, { backgroundColor: switchColor }]}>
-                    <Animated.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
-                </Animated.View>
+                <AnimatedRN.View style={[styles.switch, { backgroundColor: switchColor }]}>
+                    <AnimatedRN.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
+                </AnimatedRN.View>
             </Pressable>
             <Text style={{ fontSize: 16, marginLeft: 5 }}>Inspection</Text>
         </View>
@@ -477,10 +508,10 @@ const Warranty = () => {
 
 
     const [toggle, setToggle] = useState(false);
-    const toggleAnim = useRef(new Animated.Value(0)).current;
+    const toggleAnim = useRef(new AnimatedRN.Value(0)).current;
 
     const handleToggle = () => {
-        Animated.timing(toggleAnim, {
+        AnimatedRN.timing(toggleAnim, {
             toValue: toggle ? 0 : 1,
             duration: 10,
             useNativeDriver: false,
@@ -503,9 +534,9 @@ const Warranty = () => {
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', }}>
             <Pressable onPress={handleToggle}>
-                <Animated.View style={[styles.switch, { backgroundColor: switchColor }]}>
-                    <Animated.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
-                </Animated.View>
+                <AnimatedRN.View style={[styles.switch, { backgroundColor: switchColor }]}>
+                    <AnimatedRN.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
+                </AnimatedRN.View>
             </Pressable>
             <Text style={{ fontSize: 16, marginLeft: 5 }}>Warranty</Text>
         </View>
@@ -522,11 +553,11 @@ const Calculate = ({ selectedPort, setProfitMap, totalPriceCalculation, setCalcu
     return (
         <View style={{
             flexDirection: 'row',
-            justifyContent: 'center', // Center the buttons
-            alignItems: 'center', // Vertically center items in the container
+            justifyContent: 'flex-end', // Center the buttons
+            alignItems: 'flex-end', // Vertically center items in the container
             padding: 10,
-            flex: 3
-            , zIndex: -5// Add some padding around the container
+            flex: 1,
+            zIndex: - 5// Add some padding around the container
         }}>
             <Pressable
                 onPress={() => {
@@ -535,9 +566,9 @@ const Calculate = ({ selectedPort, setProfitMap, totalPriceCalculation, setCalcu
                 style={({ pressed }) => ({
                     flex: 1, // Do not grow, take as much space as needed
                     opacity: pressed ? 0.5 : 1,
-                    backgroundColor: '#f5f5f5', // Light grey background for the Reset button
+                    backgroundColor: '#d5d5d5', // Light grey background for the Reset button
                     marginRight: 10, // Add margin to the right for spacing
-                    borderRadius: 20, // Rounded corners for the buttons
+                    borderRadius: 3, // Rounded corners for the buttons
                     paddingHorizontal: 15, // Horizontal padding
                     height: 35, // Fixed height for the button
                     justifyContent: 'center', // Center content vertically
@@ -546,7 +577,8 @@ const Calculate = ({ selectedPort, setProfitMap, totalPriceCalculation, setCalcu
             >
                 <Text style={{
                     fontWeight: '600',
-                    textAlign: 'center' // Ensure text is centered
+                    textAlign: 'center',
+                    color: 'white' // Ensure text is centered
                 }}>Reset</Text>
             </Pressable>
             <Pressable
@@ -556,8 +588,8 @@ const Calculate = ({ selectedPort, setProfitMap, totalPriceCalculation, setCalcu
                 style={({ pressed, hovered }) => ({
                     flex: 2, // Takes twice the space compared to Reset
                     opacity: pressed ? 0.5 : 1,
-                    backgroundColor: hovered ? '#bdceff' : '#7b9cff', // Blue background for Calculate button
-                    borderRadius: 20, // Rounded corners for the buttons
+                    backgroundColor: hovered ? 'black' : '#191919', // Blue background for Calculate button
+                    borderRadius: 5, // Rounded corners for the buttons
                     paddingHorizontal: 20, // Horizontal padding
                     height: 35, // Fixed height for the button
                     justifyContent: 'center', // Center content vertically
@@ -671,7 +703,49 @@ const ChatWithUs = () => {
     );
 }
 
-//get the data from carls datanbase sample
+const SquareGrays = () => {
+    const styles = StyleSheet.create({
+        container: {
+        },
+        row: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        square: {
+            width: 8,
+            height: 8,
+            backgroundColor: 'gray',
+            marginLeft: 1,
+        },
+    });
+
+    const createOddRowOfSquares = () => (
+        Array.from({ length: 20 }, (_, index) => {
+            const backgroundColor = (index % 2 === 0) ? 'gray' : 'transparent';
+            return (
+                <View key={`odd-${index}`} style={[styles.square, { backgroundColor }]} />
+            );
+        })
+    );
+
+    // Function to create a row of gray squares at even positions
+    const createEvenRowOfSquares = () => (
+        Array.from({ length: 20 }, (_, index) => {
+            const backgroundColor = (index % 2 !== 0) ? 'gray' : 'transparent';
+            return (
+                <View key={`even-${index}`} style={[styles.square, { backgroundColor }]} />
+            );
+        })
+    );
+
+    return (
+        <View style={styles.container}>
+            <View style={styles.row}>{createOddRowOfSquares()}</View>
+            <View style={styles.row}>{createEvenRowOfSquares()}</View>
+        </View>
+    );
+};
 const GetDataFeature = () => {
 
     const { carId } = useParams();
@@ -821,9 +895,9 @@ const GetDataFeature = () => {
                             <View>
                                 <TouchableOpacity
                                     style={{
-                                        backgroundColor: feature.value ? '#7b9cff' : '#fff',
+                                        backgroundColor: feature.value ? '#454545' : '#fff',
                                         borderWidth: 1,
-                                        borderColor: feature.value ? '#7b9cff' : '#706E6E',
+                                        borderColor: feature.value ? '#454545' : '#D5D5D5',
                                         justifyContent: 'center',
                                         alignItems: 'center',
                                         height: 40,
@@ -833,7 +907,7 @@ const GetDataFeature = () => {
                                         padding: 2,
                                     }}
                                 >
-                                    <Text adjustsFontSizeToFit numberOfLines={2} style={{ textAlign: 'center', color: feature.value ? 'white' : '#706E6E', fontSize: 12, fontWeight: '600' }}>{feature.name}</Text>
+                                    <Text adjustsFontSizeToFit numberOfLines={2} style={{ textAlign: 'center', color: feature.value ? 'white' : '#D5D5D5', fontSize: 12, fontWeight: '600' }}>{feature.name}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -894,12 +968,14 @@ const GetDataFeature = () => {
 
     return (
         <View style={{ flex: 1 }}>
-            <View style={{ width: '100%', paddingRight: 5, height: 50, padding: 5, flexDirection: 'row', alignItems: 'center', backgroundColor: '#7b9cff', paddingLeft: 10 }} >
-                <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 22 }}>Features</Text>
-                </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: 'black', fontWeight: '700', fontSize: '2em', marginRight: '3%' }}>Features</Text>
+                <SquareGrays />
+
             </View>
             <FlatList
+                style={{ marginTop: '3%' }}
                 data={featureData}
                 renderItem={renderVehicleFeaturesCategory}
                 keyExtractor={(item, index) => `${item.category}-${index}`}
@@ -1034,11 +1110,11 @@ const GetDataSpecifications = () => {
     const renderSpecificationItem = ({ item }) => {
         return (
             <View style={{ flexDirection: 'row' }}>
-                <View style={{ flex: 1, backgroundColor: '#7b9cff', padding: 10, margin: 5, }}>
+                <View style={{ flex: 1, backgroundColor: '#454545', padding: 10, margin: 5, }}>
                     <Text style={[styles.specificationItem, { color: 'white' }]}>{item.name}</Text>
                 </View>
                 <View style={{ flex: 1, padding: 10, margin: 5, borderWidth: 1, borderColor: '#706E6E' }}>
-                    <Text style={{ fontSize: 16, color: '#706E6E' }}>{item.value || 'N/A'}</Text>
+                    <Text style={{ fontSize: 16, color: '#706E6E', fontWeight: '300' }}>{item.value || 'N/A'}</Text>
                 </View>
             </View>
         );
@@ -1047,15 +1123,10 @@ const GetDataSpecifications = () => {
     const renderSpecificationCategory = ({ item }) => {
         return (
             <View style={[styles.categoryContainer]}>
-                {/* <View style={{ backgroundColor: '#7b9cff', padding: 6, marginBottom: 5 }}>
-                    <Text style={[styles.category, { color: 'white' }]}>{item.category}</Text>
-                </View> */}
-                <View style={{ width: '100%', paddingRight: 5, height: 50, padding: 5, flexDirection: 'row', alignItems: 'center', backgroundColor: '#7b9cff', paddingLeft: 10 }} >
-                    <View style={{ flex: 1 }}>
-                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 22 }}>{item.category}</Text>
-                    </View>
-                </View>
+
+
                 <FlatList
+                    style={{ marginTop: '3%' }}
                     data={item.data}
                     renderItem={renderSpecificationItem}
                     keyExtractor={(specItem) => specItem.name}
@@ -1066,6 +1137,10 @@ const GetDataSpecifications = () => {
 
     return (
         <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: 'black', fontWeight: '700', fontSize: '2em', marginRight: '3%' }}>Full Vehicle Specifications</Text>
+                <SquareGrays />
+            </View>
             <FlatList
                 data={specsData}
                 renderItem={renderSpecificationCategory}
@@ -1077,7 +1152,7 @@ const GetDataSpecifications = () => {
 };
 
 
-const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
+const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
     //MAKE MODAL
 
 
@@ -1196,6 +1271,12 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
             console.error('User email address is not available.');
             return;
         }
+
+
+        //PORT OF JAPAN
+
+        //PORT OF JAPAN
+
         //formatted time
         const response = await axios.get('http://worldtimeapi.org/api/timezone/Asia/Tokyo');
         const { datetime } = response.data;
@@ -1229,6 +1310,9 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
 
             // });
 
+
+            // Fetch IP Address
+
             const chatId = `chat_${carId}_${userEmail}`;
             //NEW DATE FEATURE
 
@@ -1238,9 +1322,12 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
 
 
             const messageData = {
+
                 sender: userEmail, // Sender's email
                 text: `You are now inquiring with this product.`,
                 timestamp: formattedTime,
+                ip: ip,
+                ipCountry: ipCountry
             };
 
             // Set the message data in the new message document
@@ -1276,8 +1363,10 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
         await setDoc(doc(chatsCollectionExtension, chatId), {
             lastMessageDate: formattedTime,
             read: false,
+            readBy: [],
             lastMessage: 'You are now inquiring with this product.',
             lastMessageSender: userEmail,
+            customerRead: true,
             participants:
             {
                 salesRep: recipientEmail,
@@ -1299,7 +1388,8 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
             freightPrice: profitMap,
             dateOfTransaction: formattedTime,
             country: selectedCountry,
-            port: selectedPort
+            port: selectedPort,
+            freightOrigPrice: freightOrigPrice
         });
 
         // Navigate to the ChatScreen with the chat ID
@@ -1317,15 +1407,13 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
             <TouchableOpacity
                 onPress={() => handleCreateConversation(carId, carName)}
                 style={{
-                    backgroundColor: '#FA4D4D', justifyContent: 'center',
+                    backgroundColor: 'blue', justifyContent: 'center',
                     alignItems: 'center',
                     height: 50,
-                    shadowColor: '#000', // Set the shadow color for iOS
-                    shadowOffset: { width: 0, height: 4 }, // Set the shadow offset (y = 4)
-                    shadowOpacity: 0.25, // Set the shadow opacity (25%)
-                    shadowRadius: 4,
+                    borderRadius: 3,
+                    marginVertical: 20
                 }}>
-                <Text style={{ textAlign: 'center', color: 'white' }}>Send Inquiry</Text>
+                <Text style={{ textAlign: 'center', color: 'white', fontWeight: '500', fontStyle: 'italic' }}>Send Inquiry</Text>
             </TouchableOpacity>
 
             <Modal
@@ -1362,34 +1450,946 @@ const MakeAChat = ({ selectedCountry, selectedPort, profitMap, currency, carId, 
     );
 };
 
-const CarouselSample = ({ allImageUrl }) => {
+
+const CarouselSampleAnimations = ({ animationValue, label, onPress }) => {
+    const translateY = useSharedValue(0)
+
+    const containerStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            animationValue.value,
+            [-1, 0, 1],
+            [0.5, 1, 0.5],
+            Extrapolate.CLAMP
+        )
+
+        return {
+            opacity
+        }
+    }, [animationValue])
+
+    const labelStyle = useAnimatedStyle(() => {
+        const scale = interpolate(
+            animationValue.value,
+            [-1, 0, 1],
+            [1, 1.5, 1],
+            Extrapolate.CLAMP
+        )
+
+        const color = interpolateColor(
+            animationValue.value,
+            [-1, 0, 1],
+            ["#b6bbc0", "#0071fa", "#b6bbc0"]
+        )
+
+        return {
+            transform: [{ scale }, { translateY: translateY.value }],
+            color
+        }
+    }, [animationValue, translateY])
+
+    const onPressIn = React.useCallback(() => {
+        translateY.value = withTiming(-8, { duration: 250 })
+    }, [translateY])
+
+    const onPressOut = React.useCallback(() => {
+        translateY.value = withTiming(0, { duration: 250 })
+    }, [translateY])
 
     return (
-        <View style={{ maxWidth: 200, maxHeight: 370, width: '100%' }}>
-            <FlatList
-                data={allImageUrl}
-                keyExtractor={(item, index) => `image-${index}`}
-                renderItem={({ item }) => (
-                    <View style={{ backgroundColor: '#f5f5f5', borderRadius: 5, marginBottom: 5, margin: 5 }}>
-                        <Image
-                            source={{ uri: item }}
-                            style={{ width: '100%', height: 150, }}
-                            resizeMode='contain'
-                        />
-                    </View>
-                )}
-                style={{ flex: 1, width: '100%' }}
-            />
-        </View>
+        <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
+            <Animated.View
+                style={[
+                    {
+                        height: "100%",
+                        alignItems: "center",
+                        justifyContent: "center",
+
+                    },
+                    containerStyle
+                ]}
+            >
+
+                <Animated.Image
+                    source={{ uri: label }}
+                    style={[labelStyle, { width: '100%', height: undefined, aspectRatio: 1, borderWidth: 1, flex: 3 }]}
+                    resizeMode='contain'
+                />
+                {/* <Animated.Text style={[{ fontSize: 18, color: "#26292E" }, labelStyle]}>
+                    'Hello'
+                </Animated.Text> */}
+            </Animated.View>
+        </Pressable>
     )
 }
 
+
+
+
+const FullscreenImageView = ({ src, onClose }) => (
+    <div className="fullscreen-container" onClick={onClose}>
+        <img src={src} alt="Fullscreen" className="fullscreen-image" />
+    </div>
+);
+
+const LoadingImageGallery = () => {
+
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const renderCustomImage = (item) => {
+
+
+        return (
+
+            <img src={item.original} alt={item.originalAlt} className="custom-image" loading="lazy" />
+
+        );
+    };
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+    const blankItems = [
+        { original: carSample, thumbnail: carSample, originalAlt: '' }, // Add as many blank items as needed
+    ];
+    const renderCustomLeftNav = (onClick, disabled) => (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="custom-nav-button" // Apply the CSS class
+            style={{
+                left: '10px', // Adjust this value as needed
+            }}
+
+        >
+            <AntDesign name="left" size={25} color="#fff" />
+        </button>
+    );
+
+    const renderCustomRightNav = (onClick, disabled) => (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="custom-nav-button" // Apply the CSS class
+            style={{
+                right: '10px', // Adjust this value as needed
+            }}
+        >
+            <AntDesign name="right" size={25} color="#fff" />
+        </button>
+
+
+    );
+    const thumbnailPosition = screenWidth >= 1280 ? 'bottom' : (screenWidth >= 992 ? 'right' : (screenWidth >= 768 ? 'right' : 'bottom'));
+
+    return (
+        <ImageGallery
+            items={blankItems}
+            showFullscreenButton={true}
+            showPlayButton={false} // Hide autoplay button
+            showThumbnails={true} // Hide thumbnails
+            thumbnailPosition={thumbnailPosition}
+            renderLeftNav={isFullscreen ? undefined : renderCustomLeftNav}
+            renderRightNav={isFullscreen ? undefined : renderCustomRightNav}
+            infinite={true}
+            renderItem={renderCustomImage}
+        />
+    );
+};
+const CarouselSample = ({ allImageUrl }) => {
+
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+
+
+
+
+
+    const [imagesLoading, setImagesLoading] = useState(true);
+    useEffect(() => {
+        if (allImageUrl && allImageUrl.length > 0) {
+            setImagesLoading(false);
+        } else {
+            setImagesLoading(true);
+        }
+    }, [allImageUrl]);
+
+
+    const formattedImages = allImageUrl.map(url => ({
+        original: url,
+        thumbnail: url, // You can set thumbnail to the same URL if thumbnails are not available
+        // You can add more properties like description, alt text, etc. if needed
+    }));
+    const renderCustomLeftNav = (onClick, disabled) => (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="custom-nav-button" // Apply the CSS class
+            style={{
+                left: '10px', // Adjust this value as needed
+            }}
+        >
+            <AntDesign name="left" size={25} color="#fff" />
+        </button>
+    );
+    const [modalVisible, setModalVisible] = useState(false);
+
+    const openModal = () => {
+        setModalVisible(true);
+    };
+
+    const closeModal = () => {
+        setModalVisible(false);
+    };
+    const FullScreenButton = () => {
+        return (
+            <View style={{ width: '100%', height: '100%' }}>
+                <button
+                    onClick={openModal}
+                    className="custom-fullscreen"
+                    style={{
+                        right: '10px', // Adjust this value as needed
+                    }}
+                >
+                    <Feather name='check-square' size={20} />
+                </button>
+                {modalVisible === true && (
+                    <View style={{ backgroundColor: 'white', width: '100%', height: '100%', position: 'absolute', top: '150%', left: 0 }}>
+                        <Image
+                            source={{ uri: formattedImages[0].original }}
+                            style={{ width: 750, height: 550 }} // Set your modal image dimensions here
+                            resizeMode="contain"
+                        />
+                    </View>
+
+                )}
+            </View>
+        );
+    };
+    const renderCustomRightNav = (onClick, disabled) => (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="custom-nav-button" // Apply the CSS class
+            style={{
+                right: '10px', // Adjust this value as needed
+            }}
+        >
+            <AntDesign name="right" size={25} color="#fff" />
+        </button>
+    );
+    const thumbnailPosition =
+        screenWidth >= 1280
+            ? 'right'
+
+            : 'bottom';
+
+
+
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [fullscreenImage, setFullscreenImage] = useState(null);
+
+
+    const renderCustomImage = (item) => {
+        const handleImagePress = () => {
+            setFullscreenImage(item.original);
+            setIsFullscreen(true);
+        };
+
+        return (
+            <Pressable onPress={handleImagePress}>
+                <img src={item.original} alt={item.originalAlt} className="custom-image" />
+            </Pressable>
+        );
+    };
+
+
+    if (imagesLoading) {
+
+        return <LoadingImageGallery />;
+    } else {
+        // Render the actual carousel if images have been loaded
+        return (
+            <View style={{ width: '100%' }}>
+                <ImageGallery
+                    items={formattedImages}
+                    showFullscreenButton={false}
+                    showPlayButton={false} // Hide autoplay button
+                    showThumbnails={true} // Hide thumbnails
+                    thumbnailPosition={thumbnailPosition}
+                    renderLeftNav={isFullscreen ? undefined : renderCustomLeftNav}
+                    renderRightNav={isFullscreen ? undefined : renderCustomRightNav}
+                    infinite={true}
+                    renderItem={renderCustomImage}
+                />
+                {isFullscreen && <FullscreenImageView src={fullscreenImage} onClose={() => setIsFullscreen(false)} />}
+            </View>
+        );
+
+    }
+
+}
+
+
+// const flatListRef = useRef();
+//     const [currentIndex, setCurrentIndex] = useState(0);
+//     const itemHeight = 250; // The height of the image with margin
+//     const viewHeight = 500; // The height of the visible FlatList area
+//     const numItems = 1; // Number of items to display in view
+//     const maxIndex = Math.ceil(allImageUrl.length / numItems) - 1;
+
+//     // Ensure the FlatList only displays 3 items at a time
+//     const getItemLayout = (data, index) => ({
+//         length: itemHeight,
+//         offset: itemHeight * index,
+//         index,
+//     });
+
+//     // Handler for the up button
+//     const handleUp = () => {
+//         setCurrentIndex((prevIndex) => {
+//             const newIndex = Math.max(prevIndex - numItems, 0);
+//             flatListRef.current.scrollToIndex({ animated: true, index: newIndex });
+//             return newIndex;
+//         });
+//     };
+
+//     // Handler for the down button
+//     const handleDown = () => {
+//         setCurrentIndex((prevIndex) => {
+//             const newIndex = Math.min(prevIndex + numItems, maxIndex * numItems);
+//             flatListRef.current.scrollToIndex({ animated: true, index: newIndex });
+//             return newIndex;
+//         });
+//     };
+//     return (
+//         <View >
+//             <TouchableOpacity onPress={handleUp} disabled={currentIndex === 0}>
+//                 <Text>UP</Text>
+//             </TouchableOpacity>
+//             <View style={{ height: viewHeight, width: '100%', justifyContent: 'center' }}>
+//                 <FlatList
+//                     ref={flatListRef}
+//                     data={allImageUrl}
+//                     keyExtractor={(item, index) => `image-${index}`}
+//                     renderItem={({ item }) => (
+//                         <View style={{ backgroundColor: '#f5f5f5', borderRadius: 5, marginBottom: 5, margin: 5 }}>
+//                             <Image
+//                                 source={{ uri: item }}
+//                                 style={{ width: '100%', height: itemHeight }}
+//                                 resizeMode='contain'
+//                             />
+//                         </View>
+//                     )}
+//                     getItemLayout={getItemLayout}
+//                     initialScrollIndex={currentIndex}
+//                     scrollEnabled={false}
+//                     style={{ flex: 1, width: '100%' }}
+//                 />
+//             </View>
+//             <TouchableOpacity onPress={handleDown} disabled={currentIndex >= maxIndex * numItems}>
+//                 <Text>DOWN</Text>
+//             </TouchableOpacity>
+//         </View>
+//     );
+
+// const FetchPort = () => {
+//     if (data[currentPort]?.kobePrice !== undefined) {
+
+//         if (invoiceData.departurePort == "Nagoya") {
+
+//             await updateDoc(doc(projectExtensionFirestore, 'chats', selectedChatData.id), {
+//                 freightOrigPrice: data[currentPort].nagoyaPrice,
+//             });
+//             // console.log("Nagoya Price ", data[currentPort].nagoyaPrice);
+
+//         }
+//         else if (invoiceData.departurePort == "Yokohama") {
+//             await updateDoc(doc(projectExtensionFirestore, 'chats', selectedChatData.id), {
+//                 freightOrigPrice: data[currentPort].yokohamaPrice,
+//             });
+//             // console.log("Yokohama Price ", data[currentPort].yokohamaPrice);
+
+//         }
+//         else if (invoiceData.departurePort == "Kyushu") {
+//             await updateDoc(doc(projectExtensionFirestore, 'chats', selectedChatData.id), {
+//                 freightOrigPrice: data[currentPort].kyushuPrice,
+//             });
+//             // console.log("Kyushu Price ", data[currentPort].kyushuPrice);
+
+//         }
+//         else if (invoiceData.departurePort == "Kobe") {
+//             await updateDoc(doc(projectExtensionFirestore, 'chats', selectedChatData.id), {
+//                 freightOrigPrice: data[currentPort].kobePrice,
+//             });
+//             // console.log("Kobe Price ", data[currentPort].kobePrice);
+
+//         }
+
+//         setLastFetchedPort(currentPort); // Update last fetched port
+//     } else {
+//         console.log('Port data not found for the given port');
+//     }
+// }
+
+
+const SearchByTypes = ({ carItems }) => {
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+    const types = [
+        { id: '1', logo: 'Logo', name: 'SEDAN', price: '520' },
+        { id: '2', logo: 'Logo', name: 'TRUCK', price: '520' },
+        { id: '3', logo: 'Logo', name: 'SUV', price: '520' },
+        { id: '4', logo: 'Logo', name: 'HATCHBACK', price: '520' },
+        { id: '5', logo: 'Logo', name: 'WAGON', price: '520' },
+        { id: '6', logo: 'Logo', name: 'BUS', price: '520' },
+    ];
+    const styles = StyleSheet.create({
+        container: {
+            padding: 15,
+        },
+        title: {
+            fontSize: 26,
+            fontWeight: 'bold',
+            marginVertical: 20,
+            color: 'white',
+            marginLeft: 20,
+            marginRight: 20
+        },
+        itemContainer: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: 10,
+        },
+        button: {
+            backgroundColor: 'blue',
+            borderRadius: 5,
+            height: 40,
+            maxWidth: 150,
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'center'
+        },
+
+        cardPressable: {
+            alignSelf: 'center',
+            shadowColor: '#333',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 10,
+            elevation: 3,
+            marginBottom: 10,
+            maxWidth: screenWidth < 700 ? 290 : 360,
+            width: '100%',
+
+        },
+        card: {
+            overflow: 'hidden',
+            backgroundColor: 'transparent',
+        },
+        cardImage: {
+            width: '100%',
+            aspectRatio: 1.3,
+            resizeMode: 'cover',
+        },
+        textContainer: {
+            padding: 10,
+
+        },
+        carName: {
+            alignSelf: 'flex-start',
+            fontWeight: '600',
+            fontSize: 18,
+            color: 'white'
+        },
+    });
+    const renderItem = useCallback(({ item }) => {
+        const formattedPrice = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0, // No decimal places
+            maximumFractionDigits: 0, // No decimal places
+        }).format(item.fobPrice * 0.0068).replace('.00', '');
+        return (
+            <Pressable
+                style={({ pressed }) => [
+                    {
+                        opacity: pressed ? 0.5 : 1,
+                    },
+                    styles.cardPressable
+                ]}
+            >
+                <View style={styles.card}>
+
+                    <Image
+                        source={{ uri: carSample }}
+                        style={styles.cardImage}
+                    />
+                    <View style={styles.textContainer}>
+                        <Text style={styles.carName} >
+                            {item.carName}
+                        </Text>
+                        <Text style={{ fontSize: 14, marginTop: 20, color: 'white' }}>
+                            {item.regYear}/{item.regMonth}
+                        </Text>
+                        <Text style={{ fontSize: 14, color: 'blue', color: 'white' }}>
+                            {`FOB. US${formattedPrice}`}
+                        </Text>
+                    </View>
+                </View>
+            </Pressable>
+        );
+    }, []);
+    let numberOfItemsPerRow;
+    if (screenWidth > 992) {
+        numberOfItemsPerRow = 6;
+    } else if (screenWidth > 440) {
+        numberOfItemsPerRow = 3;
+    } else {
+        numberOfItemsPerRow = 2;
+    }
+    const spacing = screenWidth > 440 ? 15 : 10;
+    const totalSpacing = spacing * (numberOfItemsPerRow - 1);
+
+
+    const itemDimension = (screenWidth - totalSpacing) / numberOfItemsPerRow;
+    return (
+        <View style={styles.container}>
+            {screenWidth < 644 && (
+                <View style={{
+                    alignSelf: 'flex-end',
+                    marginTop: -15,
+                    marginRight: -15
+                }}>
+                    <SquareGrays />
+                </View>
+            )}
+            {screenWidth >= 644 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center', marginLeft: -35 }}>
+
+                        <View style={{ width: '100%', maxWidth: 80, borderBottomWidth: 2, borderBottomColor: 'white' }} />
+                        <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                        }}>
+                            <Text style={styles.title}>Recommended Items</Text>
+                            <SquareGrays />
+                        </View>
+                    </View>
+                    <TouchableOpacity style={styles.button}>
+                        <Text style={{ fontWeight: '600', fontSize: 12, color: 'white' }}>View all Type</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {screenWidth < 644 && (
+                <View style={{
+                    alignSelf: 'center',
+                }}>
+                    <Text style={styles.title}>Search by Type</Text>
+                </View>
+            )}
+            <View style={{ flex: 3 }}>
+                <FlatGrid
+                    data={carItems}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.id}
+                    itemDimension={itemDimension}
+                    spacing={spacing}
+                />
+            </View>
+            {screenWidth < 644 && (
+                <TouchableOpacity style={[{
+                    marginTop: screenWidth < 644 ? 10 : 0,
+                    alignSelf: 'center',
+                }, styles.button]}>
+                    <Text style={{ fontWeight: '600', fontSize: 12, color: 'white' }}>View all Type</Text>
+                </TouchableOpacity>
+            )}
+        </View>
+    )
+
+};
+
+
+const StickyFooter = () => {
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+    const styles = StyleSheet.create({
+        footerContainer: {
+            borderTopWidth: 1,
+            borderTopColor: '#ddd',
+            padding: 20,
+            marginTop: '5%',
+            backgroundColor: '#fff',
+
+            // assuming a white background
+        },
+        linkSection: {
+            flex: 1,
+            flexDirection: 'row', // Ensures items are laid out in a row
+            flexWrap: 'wrap', // Allows items to wrap to the next line
+            padding: 10, // Adjusts padding around the entire section
+            justifyContent: 'space-between', // Places space between the child items
+        },
+        item: {
+            // Common style for all items
+            flex: 1,// Each item takes up half the width of the container
+            padding: 5,
+
+            // Padding within each item
+            // No justifyContent or alignItems here
+        },
+        firstColumn: {
+            // Specific style for the first column
+            alignItems: 'flex-start', // Aligns text to the start of the column
+        },
+        secondColumn: {
+            // Specific style for the second column
+            alignItems: 'flex-start',
+
+        },
+        title: {
+            // Style for the text inside each item
+            textAlign: 'left', // Center align text
+            fontWeight: '500',
+            flex: 1
+        },
+        sectionTitle: {
+            // Style for the section title
+            borderBottomWidth: 1,
+            borderBottomColor: '#ddd',
+            paddingBottom: 5,
+            marginBottom: 10,
+            fontWeight: 'bold'
+            // Add other styling like font weight, text transform, etc.
+        },
+        sectionContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            maxWidth: 1300,
+            alignSelf: 'center',
+            width: '100%',
+            padding: 10
+        },
+        infoSection: {
+            flex: 2,
+            maxWidth: screenWidth < 768 ? '100%' : 250,
+            marginRight: 20// takes more space for the company info
+        },
+        logo: {
+            width: '100%',
+            height: 60, // Adjust height accordingly
+            marginBottom: 20,
+        },
+        companyAddress: {
+            marginBottom: 5,
+            marginVertical: 10
+        },
+        companyContact: {
+            marginBottom: 5,
+            marginVertical: 10
+        },
+        contactButton: {
+            backgroundColor: 'blue',
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            marginVertical: 10,
+            marginTop: 10,
+            marginHorizontal: -1,
+            borderRadius: 5,
+            alignItems: 'center'
+        },
+        contactButtonText: {
+            color: 'white',
+        },
+        policyLinks: {
+            borderTopWidth: 2,
+            borderBottomWidth: 2,
+            borderColor: '#ddd',
+            paddingTop: 5,
+            marginTop: 10,
+            paddingBottom: 5,
+        },
+        policyText: {
+            marginBottom: 5,
+            paddingBottom: 5
+        },
+        linkSection: {
+            flex: 1,
+            padding: 5
+        },
+
+        linkText: {
+            marginBottom: 5,
+            fontWeight: '500'
+        },
+        socialMediaSection: {
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-end', // Evenly space items apart
+            padding: 10,
+            paddingVertical: 10,
+            alignSelf: 'center',
+            maxWidth: 1300,
+            width: '100%',
+
+        },
+        iconsRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-evenly', // Center icons horizontally
+            alignItems: 'center', // Center icons vertically
+            width: '100%', // Take the full width to center icons on the screen
+            marginBottom: screenWidth < 768 ? 10 : 5,
+            maxWidth: 150,
+            alignSelf: screenWidth < 768 ? 'center' : 'flex-end'// Adjust based on the screen width
+        },
+        copyRightSection: {
+            alignItems: screenWidth < 768 ? 'center' : 'flex-end',
+            justifyContent: screenWidth < 768 ? 'center' : 'flex-end',
+            width: '100%'
+        },
+        copyRightText: {
+            textAlign: 'center', // Center the text horizontally
+            fontSize: screenWidth < 768 ? 12 : 14, // Adjust the font size based on the screen width
+            marginTop: screenWidth < 768 ? 5 : 10, // Adjust the margin top based on the screen width
+        },
+        socialIcon: {
+            marginHorizontal: screenWidth < 768 ? 5 : 10, // Adjust spacing between icons
+        },
+        // ... other styles you may need
+    });
+    const maker = [
+        { key: 'TOYOTA' },
+        { key: 'MAZDA' },
+        { key: 'NISSAN' },
+        { key: 'BMW' },
+        { key: 'HONDA' },
+        { key: 'LAND ROVER' },
+        { key: 'MITSUBISHI' },
+        { key: 'ISUZU' },
+        { key: 'MERCEDES-BENZ' },
+        { key: 'JEEP' },
+        { key: 'VOLKSWAGEN' },
+    ];
+    const bodyType = [
+        { key: 'Couper' },
+        { key: 'Convertible' },
+        { key: 'Sedan' },
+        { key: 'Wagon' },
+        { key: 'Hatchback' },
+        { key: 'Van' },
+        { key: 'Truck' },
+        { key: 'SUV' },
+    ];
+    const renderItem = ({ item, index }) => {
+        // Determine column based on index
+        const isFirstColumn = index % 2 === 0;
+
+        return (
+            <View style={[styles.item, isFirstColumn ? styles.firstColumn : styles.secondColumn]}>
+                <Text style={styles.title}>{item.key}</Text>
+            </View>
+        );
+    };
+    const numColumns = screenWidth < 992 ? 1 : 2;
+
+    const renderItemBodyType = ({ item, index }) => {
+        return (
+            <View style={[styles.item, styles.firstColumn]}>
+                <Text style={styles.title}>{item.key}</Text>
+            </View>
+        );
+    };
+    return (
+        <View style={styles.footerContainer}>
+            <View style={styles.sectionContainer}>
+
+                <View style={styles.infoSection}>
+                    <Image
+                        source={{ uri: gifLogo }}
+                        resizeMode='contain'
+                        style={styles.logo}
+                    />
+                    <Text style={styles.companyAddress}>26-2 Takara Tsutsumi-cho, Toyota-city, Aichi 473-90932 Japan</Text>
+                    <Text style={styles.companyContact}>Tel +81-565-85-0602</Text>
+                    <Text>Fax +81-565-85-0606</Text>
+                    <TouchableOpacity style={styles.contactButton}>
+                        <Text style={styles.contactButtonText}>Contact Us</Text>
+                    </TouchableOpacity>
+                    <View style={styles.policyLinks}>
+                        <Text style={[styles.policyText, { borderBottomWidth: 2, borderBottomColor: '#DDD' }]}>Terms of Use</Text>
+                        <Text style={[styles.policyText, { borderBottomWidth: 2, borderBottomColor: '#DDD' }]}>Privacy Policy</Text>
+                        <Text style={[styles.policyText, { marginBottom: -2 }]}>Cookie Policy</Text>
+                    </View>
+                </View>
+                {screenWidth < 768 ? null : (
+                    <>
+                        <View style={styles.linkSection}>
+                            <Text style={styles.sectionTitle}>Contents</Text>
+                            <Text style={styles.linkText}>Used Car Stock</Text>
+                            <Text style={styles.linkText}>How to Buy</Text>
+                            <Text style={styles.linkText}>About Us</Text>
+                            <Text style={styles.linkText}>Local Introduction</Text>
+                            <Text style={styles.linkText}>Contact Us</Text>
+                        </View>
+
+                        <View style={styles.linkSection}>
+                            <Text style={styles.sectionTitle}>Makers</Text>
+                            <FlatList
+                                data={maker}
+                                renderItem={renderItem}
+                                keyExtractor={item => item.key}
+                                numColumns={numColumns}
+                                scrollEnabled={false}
+                                key={numColumns}
+                            />
+                        </View>
+
+                        <View style={styles.linkSection}>
+                            <Text style={styles.sectionTitle}>Body Types</Text>
+                            <FlatList
+                                data={bodyType}
+                                renderItem={renderItemBodyType}
+                                keyExtractor={item => item.key}
+                                scrollEnabled={false}
+                            />
+
+                        </View>
+
+                        <View style={styles.linkSection}>
+                            <Text style={styles.sectionTitle}>Find Car</Text>
+                            <Text style={styles.linkText}>Browse All Stock</Text>
+                            <Text style={styles.linkText}>Sale Cars</Text>
+                            <Text style={styles.linkText}>Recommended Cars</Text>
+                            <Text style={styles.linkText}>Luxury Cars</Text>
+                        </View>
+                    </>
+                )}
+
+            </View>
+
+            <View style={styles.socialMediaSection}>
+                <View style={styles.iconsRow}>
+                    <AntDesign name="linkedin-square" size={20} color={'blue'} />
+                    <AntDesign name="twitter" size={20} color={'blue'} />
+                    <Ionicons name="logo-facebook" size={20} color={'blue'} />
+                    <Entypo name="instagram" size={20} color={'blue'} />
+                </View>
+                <View style={styles.copyRightSection}>
+                    <Text style={styles.copyRightText}>
+                        Copyright © Real Motor Japan All Rights Reserved.
+                    </Text>
+                </View>
+            </View>
+
+        </View>
+    );
+};
+
+
+const SocialMedia = () => {
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', padding: 15 }}>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'blue', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 5 }}>
+                <AntDesign name={"heart"} size={20} color="white" style={{ marginRight: 8 }} />
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16, fontStyle: 'italic' }}>Add to Shortlist</Text>
+            </TouchableOpacity>
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-evenly',
+                alignItems: 'center',
+                width: 'auto', // Adjust the width as necessary
+                marginLeft: 10
+            }}>
+
+                <AntDesign name="facebook-square" size={25} color={'blue'} style={{ marginHorizontal: 5 }} />
+                <AntDesign name="twitter" size={25} color={'blue'} style={{ marginHorizontal: 5 }} />
+                <AntDesign name="linkedin-square" size={25} color={'blue'} style={{ marginHorizontal: 5 }} />
+                <Entypo name="instagram" size={25} color={'blue'} style={{ marginHorizontal: 5 }} />
+            </View>
+        </View>
+    );
+};
+
 const ProductDetailScreen = () => {
+
+
+    //FETCH NEW ARRIVALS
+    const [carItems, setCarItems] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            setIsLoading(true);
+            try {
+                const vehicleCollectionRef = collection(projectExtensionFirestore, 'VehicleProducts');
+                const q = query(vehicleCollectionRef, orderBy('dateAdded'), limit(5));
+
+                const querySnapshot = await getDocs(q);
+                const newItems = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                setCarItems(newItems);
+            } catch (error) {
+                console.error("Error fetching documents: ", error);
+            }
+            setIsLoading(false);
+        };
+
+        fetchItems();
+    }, []);
+    //FETCH NEW ARRIVALS
+
+
     // const totalPriceCalculation = (selectedChatData.fobPrice * selectedChatData.jpyToUsd) + (selectedChatData.m3 * selectedChatData.freightPrice);
     const { carId } = useParams();
     const navigate = useNavigate();
     const [carData, setCarData] = useState({});
-    console.log('CAR NAME',);
+    const JapanPort = carData.port
     const carName = carData.carName;
     const { userEmail } = useContext(AuthContext);
     const [userTransactions, setUserTransactions] = useState([]);
@@ -1641,36 +2641,37 @@ const ProductDetailScreen = () => {
 
     }, []);
 
-    const [imageUrl, setImageUrl] = useState('');
-    useEffect(() => {
-        const folderRef = ref(projectExtensionStorage, vehicleData.stockID);
+    // const [imageUrl, setImageUrl] = useState('');
+    // useEffect(() => {
+    //     const folderRef = ref(projectExtensionStorage, vehicleData.stockID);
 
-        // Function to fetch the first image URL for a folder
-        const fetchImageURL = async (folderRef) => {
-            try {
-                // List all items (images) in the folder
-                const result = await listAll(folderRef);
+    //     // Function to fetch the first image URL for a folder
+    //     const fetchImageURL = async (folderRef) => {
+    //         try {
+    //             // List all items (images) in the folder
+    //             const result = await listAll(folderRef);
 
-                if (result.items.length > 0) {
-                    // Get the download URL for the first image in the folder
-                    const imageUrl = await getDownloadURL(result.items[0]);
-                    // Update the imageUrl state with the new URL
-                    setImageUrl(imageUrl);
-                } else {
-                    // If the folder is empty, you can add a placeholder URL or handle it as needed
-                }
-            } catch (error) {
-                console.error('Error listing images for folder', vehicleData.stockID, ':', error);
-            }
-        };
+    //             if (result.items.length > 0) {
+    //                 // Get the download URL for the first image in the folder
+    //                 const imageUrl = await getDownloadURL(result.items[0]);
+    //                 // Update the imageUrl state with the new URL
+    //                 setImageUrl(imageUrl);
+    //             } else {
+    //                 // If the folder is empty, you can add a placeholder URL or handle it as needed
+    //             }
+    //         } catch (error) {
+    //             console.error('Error listing images for folder', vehicleData.stockID, ':', error);
+    //         }
+    //     };
 
-        // Fetch image URL for the vehicleData's referenceNumber
-        fetchImageURL(folderRef);
-    }, [vehicleData.stockID]);
+    //     // Fetch image URL for the vehicleData's referenceNumber
+    //     fetchImageURL(folderRef);
+    // }, [vehicleData.stockID]);
 
     const [allImageUrl, setAllImageUrl] = useState([]);
+
     useEffect(() => {
-        const folderRef = ref(projectExtensionStorage, vehicleData.stockID);
+        const folderRef = ref(projectExtensionStorage, carId);
         const fetchAllImageUrl = async () => {
             try {
                 const result = await listAll(folderRef);
@@ -1684,29 +2685,9 @@ const ProductDetailScreen = () => {
             }
         };
         fetchAllImageUrl(folderRef);
-    }, [vehicleData.stockID])
+    }, [carId])
 
-    const renderImage = ({ item }) => (
-        <Image
-            source={{ uri: item }}
-            style={{
-                flex: 1, // Take up all available space within the parent container
-                aspectRatio: 1, // Maintain aspect ratio (square images)
-                margin: 5, // Add margin between images
-                width: '100%',
-                height: 150,
-                resizeMode: 'cover' // Add border radius to images for rounded corners
-            }}
-        />
-    );
-    const scrollViewRef = useRef(null);
 
-    const scrollToTop = () => {
-        scrollViewRef.current.scrollTo({ y: 0, animated: true });
-    };
-    useEffect(() => {
-        scrollToTop();
-    }, []);
 
     //COUNTRY PICKER
     const [selectedCountry, setSelectCountry] = useState(null);
@@ -1776,10 +2757,10 @@ const ProductDetailScreen = () => {
 
     };
 
-    const toggleAnim = useRef(new Animated.Value(0)).current;
+    const toggleAnim = useRef(new AnimatedRN.Value(0)).current;
     const [isToggleDisabled, setIsToggleDisabled] = useState(false);
     const handleToggle = () => {
-        Animated.timing(toggleAnim, {
+        AnimatedRN.timing(toggleAnim, {
             toValue: toggle ? 0 : 1,
             duration: 100, // Increased duration for a more noticeable animation
             useNativeDriver: true, // Change this based on what you are animating
@@ -1856,7 +2837,7 @@ const ProductDetailScreen = () => {
 
     // Separate effect for handling the animation when the toggle state changes
     useEffect(() => {
-        Animated.timing(toggleAnim, {
+        AnimatedRN.timing(toggleAnim, {
             toValue: toggle ? 1 : 0,
             duration: 100,
             useNativeDriver: true,
@@ -1892,7 +2873,11 @@ const ProductDetailScreen = () => {
     //get currency
 
     //profit map
-    console.log('PROFIT PRICE', profitMap)
+
+    const [freightOrigPrice, setFreightOrigPrice] = useState('');
+
+
+    console.log('PROFIT PRICE DAR ES', freightOrigPrice)
     useEffect(() => {
         const fetchInspection = async () => {
 
@@ -1905,9 +2890,23 @@ const ProductDetailScreen = () => {
                     const selectedPortData = docSnap.data()[selectedPort];
 
                     if (selectedPortData) {
-                        const profitPrice = selectedPortData.profitPrice;
-                        setProfitMap(profitPrice);
 
+
+                        setProfitMap(selectedPortData.profitPrice || '');
+                        if (!JapanPort) {
+                            console.error('NO PORT DETECTED')
+                            return;
+                        } else {
+                            if (JapanPort === "Nagoya") {
+                                setFreightOrigPrice(selectedPortData.nagoyaPrice || ''); // Use fallback if undefined
+                            } else if (JapanPort === "Kobe") {
+                                setFreightOrigPrice(selectedPortData.kobePrice || ''); // Use fallback if undefined
+                            } else if (JapanPort === "Yokohama") {
+                                setFreightOrigPrice(selectedPortData.yokohamaPrice || ''); // Use fallback if undefined
+                            } else if (JapanPort === "Kyushu") {
+                                setFreightOrigPrice(selectedPortData.kyushuPrice || ''); // Use fallback if undefined
+                            }
+                        }
                     } else {
                     }
                 } else {
@@ -1923,183 +2922,232 @@ const ProductDetailScreen = () => {
     }, [selectedPort]);
     //profit map
 
+    //fetch ip address
+    const [ip, setIp] = useState('');
+    const [ipCountry, setIpCountry] = useState('');
+
+    // useEffect to fetch IP and Country
+    useEffect(() => {
+        async function fetchIpAndCountry() {
+            try {
+                // Fetch the IP address
+                const ipResponse = await axios.get('https://api.ipify.org?format=json');
+                const fetchedIp = ipResponse.data.ip;
+                setIp(fetchedIp);
+
+                // Fetch IP Country
+                if (fetchedIp) {
+                    const countryResponse = await axios.get(`https://ipapi.co/${fetchedIp}/json/`);
+                    const fetchedIpCountry = countryResponse.data.country_name;
+                    setIpCountry(fetchedIpCountry);
+                }
+            } catch (error) {
+                console.error("Error fetching IP information:", error);
+            }
+        }
+
+        fetchIpAndCountry();
+    }, []);
+    //fetch ip address
+
+
+    //is check PRIVACY
+    const [isCheck, setIsCheck] = useState(false);
+    const checkButton = (option) => {
+        setIsCheck(option)
+    }
+    //is check PRIVACY
+
     return (
-        <View style={{ height: '100vh', flex: 3 }}>
+        <View style={{ flex: 3 }}>
             <StickyHeader />
 
-            <ScrollView ref={scrollViewRef}>
 
-                <View style={{ flexDirection: screenWidth <= 992 ? null : 'row', alignItems: screenWidth <= 992 ? null : 'center', maxWidth: 1550, alignSelf: 'center', width: '100%', justifyContent: 'space-between' }}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 28, textAlign: 'left', marginBottom: 5 }}>
-                            {vehicleData.carName} C CLASS
-                        </Text>
-                        <View style={{ flexDirection: 'row', width: '100%' }}>
-                            <View style={{ maxWidth: screenWidth <= 992 ? '100%' : 500, flex: 3 }}>
-                                <Image
-                                    source={{ uri: imageUrl }}
-                                    style={{ borderRadius: 5, maxWidth: screenWidth <= 992 ? '100%' : 500, height: 370, resizeMode: screenWidth <= 1280 ? 'contain' : 'cover' }}
-
-                                />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <CarouselSample allImageUrl={allImageUrl} />
-                            </View>
-                        </View>
-                    </View>
-
-
-                    <View style={{ padding: 5, flex: 1 }}>
-                        <View style={{ maxWidth: screenWidth <= 992 ? '100%' : 750, width: '100%', alignSelf: screenWidth <= 992 ? 'center' : null, height: '100%', justifyContent: 'center' }}>
-                            <Text style={{ fontWeight: 'bold', fontSize: 28, textAlign: 'left', marginBottom: 5 }}>
-                                {vehicleData.carName} C CLASS
-                            </Text>
-                            <View style={{ backgroundColor: '#E5EBFD' }}>
-                                <View style={{ flexDirection: 'row', padding: 10, zIndex: 50, flex: 1, paddingHorizontal: 20 }}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text>Current FOB Price</Text>
-                                        <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: 22, fontWeight: '700' }}>{formattedFobDollar}</Text></Text>
-
-
-
-                                    </View>
-
-
-
-
-                                    <View style={{ flex: 1 }}>
-                                        <Text>Total Estimated Price</Text>
-                                        <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: 22, fontWeight: '700' }}>{calculatePrice ? calculatePrice : '000'}</Text></Text>
-
-
-                                    </View>
-                                </View>
-
-
-
-                            </View>
-
-
-                            <View style={{ flexDirection: 'row', padding: 10, backgroundColor: '#F2F5FE', paddingHorizontal: 20, zIndex: 5 }}>
-                                <View style={{ flex: 1, zIndex: -2 }}>
-                                    <SearchCountry setSelectPort={setSelectPort} handleSelectCountry={handleSelectCountry} selectedCountry={selectedCountry} setSelectCountry={setSelectCountry} />
-                                    <View style={{ flexDirection: getFlexDirection(screenWidth), alignItems: screenWidth <= 1075 ? 'flex-start' : 'center', justifyContent: 'space-between', zIndex: -2 }}>
-                                        <View>
-                                            <Inspection
-                                                isToggleDisabled={isToggleDisabled}
-                                                toggleAnim={toggleAnim}
-                                                handleToggle={handleToggle}
-                                                switchTranslate={switchTranslate}
-                                                switchColor={switchColor}
-                                                setToggle={setToggle} toggle={toggle}
-                                                handleToggleInspection={handleToggleInspection}
-                                                selectedCountry={selectedCountry} />
-                                        </View>
-                                        <View style={{ marginTop: 5 }}>
-                                            <Insurance />
-                                        </View>
-                                    </View>
-
-                                </View>
-
-                                <View style={{ flex: 1, zIndex: 5 }}>
-                                    <SearchPort selectedCountry={selectedCountry} handleSelectPort={handleSelectPort} selectedPort={selectedPort} />
-                                    <Calculate selectedPort={selectedPort} setProfitMap={setProfitMap} setCalculatePrice={setCalculatePrice} totalPriceCalculation={totalPriceCalculation} />
-                                </View>
-                            </View>
-                            {/* <View style={{ paddingLeft: 10 }}>
-                                        <Warranty />
-                                    </View> */}
-                            <View style={{ padding: 16, backgroundColor: '#f5f5f5', flex: 1 }}>
-                                <View style={{
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: 16
-                                }}>
-                                    <Text style={{ fontSize: 16, color: '#333' }}>
-                                        Please sign up before initiating a chat with us
-                                    </Text>
-                                    <TouchableOpacity style={{
-                                        backgroundColor: '#FFA500', // Orange color for the 'Sign Up Free' button
-                                        paddingHorizontal: 20,
-                                        paddingVertical: 10,
-                                        borderRadius: 5
-                                    }}>
-                                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
-                                            Sign Up Free
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                                <TextInput
-                                    style={{
-                                        borderWidth: 1,
-                                        borderColor: '#ddd',
-                                        padding: 10,
-                                        borderRadius: 5,
-                                        marginBottom: 16,
-                                        fontSize: 16,
-                                        textAlignVertical: 'top'
-                                    }}
-                                    placeholder="Write your message here"
-                                    multiline={true}
-                                    numberOfLines={4}
-                                />
-
-                                <View style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    marginBottom: 16
-                                }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-
-                                        <Text style={{ marginLeft: 8, fontSize: 16 }}>I agree to Privacy Policy and Terms of Agreement</Text>
-                                    </View>
-                                </View>
-                                <View style={{
-                                    marginHorizontal: '20%',
-                                    justifyContent: 'center',
-
-                                }}>
-                                    <MakeAChat
-                                        selectedCountry={selectedCountry}
-                                        selectedPort={selectedPort}
-                                        currency={currency}
-                                        profitMap={profitMap}
-                                        inspectionIsRequired={inspectionIsRequired}
-                                        inspectionName={inspectionName}
-                                        carId={carId} carName={carName} userEmail={userEmail} setToggle={setToggle} toggle={toggle} />
-                                </View>
-
-                            </View>
-
-                        </View>
-                    </View>
-
-
-                </View>
+            <View style={{ flex: 1, maxWidth: 1500, width: '100%', margin: 'auto', flexDirection: screenWidth < 992 ? 'column' : 'row', padding: '2%', }}>
 
                 <View style={{
-
-                    marginRight: screenWidth > 1600 ? 20 : 0,
-                    flexDirection: screenWidth <= 992 ? null : 'row',
-                    maxWidth: 1500,
-                    alignSelf: 'center',
-                    width: screenWidth > 1600 ? '100%' : '97%',
-
-
+                    flex: screenWidth < 992 ? null : 3,
                 }}>
-                    <View style={{ marginTop: 10, width: '100%', flexShrink: 1, marginRight: 5 }}>
-                        <GetDataSpecifications />
-                    </View>
-                    <View style={{ marginTop: 10, width: '100%', flexShrink: 1 }}>
-                        <GetDataFeature />
-                    </View>
+                    <View style={{ flex: 2 }} />
+
+                    <Text style={{ fontSize: '2em', fontWeight: 'bold' }}>{carName}</Text>
+                    <Text style={{ fontSize: 12, color: 'blue', }}>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </Text>
+                    {screenWidth < 992 && (
+                        <SocialMedia />
+                    )}
+                    <View style={{ flex: 1 }} />
+                    <CarouselSample allImageUrl={allImageUrl} />
+
+
                 </View>
 
-                {/* 
+                {screenWidth > 992 && (
+                    <View
+                        style={{ marginHorizontal: '1%' }}
+                    />
+                )}
+
+                <View style={{ flex: 3, width: '100%', zIndex: -100, marginTop: screenWidth < 992 ? 10 : null }}>
+                    {screenWidth > 992 && (
+                        <SocialMedia />
+                    )}
+                    <View style={{ backgroundColor: '#E5EBFD', borderTopRightRadius: 5, borderTopLeftRadius: 5 }}>
+                        <View style={{ flexDirection: 'row', padding: 10, zIndex: 50, flex: 1, paddingHorizontal: 20 }}>
+                            <View style={{ flex: 1, marginLeft: 5 }}>
+
+                                <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: '3em', fontWeight: '700' }}>{formattedFobDollar}</Text></Text>
+                                <Text style={{ color: '#a5a5a5' }}>Current FOB Price</Text>
+
+
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 5 }}>
+
+
+                                <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: '3em', fontWeight: '700' }}>{calculatePrice ? calculatePrice : '000'}</Text></Text>
+                                <Text style={{ color: '#a5a5a5' }}>Total Estimated Price</Text>
+                            </View>
+                        </View>
+
+
+
+                    </View>
+
+
+                    <View style={{ padding: 10, backgroundColor: '#F2F5FE', paddingHorizontal: 20, zIndex: 5, borderBottomLeftRadius: 5, borderBottomRightRadius: 5 }}>
+                        <View style={{ zIndex: 5, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                            <SearchCountry setSelectPort={setSelectPort} handleSelectCountry={handleSelectCountry} selectedCountry={selectedCountry} setSelectCountry={setSelectCountry} />
+
+                            <SearchPort selectedCountry={selectedCountry} handleSelectPort={handleSelectPort} selectedPort={selectedPort} />
+
+                        </View>
+
+                        <View style={{ zIndex: -2, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', padding: '2%' }}>
+                            <View style={{ flex: 3, zIndex: -2, }}>
+                                <Inspection
+                                    isToggleDisabled={isToggleDisabled}
+                                    toggleAnim={toggleAnim}
+                                    handleToggle={handleToggle}
+                                    switchTranslate={switchTranslate}
+                                    switchColor={switchColor}
+                                    setToggle={setToggle} toggle={toggle}
+                                    handleToggleInspection={handleToggleInspection}
+                                    selectedCountry={selectedCountry} />
+                            </View>
+                            <View style={{ flex: 3, zIndex: -2, }}>
+                                <Insurance />
+                            </View>
+                        </View>
+                        <Calculate selectedPort={selectedPort} setProfitMap={setProfitMap} setCalculatePrice={setCalculatePrice} totalPriceCalculation={totalPriceCalculation} />
+
+                    </View>
+
+
+
+                    {/* <View style={{ paddingLeft: 10 }}>
+                                        <Warranty />
+                                    </View> */}
+                    <View style={{ padding: 16, backgroundColor: '#f5f5f5', marginTop: 5 }}>
+                        <View style={{ paddingHorizontal: 12 }}>
+                            <View style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: 16,
+                                flex: 1
+                            }}>
+                                <Text style={{ fontSize: 16, color: '#FFA500' }}>
+                                    Please sign up before initiating a chat with us
+                                </Text>
+                                <TouchableOpacity style={{
+                                    backgroundColor: '#FFA500', // Orange color for the 'Sign Up Free' button
+                                    paddingHorizontal: 20,
+                                    paddingVertical: 10,
+                                    borderRadius: 5
+                                }}>
+                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                                        Sign Up Free
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <TextInput
+                                style={{
+                                    borderWidth: 1,
+                                    borderColor: '#ddd',
+                                    padding: 10,
+                                    borderRadius: 5,
+                                    marginBottom: 16,
+                                    fontSize: 16,
+                                    textAlignVertical: 'top',
+                                    backgroundColor: 'white',
+                                    height: 90
+                                }}
+                                placeholder="Write your message here"
+                                multiline={true}
+                                numberOfLines={2}
+                            />
+
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {isCheck ? (
+                                    <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
+                                ) : (
+                                    <Feather name='square' size={20} onPress={() => checkButton(true)} />
+                                )}
+                                <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
+                            </View>
+
+                            <View style={{
+                                marginHorizontal: '20%',
+                                justifyContent: 'center',
+                                flex: 1
+
+                            }}>
+                                <MakeAChat
+                                    ip={ip}
+                                    ipCountry={ipCountry}
+                                    freightOrigPrice={freightOrigPrice}
+                                    JapanPort={JapanPort}
+                                    selectedCountry={selectedCountry}
+                                    selectedPort={selectedPort}
+                                    currency={currency}
+                                    profitMap={profitMap}
+                                    inspectionIsRequired={inspectionIsRequired}
+                                    inspectionName={inspectionName}
+                                    carId={carId} carName={carName} userEmail={userEmail} setToggle={setToggle} toggle={toggle} />
+                            </View>
+                        </View>
+                    </View>
+
+                </View>
+
+
+
+            </View>
+
+            <View style={{
+
+                paddingHorizontal: '2%',
+                marginRight: screenWidth > 1600 ? 20 : 0,
+                flexDirection: screenWidth <= 992 ? null : 'row',
+                maxWidth: 1500,
+                alignSelf: 'center',
+                width: screenWidth > 1600 ? '100%' : '97%',
+                zIndex: -99
+            }}>
+                <View style={{ marginTop: 10, marginRight: 5, flex: screenWidth <= 992 ? null : 3, }}>
+                    <GetDataSpecifications />
+                </View>
+                <View style={{ marginTop: 10, flex: screenWidth <= 992 ? null : 3, }}>
+                    <GetDataFeature />
+                </View>
+            </View>
+            <View style={{ backgroundColor: 'black', marginTop: '2%' }}>
+                <SearchByTypes carItems={carItems} />
+            </View>
+            {/* 
                 <View style={{ alignSelf: 'center' }}>
                     <View style={[{ flexDirection: screenWidth > 768 ? 'row' : 'column', width: screenWidth > 1280 ? 1188 : '100%', alignItems: 'flex-start' }, styles.containerBox]}>
                         <View style={[{ width: screenWidth > 1280 ? 594 : '50%', padding: 10, marginRight: 'auto' }, { width: screenWidth <= 768 ? '100%' : '50%' }]}>
@@ -2120,8 +3168,8 @@ const ProductDetailScreen = () => {
 
 
 
-            </ScrollView>
 
+            <StickyFooter />
         </View>
     );
 };
@@ -2134,7 +3182,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     categoryContainer: {
-        marginBottom: 20,
+        marginBottom: 0,
     },
     category: {
         fontSize: 20,

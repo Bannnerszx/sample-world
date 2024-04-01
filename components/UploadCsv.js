@@ -2143,51 +2143,52 @@ const UploadCsv = () => {
     };
     const checkPort = (value) => {
         const options = {
-            "本社": { port: "Nagoya", portID: "N" },
-            "HD　みよし": { port: "Nagoya", portID: "N" },
-            "輸出(神戸）": { port: "Kobe", portID: "K" },
-            "輸出（NZ)": { port: "Nagoya", portID: "N" },
-            "輸出（横浜）": { port: "Yokohama", portID: "Y" }, // Removed the extra space here
-            "輸出（九州）": { port: "Kyushu", portID: "F" },
-            "輸出（本社）": { port: "Nagoya", portID: "N" },
-            "輸出（名港）": { port: "Nagoya", portID: "N" },
-            "自販の在庫": { port: "Nagoya", portID: "N" },
-            "HDﾄﾗｯｸの在庫": { port: "Nagoya", portID: "N" },
-            "トラスタ": { port: "Nagoya", portID: "N" },
-            "書類入庫": { port: "Nagoya", portID: "N" },
-            "代車": { port: "Nagoya", portID: "N" },
-            "Zambia Office ": { port: "Nagoya", portID: "N" },
-            "NZ Office": { port: "Nagoya", portID: "N" },
-            "Tanzania Office": { port: "Nagoya", portID: "N" },
-            "社用車": { port: "Nagoya", portID: "N" },
-            "豊南自動車": { port: "Nagoya", portID: "N" },
-            "本社（AS）": { port: "Nagoya", portID: "N" },
-            "本地ﾔｰﾄﾞ（AS）": { port: "Nagoya", portID: "N" },
-            "輸出（本社AS）": { port: "Nagoya", portID: "N" },
-            "トラック市第1展示場": { port: "Nagoya", portID: "N" },
-            "日立ﾘｰｽ": { port: "Nagoya", portID: "N" },
-            "ﾘｺｰﾘｰｽ": { port: "Nagoya", portID: "N" },
-            "ﾘｺｰﾛｰﾝ": { port: "Nagoya", portID: "N" },
-            "三井ﾘｰｽ": { port: "Nagoya", portID: "N" },
-            "三井ﾛｰﾝ": { port: "Nagoya", portID: "N" },
-            "SMFLﾘｰｽ": { port: "Nagoya", portID: "N" },
-            "SMFLﾛｰﾝ": { port: "Nagoya", portID: "N" },
-            "RMJ輸出(三利）": { port: "Nagoya", portID: "N" },
-            "輸出　Zambia": { port: "Nagoya", portID: "N" },
-            "ﾎﾞﾃﾞｨｰ": { port: "Nagoya", portID: "N" },
-            "ﾗｼﾞｺﾝ": { port: "Nagoya", portID: "N" },
-            "台風　六甲": { port: "Nagoya", portID: "N" },
-            "トラック王国": { port: "Nagoya", portID: "N" },
-            "HD　明石": { port: "Nagoya", portID: "N" },
-            "田代ヤード": { port: "Nagoya", portID: "N" },
-            "自販　明石": { port: "Nagoya", portID: "N" },
-            "ｵｰｸﾈｯﾄﾔｰﾄﾞ": { port: "Nagoya", portID: "N" },
-            "共有ﾄﾗｯｸ・輸出": { port: "Nagoya", portID: "N" },
-            "田代　共有": { port: "Nagoya", portID: "N" },
-            "償却": { port: "Nagoya", portID: "N" },
-            "MIRIVE愛知": { port: "Nagoya", portID: "N" },
-            "セントパーツ": { port: "Nagoya", portID: "N" }
+            "本社": { port: "Nagoya", portID: "N", value: 0 },
+            "HD　みよし": { port: "Nagoya", portID: "N", value: 1 },
+            "輸出(神戸）": { port: "Kobe", portID: "K", value: 2 },
+            "輸出（NZ)": { port: "Nagoya", portID: "N", value: 3 },
+            "輸出（横浜）": { port: "Yokohama", portID: "Y", value: 4 },
+            "輸出（九州）": { port: "Kyushu", portID: "F", value: 5 },
+            "輸出（本社）": { port: "Nagoya", portID: "N", value: 6 },
+            "輸出（名港）": { port: "Nagoya", portID: "N", value: 7 },
+            "自販の在庫": { port: "Nagoya", portID: "N", value: 8 },
+            "HDﾄﾗｯｸの在庫": { port: "Nagoya", portID: "N", value: 9 },
+            "トラスタ": { port: "Nagoya", portID: "N", value: 10 },
+            "書類入庫": { port: "Nagoya", portID: "N", value: 11 },
+            "代車": { port: "Nagoya", portID: "N", value: 12 },
+            "Zambia Office ": { port: "Nagoya", portID: "N", value: 13 },
+            "NZ Office": { port: "Nagoya", portID: "N", value: 14 },
+            "Tanzania Office": { port: "Nagoya", portID: "N", value: 15 },
+            "社用車": { port: "Nagoya", portID: "N", value: 16 },
+            "豊南自動車": { port: "Nagoya", portID: "N", value: 17 },
+            "本社（AS）": { port: "Nagoya", portID: "N", value: 18 },
+            "本地ﾔｰﾄﾞ（AS）": { port: "Nagoya", portID: "N", value: 19 },
+            "輸出（本社AS）": { port: "Nagoya", portID: "N", value: 20 },
+            "トラック市第1展示場": { port: "Nagoya", portID: "N", value: 21 },
+            "日立ﾘｰｽ": { port: "Nagoya", portID: "N", value: 22 },
+            "ﾘｺｰﾘｰｽ": { port: "Nagoya", portID: "N", value: 23 },
+            "ﾘｺｰﾛｰﾝ": { port: "Nagoya", portID: "N", value: 24 },
+            "三井ﾘｰｽ": { port: "Nagoya", portID: "N", value: 25 },
+            "三井ﾛｰﾝ": { port: "Nagoya", portID: "N", value: 26 },
+            "SMFLﾘｰｽ": { port: "Nagoya", portID: "N", value: 27 },
+            "SMFLﾛｰﾝ": { port: "Nagoya", portID: "N", value: 28 },
+            "RMJ輸出(三利）": { port: "Nagoya", portID: "N", value: 29 },
+            "輸出　Zambia": { port: "Nagoya", portID: "N", value: 30 },
+            "ﾎﾞﾃﾞｨｰ": { port: "Nagoya", portID: "N", value: 31 },
+            "ﾗｼﾞｺﾝ": { port: "Nagoya", portID: "N", value: 32 },
+            "台風　六甲": { port: "Nagoya", portID: "N", value: 33 },
+            "トラック王国": { port: "Nagoya", portID: "N", value: 34 },
+            "HD　明石": { port: "Nagoya", portID: "N", value: 35 },
+            "田代ヤード": { port: "Nagoya", portID: "N", value: 36 },
+            "自販　明石": { port: "Nagoya", portID: "N", value: 37 },
+            "ｵｰｸﾈｯﾄﾔｰﾄﾞ": { port: "Nagoya", portID: "N", value: 38 },
+            "共有ﾄﾗｯｸ・輸出": { port: "Nagoya", portID: "N", value: 39 },
+            "田代　共有": { port: "Nagoya", portID: "N", value: 40 },
+            "償却": { port: "Nagoya", portID: "N", value: 41 },
+            "MIRIVE愛知": { port: "Nagoya", portID: "N", value: 42 },
+            "セントパーツ": { port: "Nagoya", portID: "N", value: 43 }
         };
+
 
         for (let key in options) {
             if (value.includes(key)) {
@@ -2583,7 +2584,7 @@ const UploadCsv = () => {
 
     console.log("Ranked car models:", sortedCarModelCountsArray);
     const iconv = require('iconv-lite');
-    const handleFileUpload = async () => { 
+    const handleFileUpload = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({ type: 'application/csv' });
 

@@ -24,6 +24,7 @@ import LocalInformation from './components/homepage/LocalInformation';
 import HowToBuy from './components/homepage/HowToBuy';
 import UploadCsv from './components/UploadCsv';
 import TestServer from './TestServerCodes/DatabaseServer';
+import AnimationSample from './components/homepage/AnimationSample';
 const widthSize = Dimensions.get('window').width
 const HEADER_HEIGHT = 160;
 const styles = StyleSheet.create({
@@ -145,7 +146,7 @@ const App = () => {
             path="/SearchCar"
             element={<SearchCar />}
           />
-           <Route
+          <Route
             exact
             path="/TestServer"
             element={<TestServer />}
@@ -154,6 +155,11 @@ const App = () => {
             exact
             path='/SearchCarDesign'
             element={<SearchCarDesignAlpha />}
+          />
+          <Route
+            exact
+            path='/Animation'
+            element={<AnimationSample />}
           />
           <Route exact path="/VerifyEmail" element={<EmailVerificationHandler />} />
           <Route exact path="/ProfileFormTransaction" element={userEmails ? <ProfileFormTransaction /> : <Navigate to="/LoginForm" />} />

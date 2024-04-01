@@ -2396,6 +2396,7 @@ const AboutUs = () => {
                     <View style={{ flex: 1, justifyContent: 'center', height: '100%' }}>
                         <GestureHandlerRootView style={{ flex: 1 }}>
                             <Carousel
+                                vertical
                                 mode="parallax"
                                 ref={carouselRef}
                                 autoPlay={true}
