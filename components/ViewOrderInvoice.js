@@ -292,7 +292,7 @@ const ViewOrderInvoice = () => {
         };
     }, [chatId]);
     return (
-        <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
             <TouchableOpacity onPress={() => generatePDFs()}>
                 <Text style={{ color: 'red', textDecorationLine: 'underline' }}>{invoiceNumber || chatField.InvoiceNumber ? `${invoiceNumber}` || `${chatField.InvoiceNumber}` : 'NO INVOICE ISSUED YET'}</Text>
             </TouchableOpacity>

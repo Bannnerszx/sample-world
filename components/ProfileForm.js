@@ -162,6 +162,41 @@ const ProfileForm = () => {
     setShowDropdown(!showDropdown);
   };
   //dropdown ends here
+
+
+
+
+
+
+
+  const appendDataToCSV = async () => {
+    try {
+      const response = await fetch('https://rmj-api.duckdns.org/modifyCsv/append-csv-clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: 'jackall',
+          password: 'U2FsdGVkX18WCFA/fjC/fB6DMhtOOIL/xeVF2tD2b7c=',
+          data: { id: profileData?.j_id, client_name: profileData?.textFirst + profileData?.textLast, address: profileData?.textZip + profileData?.textStreet + profileData?.city + profileData?.country, phone: profileData?.textPhoneNumber, email: userEmail, country_name: profileData?.country, note: ''}, // Adjust based on your CSV structure
+        }),
+      });
+
+      if (response.ok) {
+        console.log('Success', 'Data appended successfully to CSV.');
+      } else {
+        console.log('Error', 'Failed to append data to CSV.');
+      }
+    } catch (error) {
+      console.error(error);
+      console.log('Error', 'An error occurred.');
+    }
+  };
+  
+  useEffect(()=> {
+    appendDataToCSV();
+  },[profileData])
   return (
 
     <View style={{ flex: 3 }}>

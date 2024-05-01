@@ -400,7 +400,7 @@ const ViewInvoice = () => {
 
 
     return (
-        <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
             <TouchableOpacity onPress={() => generatePDFs()} style={{ padding: 5, justifyContent: 'center' }}>
                 <Text style={{ color: 'red', fontWeight: '700', textDecorationLine: 'underline' }}>Proforma Invoice</Text>
             </TouchableOpacity>

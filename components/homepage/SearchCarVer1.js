@@ -8,7 +8,7 @@ import { where, collection, doc, getDocs, query, onSnapshot, limit, startAfter, 
 import { listAll, ref, getDownloadURL } from "firebase/storage";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthProvider";
-
+import SvgCompilations from "../../assets/SvgCompilations";
 const StickyHeader = ({ setVehicleData, setLastVisibleDoc, searchText, fetchData, setSearchText, handleClear, setCarMakes, carMakes, handleClearMake, handleSearchTextChange }) => {
     const [scrollY] = useState(new Animated.Value(0));
     const textInputRef = useRef(null);

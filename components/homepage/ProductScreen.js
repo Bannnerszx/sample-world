@@ -3,13 +3,13 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Dimensions
 import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, Fontisto, MaterialCommunityIcons } from 'react-native-vector-icons';
 import { firebaseConfig, db, where, getFirestore } from '../../firebaseConfig';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { doc, getDoc, onSnapshot, serverTimestamp, addDoc, collection, getDocs, setDoc, query, orderBy, limit } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, addDoc, collection, getDocs, setDoc, query, orderBy, limit, arrayUnion, updateDoc } from "firebase/firestore";
 import { AuthContext } from '../../context/AuthProvider';
 import logo4 from '../../assets/RMJ logo for flag transparent.png'
 import carSample from '../../assets/2.jpg'
 import { projectExtensionFirestore, projectExtensionFirebase, projectExtensionStorage } from '../../firebaseConfig';
 import { getStorage, ref, listAll, getDownloadURL, } from 'firebase/storage';
-import axios from 'axios';
+import axios, { isCancel } from 'axios';
 import { FlatGrid } from 'react-native-super-grid';
 import gifLogo from '../../assets/rename.gif'
 import moment from 'moment';
@@ -138,7 +138,7 @@ const StickyHeader = () => {
         </AnimatedRN.View>
     );
 };
-const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry, setSelectPort }) => {
+const SearchCountry = ({ setIsError, isError, handleSelectCountry, selectedCountry, setSelectCountry, setSelectPort }) => {
     const { userEmail } = useContext(AuthContext);
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
@@ -232,7 +232,7 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
                     backgroundColor: '#fff',
                     flexDirection: 'row',
                     alignItems: 'center',
-                    borderColor: '#d5d5d5',
+                    borderColor: isError === true ? 'red' : '#d5d5d5',
                     borderWidth: 1,
                     borderRadius: 3
                 }}
@@ -274,7 +274,7 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
                         keyExtractor={item => item}
                         renderItem={({ item }) => (
                             <Pressable
-                                onPress={() => { handleSelectCountry(item); handleIsActive() }}
+                                onPress={() => { handleSelectCountry(item); handleIsActive(); setIsError(false) }}
                             >
                                 <Text style={{
                                     padding: 10, // Adjust padding as needed
@@ -292,7 +292,8 @@ const SearchCountry = ({ handleSelectCountry, selectedCountry, setSelectCountry,
         </View>
     )
 };
-const SearchPort = ({ selectedCountry, handleSelectPort, selectedPort }) => {
+const SearchPort = ({ isErrorPort, setIsErrorPort, selectedCountry, handleSelectPort, selectedPort }) => {
+    console.log('isErrorPort', isErrorPort)
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
         setIsActive(!isActive)
@@ -343,7 +344,7 @@ const SearchPort = ({ selectedCountry, handleSelectPort, selectedPort }) => {
                     backgroundColor: '#fff',
                     flexDirection: 'row',
                     alignItems: 'center',
-                    borderColor: '#d5d5d5',
+                    borderColor: isErrorPort === true ? 'red' : '#d5d5d5',
                     borderWidth: 1,
                     borderRadius: 3
                 }}
@@ -383,7 +384,7 @@ const SearchPort = ({ selectedCountry, handleSelectPort, selectedPort }) => {
                         keyExtractor={item => item}
                         renderItem={({ item }) => (
                             <Pressable
-                                onPress={() => { handleIsActive(); handleSelectPort(item); }}
+                                onPress={() => { handleIsActive(); handleSelectPort(item); setIsErrorPort(false) }}
                             >
                                 <Text style={{
                                     padding: 10, // Adjust padding as needed
@@ -402,7 +403,7 @@ const SearchPort = ({ selectedCountry, handleSelectPort, selectedPort }) => {
     )
 };
 
-const Insurance = () => {
+const Insurance = ({ setInsurance, insurance, handleToggleInsurance }) => {
     const styles = StyleSheet.create({
         switch: {
             width: 50, // Width of the outer switch component
@@ -432,6 +433,7 @@ const Insurance = () => {
         }).start();
 
         setToggle(!toggle);
+        setInsurance(!toggle)
     };
 
     // Interpolate values for moving the switch and changing the background color
@@ -1152,13 +1154,10 @@ const GetDataSpecifications = () => {
 };
 
 
-const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
+const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInputRef, isCheck, ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
     //MAKE MODAL
 
 
-    console.log('Received inspectionName:', inspectionName);
-
-    console.log('Received inspectionIsRequired:', inspectionIsRequired);
 
     const { login } = useContext(AuthContext);
     //SEND INQUIRY
@@ -1253,8 +1252,9 @@ const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry
     const [userTransactions, setUserTransactions] = useState([]);
     const handleCreateConversation = async () => {
         //MAKE INQUIRY
+        const textInput = textInputRef.current;
         if (!userEmail) {
-            // If not logged in, redirect to the login form
+
             navigate('/LoginForm');
             return;
         }
@@ -1262,6 +1262,14 @@ const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry
             console.error('Invalid product data or missing id:', carData);
             return; // Exit the function to prevent further errors
         }
+        if (!isCheck || !selectedCountry || !selectedPort) {
+            setIsErrorPort(true);
+            setIsError(true);
+            console.error('PLEASE CHECK THE PRIVACY')
+            return;
+        }
+
+
 
         const productIdString = carId;
         console.log('CAR ID: ', productIdString);
@@ -1289,18 +1297,18 @@ const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry
         const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
         //formatted time
         try {
-            const transactionRefExtension = doc(collection(projectExtensionFirestore, 'accounts', userEmailAddress, 'transactions'), productIdString);
+            // const transactionRefExtension = doc(collection(projectExtensionFirestore, 'accounts', userEmailAddress, 'transactions'), productIdString);
 
-            const transacionDocExtension = await getDoc(transactionRefExtension);
+            // const transacionDocExtension = await getDoc(transactionRefExtension);
 
 
-            if (transacionDocExtension.exists()) {
-                openAlreadyInquiredModal();
-                return;
-            }
+            // if (transacionDocExtension.exists()) {
+            //     openAlreadyInquiredModal();
+            //     return;
+            // }
 
-            // If the product is not already in transactions, add it
-            setUserTransactions((prevTransactions) => [...prevTransactions, carData]);
+            // // If the product is not already in transactions, add it
+            // setUserTransactions((prevTransactions) => [...prevTransactions, carData]);
 
             // Add the product to the "Transactions" collection in Firebase
 
@@ -1319,12 +1327,22 @@ const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry
             //NEW DATE FEATURE
             // Create a new message document in the chat conversation with the formatted timestamp as the document ID
             const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', chatId, 'messages'));
+            const accountTransaction = doc(projectExtensionFirestore, 'accounts', userEmail);
+            const newTransaction = {
 
+                carName: carData?.carName,
+                imageUrl: allImageUrl[0],
+                referenceNumber: carData?.referenceNumber,
+                stockId: carData?.stockID
+            }
+            await updateDoc(accountTransaction, {
+                transactions: arrayUnion(newTransaction)
+            })
 
             const messageData = {
 
                 sender: userEmail, // Sender's email
-                text: `You are now inquiring with this product.`,
+                text: textInput ? textInput : `You are now inquiring with this product.`,
                 timestamp: formattedTime,
                 ip: ip,
                 ipCountry: ipCountry
@@ -1364,7 +1382,7 @@ const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry
             lastMessageDate: formattedTime,
             read: false,
             readBy: [],
-            lastMessage: 'You are now inquiring with this product.',
+            lastMessage: textInput ? textInput : 'You are now inquiring with this product.',
             lastMessageSender: userEmail,
             customerRead: true,
             participants:
@@ -1383,13 +1401,13 @@ const MakeAChat = ({ ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry
             inspectionName: inspectionName,
             inspection: toggle,
             warranty: false,
-            insurance: false,
+            insurance: insurance,
             currency: currency,
             freightPrice: profitMap,
             dateOfTransaction: formattedTime,
             country: selectedCountry,
             port: selectedPort,
-            freightOrigPrice: freightOrigPrice
+            freightOrigPrice: freightOrigPrice,
         });
 
         // Navigate to the ChatScreen with the chat ID
@@ -2616,30 +2634,30 @@ const ProductDetailScreen = () => {
 
     //make comments for cars here **
 
-    const [vehicleData, setVehicleData] = useState({});
-    useEffect(() => {
-        const vehicleDocRef = doc(projectExtensionFirestore, 'VehicleProducts', carId);
-        const unsubscribe = onSnapshot(vehicleDocRef,
-            (docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    setVehicleData(data);
-                } else {
-                    console.log('Document does not exist');
-                    return (
-                        <View style={{ justifyContent: 'center' }}>
-                            <Text>NO VIEW HERE!</Text>
-                        </View>
-                    )
-                }
-            },
-            (error) => {
-                console.error('Error getting document', error);
-            }
-        );
-        return () => unsubscribe();
+    // const [vehicleData, setVehicleData] = useState({});
+    // useEffect(() => {
+    //     const vehicleDocRef = doc(projectExtensionFirestore, 'VehicleProducts', carId);
+    //     const unsubscribe = onSnapshot(vehicleDocRef,
+    //         (docSnapshot) => {
+    //             if (docSnapshot.exists()) {
+    //                 const data = docSnapshot.data();
+    //                 setVehicleData(data);
+    //             } else {
+    //                 console.log('Document does not exist');
+    //                 return (
+    //                     <View style={{ justifyContent: 'center' }}>
+    //                         <Text>NO VIEW HERE!</Text>
+    //                     </View>
+    //                 )
+    //             }
+    //         },
+    //         (error) => {
+    //             console.error('Error getting document', error);
+    //         }
+    //     );
+    //     return () => unsubscribe();
 
-    }, []);
+    // }, []);
 
     // const [imageUrl, setImageUrl] = useState('');
     // useEffect(() => {
@@ -2687,8 +2705,22 @@ const ProductDetailScreen = () => {
         fetchAllImageUrl(folderRef);
     }, [carId])
 
+    //CUSTOMER MESSAGE HERE
 
 
+    const textInputRef = useRef(null);
+    const handleTextChange = (value) => {
+        textInputRef.current = value
+
+    };
+    //CUSTOMER MESSAGE HERE
+    //CHECKMARK
+    const [isCheck, setIsCheck] = useState(false);
+    const checkButton = (option) => {
+        setIsCheck(option);
+
+    }
+    //CHECKMARK
     //COUNTRY PICKER
     const [selectedCountry, setSelectCountry] = useState(null);
     const handleSelectCountry = (option) => {
@@ -2700,7 +2732,7 @@ const ProductDetailScreen = () => {
     const [selectedPort, setSelectPort] = useState('');
     const handleSelectPort = (option) => {
         setSelectPort(option)
-    }
+    };
     //PORT PICKER
 
 
@@ -2847,6 +2879,13 @@ const ProductDetailScreen = () => {
 
     //check inspection
 
+    //check insurance
+    const [insurance, setInsurance] = useState(false);
+    const handleToggleInsurance = (item) => {
+        setInsurance(item);
+    };
+    //check insurance
+
     //get currency I HAVE ALREADY THIS ONE
     const [currency, setCurrency] = useState({})
     useEffect(() => {
@@ -2952,10 +2991,8 @@ const ProductDetailScreen = () => {
 
 
     //is check PRIVACY
-    const [isCheck, setIsCheck] = useState(false);
-    const checkButton = (option) => {
-        setIsCheck(option)
-    }
+    const [isError, setIsError] = useState(false);
+    const [isErrorPort, setIsErrorPort] = useState(false);
     //is check PRIVACY
 
     return (
@@ -2970,8 +3007,8 @@ const ProductDetailScreen = () => {
                 }}>
                     <View style={{ flex: 2 }} />
 
-                    <Text style={{ fontSize: '2em', fontWeight: 'bold' }}>{carName}</Text>
-                    <Text style={{ fontSize: 12, color: 'blue', }}>
+                    <Text style={{ fontSize: '2.5em', fontWeight: 'bold' }}>{carName}</Text>
+                    <Text style={{ fontSize: 13, color: 'blue', }}>
                         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                     </Text>
                     {screenWidth < 992 && (
@@ -3017,9 +3054,9 @@ const ProductDetailScreen = () => {
 
                     <View style={{ padding: 10, backgroundColor: '#F2F5FE', paddingHorizontal: 20, zIndex: 5, borderBottomLeftRadius: 5, borderBottomRightRadius: 5 }}>
                         <View style={{ zIndex: 5, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                            <SearchCountry setSelectPort={setSelectPort} handleSelectCountry={handleSelectCountry} selectedCountry={selectedCountry} setSelectCountry={setSelectCountry} />
+                            <SearchCountry setIsError={setIsError} isError={isError} setSelectPort={setSelectPort} handleSelectCountry={handleSelectCountry} selectedCountry={selectedCountry} setSelectCountry={setSelectCountry} />
 
-                            <SearchPort selectedCountry={selectedCountry} handleSelectPort={handleSelectPort} selectedPort={selectedPort} />
+                            <SearchPort setIsErrorPort={setIsErrorPort} isErrorPort={isErrorPort} selectedCountry={selectedCountry} handleSelectPort={handleSelectPort} selectedPort={selectedPort} />
 
                         </View>
 
@@ -3036,7 +3073,11 @@ const ProductDetailScreen = () => {
                                     selectedCountry={selectedCountry} />
                             </View>
                             <View style={{ flex: 3, zIndex: -2, }}>
-                                <Insurance />
+                                <Insurance
+                                    setInsurance={setInsurance}
+                                    insurance={insurance}
+                                    handleToggleInsurance={handleToggleInsurance}
+                                />
                             </View>
                         </View>
                         <Calculate selectedPort={selectedPort} setProfitMap={setProfitMap} setCalculatePrice={setCalculatePrice} totalPriceCalculation={totalPriceCalculation} />
@@ -3087,6 +3128,7 @@ const ProductDetailScreen = () => {
                                 placeholder="Write your message here"
                                 multiline={true}
                                 numberOfLines={2}
+                                onChangeText={handleTextChange}
                             />
 
 
@@ -3106,6 +3148,12 @@ const ProductDetailScreen = () => {
 
                             }}>
                                 <MakeAChat
+                                    allImageUrl={allImageUrl}
+                                    setIsErrorPort={setIsErrorPort}
+                                    setIsError={setIsError}
+                                    textInputRef={textInputRef}
+                                    isCheck={isCheck}
+                                    insurance={insurance}
                                     ip={ip}
                                     ipCountry={ipCountry}
                                     freightOrigPrice={freightOrigPrice}

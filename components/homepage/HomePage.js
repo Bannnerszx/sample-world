@@ -1,6 +1,6 @@
 import { ImageBackground, StyleSheet, Text, View, Animated, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, Image, ScrollView, Pressable, Linking, Modal } from 'react-native';
 import React, { useEffect, useState, useRef, useMemo, useContext, useCallback, useLayoutEffect } from 'react';
-import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, MaterialCommunityIcons } from 'react-native-vector-icons';
+import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, MaterialCommunityIcons , Octicons} from 'react-native-vector-icons';
 import { FontAwesome5Brands } from '@expo/vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from '../../firebaseConfig';
 import { addDoc, collection, doc, getDocs, query, getDoc, onSnapshot, where, orderBy, limit, } from 'firebase/firestore';
@@ -12,8 +12,13 @@ import { AuthContext } from '../../context/AuthProvider';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo4 from '../../assets/RMJ logo for flag transparent.png';
 import logo1 from '../../assets/RMJ Cover Photo for Facebook.jpg';
+import logo5 from '../../assets/RMJ logo for flag transparent.png';
+import logo2 from '../../assets/RMZ Logo.png';
+import logo3 from '../../assets/Thank Followers (Facebook Cover) (facebook cover photo).png';
+import SvgCompilations from '../../assets/SvgCompilations';
 import gifLogo from '../../assets/rename.gif'
 import carSample from '../../assets/2.jpg'
+import { GestureHandlerRootView, enableLegacyWebImplementation } from "react-native-gesture-handler";
 import axios from 'axios';
 import { apiConfig } from '../../apiConfig';
 import Svg, {
@@ -28,6 +33,7 @@ import bgSVG from '../../assets/Hexagon.png'
 import { max } from 'moment';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import feature from '../../assets/features.json';
+
 
 const StickyHeader = () => {
     const { user, logout } = useContext(AuthContext);
@@ -44,6 +50,20 @@ const StickyHeader = () => {
     };
     const [scrollY] = useState(new Animated.Value(0));
 
+
+    {/* <>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
+                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text>Profile</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
+                            <TouchableOpacity onPress={logout} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text >Logout</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </> */}
+
     return (
         <Animated.View style={{
             borderBottomWidth: 1,
@@ -53,6 +73,8 @@ const StickyHeader = () => {
             left: 0,
             right: 0,
             height: 100,
+            borderTopColor: 'blue',
+            borderTopWidth: 2,
             backgroundColor: 'lightblue',
             justifyContent: 'center',
             backgroundColor: '#fff',
@@ -87,14 +109,10 @@ const StickyHeader = () => {
                 <View style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#f4f4f4',
-                    borderWidth: 0.5,
-                    padding: 5,
-                    borderRadius: 5,
-                    margin: 20,
+                    justifyContent: 'space-between',
                     flex: 3
                 }}>
-                    <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
+                    {/* <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
                     <TextInput
                         placeholder='Search by make, model, or keyword'
                         style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
@@ -103,34 +121,58 @@ const StickyHeader = () => {
                         defaultValue={searchQueryWorldRef.current}
                         onChangeText={handleChangeQuery}
                         onSubmitEditing={handleSearch}
-                    />
+                    /> */}
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Used Car Stock</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>How to Buy</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>About Us</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Local Introduction</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Contact Us</Text>
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flex: 1 }} />
                 </View>
                 {user ? (
-                    <>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text>Profile</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                            <TouchableOpacity onPress={logout} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text >Logout</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+
+
+                    < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <FontAwesome name="user" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Profile</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Entypo name="log-out" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log Out</Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
-                    <>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                            <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text>Sign Up</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                            <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text >Log In CHANGES</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Sign Up</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Octicons name="sign-in" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log In</Text>
+                        </TouchableOpacity>
+                    </View>
+
+
                 )}
             </View>
         </Animated.View>
@@ -354,16 +396,12 @@ const DropDownBodyType = ({ bodyType, carBodyType, handleSelectBodyType }) => {
         </View>
     );
 };
-const DropDownMinPrice = ({ }) => {
+const DropDownMinPrice = ({ minPrice, handleSelectMinPrice, minPriceData }) => {
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
         setIsActive(!isActive)
     };
-    const minPrice = [
-        500, 1000, 1500, 2000, 2500, 3000, 3500, 4000,
-        4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000,
-        8500, 9000, 9500, 10000, 15000, 20000, 30000
-    ];
+
     return (
         <View style={{ flex: 1, padding: 5, minWidth: 100, zIndex: -99 }}>
             <Pressable
@@ -377,7 +415,7 @@ const DropDownMinPrice = ({ }) => {
                 }}
             >
                 <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                    <Text style={{ fontWeight: '500' }}>{'Min Price'}</Text>
+                    <Text style={{ fontWeight: '500' }}>{minPrice ? minPrice : 'Min Price'}</Text>
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
                     {/* <TouchableOpacity>
@@ -409,11 +447,11 @@ const DropDownMinPrice = ({ }) => {
                     margin: 5
                 }}>
                     <FlatList
-                        data={minPrice} // Assuming countryData is an object with country names as keys
+                        data={minPriceData} // Assuming countryData is an object with country names as keys
                         keyExtractor={item => item}
                         renderItem={({ item }) => (
                             <Pressable
-                                onPress={() => { handleIsActive(false) }}
+                                onPress={() => { handleIsActive(false); handleSelectMinPrice(item) }}
                             >
                                 <Text style={{
                                     padding: 10, // Adjust padding as needed
@@ -431,17 +469,13 @@ const DropDownMinPrice = ({ }) => {
         </View>
     )
 };
-const DropDownMaxPrice = ({ }) => {
+const DropDownMaxPrice = ({ maxPrice, handleSelectMaxPrice, maxPriceData }) => {
 
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
         setIsActive(!isActive)
     };
-    const maxPrice = [
-        500, 1000, 1500, 2000, 2500, 3000, 3500, 4000,
-        4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000,
-        8500, 9000, 9500, 10000, 15000, 20000, 30000
-    ];
+
     return (
         <View style={{ flex: 1, padding: 5, minWidth: 100, zIndex: -99 }}>
             <Pressable
@@ -455,7 +489,7 @@ const DropDownMaxPrice = ({ }) => {
                 }}
             >
                 <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                    <Text style={{ fontWeight: '500' }}>{'Max Price'}</Text>
+                    <Text style={{ fontWeight: '500' }}>{maxPrice ? maxPrice : 'Max Price'}</Text>
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
                     {/* <TouchableOpacity>
@@ -487,11 +521,11 @@ const DropDownMaxPrice = ({ }) => {
                     margin: 5
                 }}>
                     <FlatList
-                        data={maxPrice} // Assuming countryData is an object with country names as keys
+                        data={maxPriceData} // Assuming countryData is an object with country names as keys
                         keyExtractor={item => item}
                         renderItem={({ item }) => (
                             <Pressable
-                                onPress={() => { handleIsActive(false) }}
+                                onPress={() => { handleIsActive(false); handleSelectMaxPrice(item) }}
                             >
                                 <Text style={{
                                     padding: 10, // Adjust padding as needed
@@ -667,14 +701,14 @@ const ApiTester = () => {
     useEffect(() => {
         // The fetch call is placed inside useEffect to ensure it's called when the component mounts
         fetch('/vehicle-details')
-          .then(response => response.text()) // Use .json() if the response is in JSON format
-          .then(data => {
-            console.log(data);
-            // You can also set the data to the component state to use it in the render, if needed
-          })
-          .catch(error => console.error('Error:', error));
-      }, []); // The empty array means this effect runs once on mount and not on subsequent updates
-    
+            .then(response => response.text()) // Use .json() if the response is in JSON format
+            .then(data => {
+                console.log(data);
+                // You can also set the data to the component state to use it in the render, if needed
+            })
+            .catch(error => console.error('Error:', error));
+    }, []); // The empty array means this effect runs once on mount and not on subsequent updates
+
 };
 
 
@@ -1011,37 +1045,14 @@ const SearchByMakes = () => {
         return () => subscription.remove();
     }, []);
     const [logos, setLogos,] = useState([
-        { id: '1', name: 'Toyota', price: '520' },
-        { id: '2', name: 'Nissan', price: '520' },
-        { id: '3', name: 'Honda', price: '520' },
-        { id: '4', name: 'Mitsubishi', price: '520' },
-        { id: '5', name: 'Mercedes-Benz', price: '520' },
-        { id: '6', name: 'BMW', price: '520' },
+        { id: '1', name: 'Toyota', price: '520', logo: <SvgCompilations name={"toyota"} /> },
+        { id: '2', name: 'Nissan', price: '520', logo: <SvgCompilations name={"nissan"} /> },
+        { id: '3', name: 'Honda', price: '520', logo: <SvgCompilations name={"honda"} /> },
+        { id: '4', name: 'Mitsubishi', price: '520', logo: <SvgCompilations name={"mitsubishi"} /> },
+        { id: '5', name: 'Mercedes-Benz', price: '520', logo: <SvgCompilations name={"mercedes"} /> },
+        { id: '6', name: 'BMW', price: '520', logo: <SvgCompilations name={"bmw"} /> },
     ])
-    useEffect(() => {
-        const fetchLogoUrls = async () => {
-            const updatedRankings = await Promise.all(logos.map(async (maker) => {
-                try {
-                    // Create a reference to the logo file in Firebase Storage
-                    const logoRef = ref(projectExtensionStorage, `logos/${maker.name.toLowerCase().replace('-benz', '')}Icon.png`);
 
-                    // Fetch the download URL
-                    const logoUrl = await getDownloadURL(logoRef);
-
-                    // Return the updated maker object with the logoUrl
-                    return { ...maker, logoUri: logoUrl };
-                } catch (error) {
-                    console.error('Error fetching logo URL for:', maker.name, error);
-                    // Return the original maker object if there's an error
-                    return { ...maker, logoUri: '' };
-                }
-            }));
-
-            setLogos(updatedRankings);
-        };
-
-        fetchLogoUrls();
-    }, []);
 
     const styles = StyleSheet.create({
         container: {
@@ -1139,10 +1150,7 @@ const SearchByMakes = () => {
         return (
             <View style={styles.itemContainer}>
                 <View style={styles.logoContainer}>
-                    <Image
-                        source={{ uri: item.logoUri }}
-                        style={itemStyle}
-                    />
+                    {item.logo}
                 </View>
                 <View style={[{ flexDirection: 'row' }, []]}>
                     <Text>{item.name} </Text>
@@ -1469,12 +1477,12 @@ const SearchByTypes = () => {
         return () => subscription.remove();
     }, []);
     const types = [
-        { id: '1', logo: 'Logo', name: 'SEDAN', price: '520' },
-        { id: '2', logo: 'Logo', name: 'TRUCK', price: '520' },
-        { id: '3', logo: 'Logo', name: 'SUV', price: '520' },
-        { id: '4', logo: 'Logo', name: 'HATCHBACK', price: '520' },
-        { id: '5', logo: 'Logo', name: 'WAGON', price: '520' },
-        { id: '6', logo: 'Logo', name: 'BUS', price: '520' },
+        { id: '1', logo: <SvgCompilations name={"sedan"} />, name: 'SEDAN', price: '520' },
+        { id: '2', logo: <SvgCompilations name={"truck"} />, name: 'TRUCK', price: '520' },
+        { id: '3', logo: <SvgCompilations name={"suv"} />, name: 'SUV', price: '520' },
+        { id: '4', logo: <SvgCompilations name={"hatchback"} />, name: 'HATCHBACK', price: '520' },
+        { id: '5', logo: <SvgCompilations name={"wagon"} />, name: 'WAGON', price: '520' },
+        { id: '6', logo: <SvgCompilations name={"van"} />, name: 'VAN', price: '520' },
     ];
     const styles = StyleSheet.create({
         container: {
@@ -1516,9 +1524,8 @@ const SearchByTypes = () => {
     });
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
-            <View style={styles.logoContainer}>
-                {/* Replace with an Image component if you have an image source */}
-                <Text style={{ color: 'white' }}>{item.logo}</Text>
+            <View style={{ flex: 1 }}>
+                {item.logo}
             </View>
             <View style={{ flexDirection: 'row' }}>
                 <Text style={{ color: 'white' }}>{item.name} </Text>
@@ -1653,18 +1660,18 @@ const SearchByTrucks = () => {
     }, []);
 
     const types = [
-        { id: '1', logo: 'Logo', name: 'FLAT BODY', price: '520' },
-        { id: '2', logo: 'Logo', name: 'DUMP', price: '520' },
-        { id: '3', logo: 'Logo', name: 'CRANE', price: '520' },
-        { id: '4', logo: 'Logo', name: 'MIXER TRUCK', price: '520' },
-        { id: '5', logo: 'Logo', name: 'AERIAL PLATFORM', price: '520' },
-        { id: '6', logo: 'Logo', name: 'ALUMINUM WING', price: '520' },
-        { id: '7', logo: 'Logo', name: 'ALUMINUM VAN', price: '520' },
-        { id: '8', logo: 'Logo', name: 'CONTAINER', price: '520' },
-        { id: '9', logo: 'Logo', name: 'PACKER', price: '520' },
-        { id: '10', logo: 'Logo', name: 'BUS', price: '520' },
-        { id: '11', logo: 'Logo', name: 'REFRIGERATED VAN', price: '520' },
-        { id: '12', logo: 'Logo', name: 'OTHER TRUCKS', price: '520' },
+        { id: '1', logo: <SvgCompilations name={"flatbody"} />, name: 'FLAT BODY', price: '520' },
+        { id: '2', logo: <SvgCompilations name={"dump"} />, name: 'DUMP', price: '520' },
+        { id: '3', logo: <SvgCompilations name={"crane"} />, name: 'CRANE', price: '520' },
+        { id: '4', logo: <SvgCompilations name={"mixertruck"} />, name: 'MIXER TRUCK', price: '520' },
+        { id: '5', logo: <SvgCompilations name={"aerialplatform"} />, name: 'AERIAL PLATFORM', price: '520' },
+        { id: '6', logo: <SvgCompilations name={"aluminumwing"} />, name: 'ALUMINUM WING', price: '520' },
+        { id: '7', logo: <SvgCompilations name={"aluminumvan"} />, name: 'ALUMINUM VAN', price: '520' },
+        { id: '8', logo: <SvgCompilations name={"container"} />, name: 'CONTAINER', price: '520' },
+        { id: '9', logo: <SvgCompilations name={"packer"} />, name: 'PACKER', price: '520' },
+        { id: '10', logo: <SvgCompilations name={"bus"} />, name: 'BUS', price: '520' },
+        { id: '11', logo: <SvgCompilations name={"chillvan"} />, name: 'REFRIGERATED VAN', price: '520' },
+        { id: '12', logo: <SvgCompilations name={"other"} />, name: 'OTHER TRUCKS', price: '520' },
     ];
     const styles = StyleSheet.create({
         container: {
@@ -1729,9 +1736,9 @@ const SearchByTrucks = () => {
                 <Image
                     source={{ uri: carSample }}
                 />
-                <View style={styles.logoContainer}>
+                <View style={{ backgroundColor: 'transparent' }}>
 
-                    <Text>{item.logo}</Text>
+                    {item.logo}
                 </View>
                 <View style={{ flexDirection: 'row' }}>
                     <Text numberOfLines={1} ellipsizeMode="tail" style={{}}>  {screenWidth < 992 ? truncatedName : item.name} </Text>
@@ -2649,9 +2656,190 @@ const SignUpView = () => {
 
     );
 };
+const DropDownMinMileageSimple = ({ minMileageData, handleSelectMinMileage, minMileage }) => {
+    const [isActive, setIsActive] = useState(false);
+    const handleIsActive = () => {
+        setIsActive(!isActive)
+    };
+    return (
+        <View style={{ flex: 1, padding: 5, zIndex: -99 }}>
+            <Pressable
+                onPress={handleIsActive}
+                style={{
+                    padding: 10, // Adjust padding as needed
+                    borderWidth: 1,
+                    borderColor: '#eee',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                }}
+            >
+                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                    <Text style={{ fontWeight: '500' }}>{minMileage ? minMileage : 'Min Mileage'}</Text>
+                </View>
+                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                    {/* <TouchableOpacity>
+                        <AntDesign name="close" size={15} />
+                    </TouchableOpacity> */}
+                    <AntDesign
+                        name="down"
+                        size={15}
+                        color={'blue'}
+                        style={[
+                            { transitionDuration: '0.3s' },
+                            isActive && {
+                                transform: [{ rotate: '180deg' }],
+                            },
+                        ]}
+                    />
+                </View>
+            </Pressable>
+            {isActive && (
+                <View style={{
+                    position: 'absolute',
+                    top: 40, // Adjust according to the height of the Pressable
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    maxHeight: 200,
+                    margin: 5
+                }}>
+                    <FlatList
+                        data={minMileageData} // Assuming countryData is an object with country names as keys
+                        keyExtractor={item => item}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => { handleIsActive(false); handleSelectMinMileage(item); }}
+                            >
+                                <Text style={{
+                                    padding: 10, // Adjust padding as needed
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: '#eee',
+                                }}>
+                                    {item}
+                                </Text>
+                            </Pressable>
+                        )}
+                    />
+                </View>
+            )}
 
+        </View>
+    );
+};
+
+const DropDownMaxMileageSimple = ({ maxMileageData, handleSelectMaxMileage, maxMileage }) => {
+    const [isActive, setIsActive] = useState(false);
+    const handleIsActive = () => {
+        setIsActive(!isActive)
+    };
+    return (
+        <View style={{ flex: 1, padding: 5, zIndex: -99 }}>
+            <Pressable
+                onPress={handleIsActive}
+                style={{
+                    padding: 10, // Adjust padding as needed
+                    borderWidth: 1,
+                    borderColor: '#eee',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                }}
+            >
+                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                    <Text style={{ fontWeight: '500' }}>{maxMileage ? maxMileage : 'Max Mileage'}</Text>
+                </View>
+                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                    {/* <TouchableOpacity>
+                        <AntDesign name="close" size={15} />
+                    </TouchableOpacity> */}
+                    <AntDesign
+                        name="down"
+                        size={15}
+                        color={'blue'}
+                        style={[
+                            { transitionDuration: '0.3s' },
+                            isActive && {
+                                transform: [{ rotate: '180deg' }],
+                            },
+                        ]}
+                    />
+                </View>
+            </Pressable>
+            {isActive && (
+                <View style={{
+                    position: 'absolute',
+                    top: 40, // Adjust according to the height of the Pressable
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    maxHeight: 200,
+                    margin: 5,
+                    zIndex: 10
+                }}>
+                    <FlatList
+                        data={maxMileageData} // Assuming countryData is an object with country names as keys
+                        keyExtractor={item => item}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => { handleIsActive(false); handleSelectMaxMileage(item); }}
+                                style={{ zIndex: 10 }}
+                            >
+                                <Text style={{
+                                    padding: 10, // Adjust padding as needed
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: '#eee',
+                                }}>
+                                    {item}
+                                </Text>
+                            </Pressable>
+                        )}
+                    />
+                </View>
+            )}
+
+        </View>
+    );
+};
 
 const HomePage = () => {
+
+
+
+
+
+    //DROPDOWN MIN MILEAGE
+    const [minMileage, setMinMileage] = useState('');
+    const minMileageData = [
+        "10000",
+        "30000",
+        "50000",
+        "100000",
+        "150000",
+        "200000",
+    ];
+    const handleSelectMinMileage = async (option) => {
+        setMinMileage(option);
+    };
+
+    //DROPDOWN MIN MILEAGE
+
+    //DROPDOWN MAX MILEAGE
+    const [maxMileage, setMaxMileage] = useState('');
+    const maxMileageData = [
+        '10000',
+        '30000',
+        '50000',
+        '100000',
+        '150000',
+        '200000',
+    ];
+    const handleSelectMaxMileage = (option) => {
+        setMaxMileage(option);
+    };
+    //DROPDOWN MAX MILEAGE
 
 
     //dropdown make
@@ -2763,7 +2951,38 @@ const HomePage = () => {
     const [selectedCountry, setSelectCountry] = useState(null);
     const handleSelectCountry = (option) => {
         setSelectCountry(option)
-    }
+    };
+    //dropdown Price
+    //Minprice
+    const [minPrice, setMinPrice] = useState('');
+    const minPriceData = [
+        '1000',
+        '3000',
+        '5000',
+        '10000',
+        '15000',
+        '20000',
+    ];
+    const handleSelectMinPrice = (option) => {
+        setMinPrice(option);
+    };
+    //MinPrice
+    //Minprice
+    const [maxPrice, setMaxPrice] = useState('');
+    const maxPriceData = [
+        '1000',
+        '3000',
+        '5000',
+        '10000',
+        '15000',
+        '20000',
+    ];
+    const handleSelectMaxPrice = (option) => {
+        setMaxPrice(option);
+    };
+    //MinPrice
+
+
     //dropdown Country
     //dropdown Min Year
     const [carMinYear, setCarMinYear] = useState('');
@@ -2771,7 +2990,6 @@ const HomePage = () => {
         setCarMinYear(option);
     };
     //dropdown Min Year
-
     //dropdown Max Year
     const [carMaxYear, setCarMaxYear] = useState('');
     const handleSelectMaxYear = async (option) => {
@@ -2830,6 +3048,25 @@ const HomePage = () => {
         return () => subscription.remove();
     }, []);
     //global text input
+
+
+
+
+    //carousel
+    enableLegacyWebImplementation(true);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const carouselRef = useRef(null);
+    const carouselWidth = screenWidth
+    const carouselHeight = carouselWidth * 0.3; // Maintain an aspect ratio (e.g., 4:3)
+
+    const dataFilesExtra = [
+        { image: logo1 },
+        { image: logo2 },
+        { image: logo3 },
+    ]
+    //carousel
+
+
     const mapAspectRatio = 0.4; // Adjust this to control the map's aspect ratio
     const mapWidth = screenWidth * 0.9;
 
@@ -2861,27 +3098,40 @@ const HomePage = () => {
         fetchItems();
     }, []);
     //FETCH NEW ARRIVALS
-
+    const searchKeywords = useRef(null)
     const navigate = useNavigate();
+    const handleTextChange = (value) => {
+        searchKeywords.current = value
 
+    };
     const handleSearch = () => {
-        navigate(`/SearchCarDesign?carMakes=${carMakes}&carModel=${carModels}&bodyType=${carBodyType}&minYear=${carMinYear}&maxYear=${carMaxYear}`)
+        navigate(`/SearchCarDesign?keywords=${searchKeywords.current || ''}&carMakes=${carMakes}&carModels=${carModels}&carBodyType=${carBodyType}&carMinYear=${carMinYear}&carMaxYear=${carMaxYear}&minPrice=${minPrice}&maxPrice=${maxPrice}&minMileage=${minMileage}&maxMileage=${maxMileage}`)
     }
     return (
         <View style={{ flex: 3 }}>
             <StickyHeader />
-            <ImageBackground
-                source={{ uri: logo1 }}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    maxHeight: 750,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}
-                resizeMode='contain'
-            >
-            </ImageBackground>
+            <Carousel
+                ref={carouselRef}
+                autoPlay={true}
+                width={screenWidth < 768 ? carouselWidth : carouselWidth}
+                height={screenWidth < 768 ? carouselHeight * 2.2 : carouselHeight * 1.2}
+                data={dataFilesExtra}
+                renderItem={({ item }) => (
+                    <View style={{ width: carouselWidth, height: screenWidth < 768 ? carouselHeight * 2.2 : carouselHeight * 1.2, justifyContent: 'center', alignItems: 'center', aspectRatio: 0.2 }}>
+                        <Image
+                            source={item.image}
+                            style={{ width: '100%', height: '100%', zIndex: -2 }}
+                            resizeMode="cover"
+                        />
+                        <Text style={{ position: 'absolute', top: 0, left: '2%', zIndex: 2 }}>
+                            TEXT INSIDE HERE
+                        </Text>
+                    </View>
+
+                )}
+            />
+
+
 
 
             <View style={{
@@ -2889,7 +3139,7 @@ const HomePage = () => {
                 backgroundColor: 'white',
                 maxWidth: 1280,
                 width: '100%',
-                minHeight: screenWidth < 664 ? 500 : 260,
+                minHeight: screenWidth < 664 ? 480 : 260,
                 padding: 10,
                 borderRadius: 8,
                 shadowColor: "#000",
@@ -2899,6 +3149,7 @@ const HomePage = () => {
                 elevation: 5,
                 zIndex: 1,
                 position: 'relative',
+                top: screenWidth > 992 ? '-1%' : null
             }}>
                 <View style={{
                     position: 'absolute',
@@ -2922,53 +3173,54 @@ const HomePage = () => {
                     }}>
                         <DropDownBodyType bodyType={bodyType} handleSelectBodyType={handleSelectBodyType} carBodyType={carBodyType} />
                         <View style={{ flexDirection: 'row', zIndex: 9 }}>
-                            <DropDownMinPrice />
-                            <DropDownMaxPrice />
+                            <DropDownMinPrice minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
+                            <DropDownMaxPrice maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
                         </View>
                         <View style={{ flexDirection: 'row', zIndex: 8 }}>
                             <DropDownMinYear carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
                             <DropDownMaxYear carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
                         </View>
                         <View style={{ flexDirection: 'row', zIndex: 7 }}>
-                            <DropDownSelectCountry selectedCountry={selectedCountry} handleSelectCountry={handleSelectCountry} countryData={countryData} />
-                            <DropDownSelectPort selectedPort={selectedPort} handleSelectPort={handleSelectPort} ports={ports} />
+                            <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
+                            <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
                         </View>
                     </View>
                 )}
                 {screenWidth >= 644 ? (
                     <View style={{ flexDirection: 'row', zIndex: 9 }}>
-                        <DropDownMinPrice />
+                        <DropDownMinPrice minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
                         <DropDownMinYear carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
-                        <DropDownSelectCountry selectedCountry={selectedCountry} handleSelectCountry={handleSelectCountry} countryData={countryData} />
+                        <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
                     </View>
                 ) : null}
 
                 {screenWidth >= 644 ? (
                     <View style={{ flexDirection: 'row', zIndex: 8, marginTop: 8 }}>
-                        <DropDownMaxPrice />
+                        <DropDownMaxPrice maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
                         <DropDownMaxYear carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
-                        <DropDownSelectPort selectedPort={selectedPort} handleSelectPort={handleSelectPort} ports={ports} />
+                        <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
                     </View>
                 ) : null}
 
 
                 <View style={{ flexDirection: screenWidth < 644 ? 'column' : 'row', alignItems: 'center', zIndex: -6, padding: 10 }}>
-
+                    {/* 
                     <View style={{
-                        flex: 1,
+                        flex: screenWidth > 644 ? 1 : null,
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-evenly',
                         marginBottom: screenWidth < 644 ? 10 : null, // Add some margin below the toggle container
                         width: '100%',
                         zIndex: -6,
+
                     }}>
                         <Inspection />
                         <Insurance />
-                    </View>
+                    </View> */}
                     <View style={{
-                        flex: 1,
-                        marginHorizontal: 6,
+                        flex: screenWidth > 644 ? 1 : null,
+                        marginHorizontal: -5,
                         flexDirection: screenWidth < 644 ? 'column' : 'row',
                         justifyContent: 'space-evenly',
                         alignItems: 'center',
@@ -2985,16 +3237,19 @@ const HomePage = () => {
                                 marginRight: 5,
                                 marginTop: screenWidth < 644 ? 10 : 0,
                                 width: '100%',
+                            
                             }}
                             placeholder='Search by make, model, or keyword '
                             placeholderTextColor={'#ccc'}
+                            onChangeText={handleTextChange}
                         />
+                        <View style={{marginHorizontal: 10}}/>
                         <TouchableOpacity
                             onPress={() => handleSearch()}
                             style={{
                                 backgroundColor: 'blue',
                                 paddingVertical: 10,
-                                paddingHorizontal: 30,
+                                paddingHorizontal: 80,
                                 borderRadius: 5,
                                 justifyContent: 'center',
                                 alignItems: 'center',
@@ -3069,7 +3324,7 @@ const HomePage = () => {
             <View>
                 <StickyFooter />
             </View>
-            <ApiTester />
+
         </View>
     )
 };

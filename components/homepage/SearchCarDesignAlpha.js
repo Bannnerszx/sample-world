@@ -1,19 +1,24 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
-import { StyleSheet, Text, View, Animated, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, ScrollView, Pressable, Linking, Modal, Image, Button, ActivityIndicator, PanResponder } from "react-native";
+import { StyleSheet, Text, View, Animated as AnimatedRN, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, ScrollView, Pressable, Linking, Modal, Image, Button, ActivityIndicator, PanResponder } from "react-native";
 import logo4 from '../../assets/RMJ logo for flag transparent.png';
 import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo } from 'react-native-vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from "../../firebaseConfig";
 import { FlatGrid } from "react-native-super-grid";
-import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt } from "firebase/firestore";
+import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt, updateDoc, getCountFromServer, collectionGroup } from "firebase/firestore";
 import { listAll, ref, getDownloadURL } from "firebase/storage";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthProvider";
 import { Slider, RangeSlider } from '@react-native-assets/slider'
 import carSample from '../../assets/2.jpg'
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, Octicons } from "@expo/vector-icons";
 import { Center } from "native-base";
 import Svg, { Polygon } from 'react-native-svg';
 import gifLogo from '../../assets/rename.gif'
+import { all } from "axios";
+import SvgCompilations from "../../assets/SvgCompilations";
+import Carousel from 'react-native-reanimated-carousel';
+import { GestureHandlerRootView, enableLegacyWebImplementation } from "react-native-gesture-handler";
+import image from "../../assets/filename";
 const StickyHeader = () => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -27,10 +32,24 @@ const StickyHeader = () => {
             navigate(`/SearchCar?searchTerm=${searchQueryWorldRef.current}`)
         }
     };
-    const [scrollY] = useState(new Animated.Value(0));
+    const [scrollY] = useState(new AnimatedRN.Value(0));
+
+
+    {/* <>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
+                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text>Profile</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
+                            <TouchableOpacity onPress={logout} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text >Logout</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </> */}
 
     return (
-        <Animated.View style={{
+        <AnimatedRN.View style={{
             borderBottomWidth: 1,
             borderBottomColor: '#aaa',
             position: 'sticky',
@@ -38,6 +57,8 @@ const StickyHeader = () => {
             left: 0,
             right: 0,
             height: 100,
+            borderTopColor: 'blue',
+            borderTopWidth: 2,
             backgroundColor: 'lightblue',
             justifyContent: 'center',
             backgroundColor: '#fff',
@@ -72,14 +93,10 @@ const StickyHeader = () => {
                 <View style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#f4f4f4',
-                    borderWidth: 0.5,
-                    padding: 5,
-                    borderRadius: 5,
-                    margin: 20,
+                    justifyContent: 'space-between',
                     flex: 3
                 }}>
-                    <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
+                    {/* <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
                     <TextInput
                         placeholder='Search by make, model, or keyword'
                         style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
@@ -88,43 +105,66 @@ const StickyHeader = () => {
                         defaultValue={searchQueryWorldRef.current}
                         onChangeText={handleChangeQuery}
                         onSubmitEditing={handleSearch}
-                    />
+                    /> */}
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Used Car Stock</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>How to Buy</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>About Us</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Local Introduction</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Contact Us</Text>
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flex: 1 }} />
                 </View>
                 {user ? (
-                    <>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text>Profile</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                            <TouchableOpacity onPress={logout} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text >Logout</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+
+
+                    < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <FontAwesome name="user" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Profile</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Entypo name="log-out" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log Out</Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
-                    <>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                            <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text>Sign Up</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                            <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text >Log In CHANGES</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Sign Up</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Octicons name="sign-in" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log In</Text>
+                        </TouchableOpacity>
+                    </View>
+
+
                 )}
             </View>
-        </Animated.View>
+        </AnimatedRN.View>
     )
 };
-
 const DropDownMake = ({ makes, handleSelectMake, carMakes }) => {
     const [isActive, setIsActive] = useState(false);
-    const animationController = useRef(new Animated.Value(0)).current; // Initial value for height
+    const animationController = useRef(new AnimatedRN.Value(0)).current; // Initial value for height
     useEffect(() => {
         if (isActive === false) {
             handleIsActive()
@@ -132,7 +172,7 @@ const DropDownMake = ({ makes, handleSelectMake, carMakes }) => {
     }, [])
     const handleIsActive = () => {
         // Start the animation
-        Animated.timing(animationController, {
+        AnimatedRN.timing(animationController, {
             toValue: isActive ? 0 : 1, // 0 for closing, 1 for opening
             duration: 300,
             useNativeDriver: false,
@@ -187,7 +227,7 @@ const DropDownMake = ({ makes, handleSelectMake, carMakes }) => {
                     />
                 </View>
             </Pressable>
-            <Animated.View
+            <AnimatedRN.View
                 style={{
                     backgroundColor: 'white',
                     maxHeight,
@@ -234,18 +274,18 @@ const DropDownMake = ({ makes, handleSelectMake, carMakes }) => {
                     />
 
                 )}
-            </Animated.View>
+            </AnimatedRN.View>
 
         </View>
     )
 };
 const DropDownModel = ({ model, handleSelectModel, carModels, carMakes }) => {
     const [isActive, setIsActive] = useState(false);
-    const animationController = useRef(new Animated.Value(0)).current; // Initial value for height
+    const animationController = useRef(new AnimatedRN.Value(0)).current; // Initial value for height
 
     const handleIsActive = () => {
         // Start the animation
-        Animated.timing(animationController, {
+        AnimatedRN.timing(animationController, {
             toValue: isActive ? 0 : 1, // 0 for closing, 1 for opening
             duration: 300,
             useNativeDriver: false,
@@ -299,7 +339,7 @@ const DropDownModel = ({ model, handleSelectModel, carModels, carMakes }) => {
                     />
                 </View>
             </Pressable>
-            <Animated.View
+            <AnimatedRN.View
                 style={{
                     backgroundColor: 'white',
                     maxHeight,
@@ -345,7 +385,7 @@ const DropDownModel = ({ model, handleSelectModel, carModels, carMakes }) => {
                     />
 
                 )}
-            </Animated.View>
+            </AnimatedRN.View>
         </View>
     )
 }
@@ -641,10 +681,10 @@ const DropDownExteriorColor = ({ colors, handleSelectColor, carColor }) => {
     });
 
     const [isActive, setIsActive] = useState(false);
-    const animationController = useRef(new Animated.Value(0)).current;
+    const animationController = useRef(new AnimatedRN.Value(0)).current;
     const handleIsActive = () => {
         // Start the animation
-        Animated.timing(animationController, {
+        AnimatedRN.timing(animationController, {
             toValue: isActive ? 0 : 1, // 0 for closing, 1 for opening
             duration: 300,
             useNativeDriver: false,
@@ -761,7 +801,7 @@ const DropDownExteriorColor = ({ colors, handleSelectColor, carColor }) => {
                     />
                 </View>
             </Pressable>
-            <Animated.View
+            <AnimatedRN.View
                 style={{
                     backgroundColor: 'white',
                     maxHeight,
@@ -781,7 +821,7 @@ const DropDownExteriorColor = ({ colors, handleSelectColor, carColor }) => {
                     />
 
                 )}
-            </Animated.View>
+            </AnimatedRN.View>
 
         </View>
     )
@@ -1155,10 +1195,10 @@ const Insurance = () => {
 
 
     const [toggle, setToggle] = useState(false);
-    const toggleAnim = useRef(new Animated.Value(0)).current;
+    const toggleAnim = useRef(new AnimatedRN.Value(0)).current;
 
     const handleToggle = () => {
-        Animated.timing(toggleAnim, {
+        AnimatedRN.timing(toggleAnim, {
             toValue: toggle ? 0 : 1,
             duration: 10,
             useNativeDriver: false,
@@ -1181,15 +1221,22 @@ const Insurance = () => {
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', }}>
             <Pressable onPress={handleToggle}>
-                <Animated.View style={[styles.switch, { backgroundColor: switchColor }]}>
-                    <Animated.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
-                </Animated.View>
+                <AnimatedRN.View style={[styles.switch, { backgroundColor: switchColor }]}>
+                    <AnimatedRN.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
+                </AnimatedRN.View>
             </Pressable>
             <Text style={{ fontSize: 16, marginLeft: 5 }}>Insurance</Text>
         </View>
     )
 };
-const Inspection = () => {
+const Inspection = ({ isToggleDisabled,
+    toggleAnim,
+    handleToggle,
+    switchTranslate,
+    switchColor,
+    setToggle,
+    handleToggleInspection,
+    selectedCountry }) => {
     const styles = StyleSheet.create({
         switch: {
             width: 50, // Width of the outer switch component
@@ -1208,36 +1255,36 @@ const Inspection = () => {
 
 
 
-    const [toggle, setToggle] = useState(false);
-    const toggleAnim = useRef(new Animated.Value(0)).current;
+    // const [toggle, setToggle] = useState(false);
+    // const toggleAnim = useRef(new AnimatedRN.Value(0)).current;
 
-    const handleToggle = () => {
-        Animated.timing(toggleAnim, {
-            toValue: toggle ? 0 : 1,
-            duration: 10,
-            useNativeDriver: false,
-        }).start();
+    // const handleToggle = () => {
+    //     AnimatedRN.timing(toggleAnim, {
+    //         toValue: toggle ? 0 : 1,
+    //         duration: 10,
+    //         useNativeDriver: false,
+    //     }).start();
 
-        setToggle(!toggle);
-    };
+    //     setToggle(!toggle);
+    // };
 
-    // Interpolate values for moving the switch and changing the background color
-    const switchTranslate = toggleAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [2, 22], // Adjust these values based on the size of your switch
-    });
+    // // Interpolate values for moving the switch and changing the background color
+    // const switchTranslate = toggleAnim.interpolate({
+    //     inputRange: [0, 1],
+    //     outputRange: [2, 22], // Adjust these values based on the size of your switch
+    // });
 
-    const switchColor = toggleAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['grey', '#7b9cff'] // Change colors as needed
-    });
+    // const switchColor = toggleAnim.interpolate({
+    //     inputRange: [0, 1],
+    //     outputRange: ['grey', '#7b9cff'] // Change colors as needed
+    // });
 
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-            <Pressable onPress={handleToggle}>
-                <Animated.View style={[styles.switch, { backgroundColor: switchColor }]}>
-                    <Animated.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
-                </Animated.View>
+            <Pressable onPress={handleToggle} disabled={isToggleDisabled || !selectedCountry}>
+                <AnimatedRN.View style={[styles.switch, { backgroundColor: switchColor }]}>
+                    <AnimatedRN.View style={[styles.toggle, { transform: [{ translateX: switchTranslate }] }]} />
+                </AnimatedRN.View>
             </Pressable>
             <Text style={{ fontSize: 16, marginLeft: 5 }}>Inspection</Text>
         </View>
@@ -1471,7 +1518,7 @@ const DropDownMakeSimple = ({ makes, handleSelectMake, carMakes }) => {
         </View>
     )
 };
-const DropDownModelSimple = ({ model, handleSelectModel, carModel, carMakes }) => {
+const DropDownModelSimple = ({ model, handleSelectModel, carModels, carMakes }) => {
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
         setIsActive(!isActive)
@@ -1489,7 +1536,7 @@ const DropDownModelSimple = ({ model, handleSelectModel, carModel, carMakes }) =
                 }}
             >
                 <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                    <Text style={{ fontWeight: '500' }}>{carModel ? carModel : 'Model'}</Text>
+                    <Text style={{ fontWeight: '500' }}>{carModels ? carModels : 'Model'}</Text>
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
                     {/* <TouchableOpacity>
@@ -2380,7 +2427,7 @@ const SignUpView = () => {
     );
 };
 
-const SortBy = () => {
+const SortBy = ({ sortOptionsArray, sortSelection, handleSortChange }) => {
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
         setIsActive(!isActive)
@@ -2396,14 +2443,45 @@ const SortBy = () => {
                     justifyContent: 'center',
                     paddingHorizontal: 8,
                     paddingVertical: 4,
-
                     borderBottomWidth: 2,
                     borderBottomColor: 'blue',
-
                 },
             ]}
         >
-            <Text>Update - New to Old</Text>
+            <Text>{sortSelection}</Text>
+            {isActive && (
+                <View style={{
+                    position: 'absolute',
+                    top: 40, // Adjust according to the height of the Pressable
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    maxHeight: 200,
+                    margin: 5,
+                    zIndex: 99,
+
+                }}>
+                    <FlatList
+                        data={sortOptionsArray} // Assuming countryData is an object with country names as keys
+                        keyExtractor={item => item.label}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => { handleSortChange(item); handleIsActive(false); }}
+                            >
+                                <Text style={{
+                                    padding: 10, // Adjust padding as needed
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: '#eee',
+                                }}>
+                                    {item.label}
+                                </Text>
+                            </Pressable>
+                        )}
+                    />
+                </View>
+            )}
             <AntDesign
                 name="down"
                 size={15}
@@ -2456,11 +2534,14 @@ const ViewPrice = () => {
         </Pressable>
     )
 };
-const PerPage = () => {
+const PerPage = ({ handleItemsPerPage, itemsPerPage, }) => {
     const [isActive, setIsActive] = useState(false);
     const handleIsActive = () => {
         setIsActive(!isActive)
     };
+    const data = [
+        5, 10, 20, 25
+    ]
     return (
         <Pressable
             onPress={handleIsActive}
@@ -2479,7 +2560,41 @@ const PerPage = () => {
                 },
             ]}
         >
-            <Text>25</Text>
+            <Text>{itemsPerPage}</Text>
+            {isActive && (
+                <View style={{
+                    position: 'absolute',
+                    top: 40, // Adjust according to the height of the Pressable
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    maxHeight: 200,
+                    margin: 5,
+                    zIndex: 99,
+                    width: 100
+                }}>
+                    <FlatList
+                        data={data} // Assuming countryData is an object with country names as keys
+                        keyExtractor={item => item}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => { handleItemsPerPage(item); handleIsActive(false); }}
+                            >
+                                <Text style={{
+                                    padding: 10, // Adjust padding as needed
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: '#eee',
+                                }}>
+                                    {item}
+                                </Text>
+                            </Pressable>
+                        )}
+                    />
+                </View>
+            )}
+
             <AntDesign
                 name="down"
                 size={15}
@@ -2777,8 +2892,133 @@ const StickyFooter = () => {
         </View>
     );
 };
+
+const LoadingComponent = () => {
+    const styles = StyleSheet.create({
+        container: {
+            flex: 1,
+            marginVertical: 5,
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: '#999',
+            flexDirection: 'column', // Ensures the layout is vertical for top-level sections
+        },
+        header: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 5,
+        },
+        iconPlaceholder: {
+            width: 25,
+            height: 25,
+            borderRadius: 12.5,
+            backgroundColor: '#ccc',
+            marginRight: 5,
+        },
+        textShort: {
+            height: 20,
+            width: 100,
+            backgroundColor: '#eee',
+            borderRadius: 5,
+        },
+        buttonPlaceholder: {
+            height: 40,
+            backgroundColor: '#ddd',
+            borderRadius: 5,
+            margin: 10,
+            maxWidth: 140,
+            alignSelf: 'flex-end',
+        },
+        imagePlaceholder: {
+            width: '50%', // Adjust width for side-by-side layout
+            height: 250,
+            backgroundColor: '#ccc',
+        },
+        details: {
+            padding: 10,
+            flex: 1, // Takes the remaining space in the flex row
+        },
+        textLong: {
+            height: 28,
+            width: '90%',
+            backgroundColor: '#eee',
+            borderRadius: 5,
+            marginBottom: 5,
+        },
+        textMedium: {
+            height: 16,
+            width: '60%',
+            backgroundColor: '#eee',
+            borderRadius: 5,
+            marginTop: 5,
+        },
+        row: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginVertical: 20,
+        },
+        textExtraSmall: {
+            width: '30%',
+            height: 16,
+            backgroundColor: '#eee',
+        },
+        verticalDivider: {
+            height: '100%',
+            width: 1,
+            backgroundColor: 'grey',
+        },
+        buttonPlaceholderSmall: {
+            backgroundColor: '#ddd',
+            height: 50,
+            width: '100%',
+            borderRadius: 5,
+            marginTop: 10,
+        },
+        flexDirection: {
+            flexDirection: 'row', // Ensures that image and details are side by side
+            alignItems: 'center',
+            width: '100%',
+            marginBottom: '2%',
+            paddingHorizontal: 5,
+        }
+    });
+
+    return (
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <View style={styles.iconPlaceholder} />
+                <View style={styles.textShort} />
+            </View>
+            <View style={styles.buttonPlaceholder} />
+            <View style={styles.flexDirection}>
+                <View style={styles.imagePlaceholder} />
+                <View style={styles.details}>
+                    <View style={styles.textLong} />
+                    <View style={styles.textShort} />
+                    <View style={styles.textMedium} />
+
+                    <View style={styles.row}>
+                        <View style={styles.textExtraSmall} />
+                        <View style={styles.verticalDivider} />
+                        <View style={styles.textExtraSmall} />
+                        <View style={styles.verticalDivider} />
+                        <View style={styles.textExtraSmall} />
+                    </View>
+
+                    <View style={styles.buttonPlaceholderSmall} />
+                </View>
+            </View>
+        </View>
+    );
+}
+
 const SearchCarDesignAlpha = () => {
     const navigate = useNavigate();
+
+
+
+
 
     //dropdown Country
     const [countryData, setCountryData] = useState([]);
@@ -2858,6 +3098,109 @@ const SearchCarDesignAlpha = () => {
     };
     //dropdown Port
 
+
+
+
+    //inspection
+    const [toggle, setToggle] = useState(false);
+    const handleToggleInspection = (item) => {
+        setToggle(item);
+
+    };
+
+    const toggleAnim = useRef(new AnimatedRN.Value(0)).current;
+    const [isToggleDisabled, setIsToggleDisabled] = useState(false);
+    const handleToggle = () => {
+        AnimatedRN.timing(toggleAnim, {
+            toValue: toggle ? 0 : 1,
+            duration: 100, // Increased duration for a more noticeable animation
+            useNativeDriver: true, // Change this based on what you are animating
+        }).start();
+
+        setToggle(prevToggle => !prevToggle); // Using a callback for the state update
+    };
+
+    // Interpolate values for moving the switch and changing the background color
+    const switchTranslate = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [2, 22], // Adjust these values based on the size of your switch
+    });
+
+    const switchColor = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['grey', '#7b9cff'] // Change colors as needed
+    });
+
+    const [inspectionIsRequired, setInspectionIsRequired] = useState('');
+    const [inspectionName, setInspectionName] = useState('');
+    console.log('PRODUCT DETAILS SCREEN', inspectionIsRequired)
+    console.log('PRODUCT DETAILS SCREEN INSPECTION NAME', inspectionName)
+
+    useEffect(() => {
+        const fetchInspection = async () => {
+            if (selectedCountry === '') {
+                setToggle(false);
+                return;
+            }
+
+            const countriesDocRef = doc(projectExtensionFirestore, 'CustomerCountryPort', 'CountriesDoc');
+
+            try {
+                const docSnap = await getDoc(countriesDocRef);
+                if (docSnap.exists()) {
+                    const selectedCountryData = docSnap.data()[selectedCountry];
+
+                    if (selectedCountryData) {
+                        setInspectionIsRequired(selectedCountryData.inspectionIsRequired);
+                        setInspectionName(selectedCountryData.inspectionName);
+                        switch (selectedCountryData.inspectionIsRequired) {
+                            case "Required":
+                                setToggle(true); // Ensure the toggle is on for "Required"
+                                setIsToggleDisabled(true); // Disable toggle interaction for "Required"
+                                break;
+                            case "Not-Required":
+                                setToggle(false); // Ensure the toggle is off for "Not-Required"
+                                setIsToggleDisabled(true); // Disable toggle interaction for "Not-Required"
+                                break;
+                            case "Optional":
+                            default:
+                                setIsToggleDisabled(false); // Enable toggle interaction otherwise
+                                break;
+                        }
+                    } else {
+                        setToggle(false);
+                        setIsToggleDisabled(false);
+                    }
+                } else {
+                    console.log("CountriesDoc does not exist, setting toggle to false");
+                    setToggle(false);
+                    setIsToggleDisabled(false);
+                }
+            } catch (error) {
+                console.error("Error fetching document:", error);
+                setToggle(false);
+                setIsToggleDisabled(false);
+            }
+        };
+
+        fetchInspection();
+    }, [selectedCountry]);
+
+    // Separate effect for handling the animation when the toggle state changes
+    useEffect(() => {
+        AnimatedRN.timing(toggleAnim, {
+            toValue: toggle ? 1 : 0,
+            duration: 100,
+            useNativeDriver: true,
+        }).start();
+    }, [toggle, toggleAnim]);
+
+
+    //check inspection
+    //inspection
+
+
+
     //getPort price
     const [profitMap, setProfitMap] = useState('');
     useEffect(() => {
@@ -2919,6 +3262,7 @@ const SearchCarDesignAlpha = () => {
 
 
     const [searchParams, setSearchParams] = useSearchParams();
+    console.log(searchParams)
     //screenwidth
     const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
     useEffect(() => {
@@ -3004,7 +3348,7 @@ const SearchCarDesignAlpha = () => {
             console.error('Error fetching data from Firebase:', error);
         }
     }, [carMakes]);
-    const [carModels, setCarModels] = useState(searchParams.get('carModel') || '');
+    const [carModels, setCarModels] = useState(searchParams.get('carModels') || '');
 
     const handleSelectModel = async (option) => {
         setCarModels(option);
@@ -3026,42 +3370,44 @@ const SearchCarDesignAlpha = () => {
             console.error('Error fetching data from Firebase:', error);
         }
     }, []);
-    const [carBodyType, setCarBodyType] = useState(searchParams.get('bodyType') || '');
+    const [carBodyType, setCarBodyType] = useState(searchParams.get('carBodyType') || '');
 
-    const handleSelectBodyType = async (option) => {
+    const handleSelectBodyType = (option) => {
         setCarBodyType(option);
     };
     //DROPDOWN BODY TYPE
     //DROPDOWN MIN YEAR
-    const [carMinYear, setCarMinYear] = useState(searchParams.get('minYear') || '');
+    const [carMinYear, setCarMinYear] = useState(searchParams.get('carMinYear') || '');
     const handleSelectMinYear = async (option) => {
         setCarMinYear(option)
     }
+
     //DROPDOWN MIN YEAR
 
     //DROPDOWN MAX YEAR
-    const [carMaxYear, setCarMaxYear] = useState(searchParams.get('maxYear') || '');
+    const [carMaxYear, setCarMaxYear] = useState(searchParams.get('carMaxYear') || '');
     const handleSelectMaxYear = async (option) => {
         setCarMaxYear(option)
     }
     //DROPDOWN MAX YEAR
     //DROPDOWN MIN MILEAGE
-    const [minMileage, setMinMileage] = useState('');
+    const [minMileage, setMinMileage] = useState(searchParams.get('minMileage') || '');
     const minMileageData = [
-        '10000',
-        '30000',
-        '50000',
-        '100000',
-        '150000',
-        '200000',
+        "10000",
+        "30000",
+        "50000",
+        "100000",
+        "150000",
+        "200000",
     ];
-    const handleSelectMinMileage = (option) => {
+    const handleSelectMinMileage = async (option) => {
         setMinMileage(option);
     };
+
     //DROPDOWN MIN MILEAGE
 
     //DROPDOWN MAX MILEAGE
-    const [maxMileage, setMaxMileage] = useState('');
+    const [maxMileage, setMaxMileage] = useState(searchParams.get('maxMileage') || '');
     const maxMileageData = [
         '10000',
         '30000',
@@ -3076,7 +3422,7 @@ const SearchCarDesignAlpha = () => {
     //DROPDOWN MAX MILEAGE
 
     //DROPDOWN MIN PRICE
-    const [minPrice, setMinPrice] = useState('');
+    const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
     const minPriceData = [
         '1000',
         '3000',
@@ -3086,13 +3432,13 @@ const SearchCarDesignAlpha = () => {
         '20000',
     ];
     const handleSelectMinPrice = (option) => {
-        setMaxMileage(option);
+        setMinPrice(option);
     };
     //DROPDOWN MIN PRICE
 
 
     //DROPDOWN MAX PRICE
-    const [maxPrice, setMaxPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
     const maxPriceData = [
         '1000',
         '3000',
@@ -3102,133 +3448,412 @@ const SearchCarDesignAlpha = () => {
         '20000',
     ];
     const handleSelectMaxPrice = (option) => {
-        setMaxMileage(option);
+        setMaxPrice(option);
+
     };
     //DROPDOWN MAX PRICE
 
     //LOGIC FOR FILTERS
 
-    const [lastVisible, setLastVisible] = useState(null);
+
     const [carItems, setCarItems] = useState([]);
     const [hasMoreItems, setHasMoreItems] = useState(false);
     const [pageSnapshots, setPageSnapshots] = useState([null]);
-    const [searchTerm, setSearchTerm] = useState(searchParams.get('searchTerm') || '');
-    const [isLoading, setIsLoading] = useState(false)
-    const updateSearchParams = () => {
-        setSearchParams({ searchTerm });
+
+    const searchKeywords = useRef(searchParams.get('keywords') || null);
+    const handleTextChange = (value) => {
+        searchKeywords.current = value
     };
 
+
+    const [isLoading, setIsLoading] = useState(false)
+    // const updateSearchParams = () => {
+    //     setSearchParams({searchTerm});
+    // };
+
+
+    //vehicle count
+    const [vehicleCount, setVehicleCount] = useState(0)
+    //vehilce count
+
     const [allItems, setAllItems] = useState([]);
+    console.log('COUNT OF ALL ITEMS OF LIMIT', allItems)
     const [displayItems, setDisplayItems] = useState([]);
     const [currentPage, setCurrentPage] = useState(0);
-    const itemsPerPage = 5; // Define items per page as needed
+    //per page
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const handleItemsPerPage = (value) => {
+        setItemsPerPage(value);
+        setCurrentPage(0);
+        fetchGeneralData();
+    };
+    //per page
+
+    //Sort by
+    const sortOptionsArray = [
+        { label: "Update New to Old", field: "dateAdded", direction: "desc" },
+        { label: "Update Old to New", field: "dateAdded", direction: "asc" },
+        { label: "Price Low to High", field: "fobPrice", direction: "asc" },
+        { label: "Price High to Low", field: "fobPrice", direction: "desc" }
+    ];
+    const [sortSelection, setSortSelection] = useState('Update Old to New');
+    const [sortDirection, setSortDirection] = useState('asc')
+    const handleSortChange = (selectedOption) => {
+        setCurrentPage(0);
+        setSortSelection(selectedOption.label);
+        setSortDirection(selectedOption.direction);
+        fetchGeneralData();
+    };
+    //Sort by
+
+    //fetch image
+    const [allImageUrl, setAllImageUrl] = useState({});
+    //fetch image
+
+    const [lastVisible, setLastVisible] = useState(null);
+    const [firstVisible, setFirstVisible] = useState(null);
+
+    const [fetching, setFetching] = useState(false); // New state to track fetching status
+    const currenceyInside = currentCurrency.jpyToUsd
     const fetchItems = async () => {
         setIsLoading(true);
 
-        // Base query without Firestore pagination
-        let q = query(collection(projectExtensionFirestore, 'VehicleProducts'), orderBy('dateAdded'), limit(50));
+        // if (lastVisible) {
+        //     q = query(q, startAfter(lastVisible));
+        // }
 
-        // Dynamically add where conditions based on filters
-        const filters = [
-            { condition: searchTerm, field: 'keywords', operation: 'array-contains', value: searchTerm?.toUpperCase() },
-            { condition: carMakes, field: 'make', operation: '==', value: carMakes?.toUpperCase() },
-            { condition: carModels, field: 'model', operation: '==', value: carModels?.toUpperCase() },
-            { condition: carBodyType, field: 'bodyType', operation: '==', value: carBodyType?.toUpperCase() },
-            // Add other filters as needed
-        ];
-        // Apply filters to the query
-        filters.forEach(filter => {
-            if (filter.condition) {
-                q = query(q, where(filter.field, filter.operation, filter.value));
+        let countryRef = doc(projectExtensionFirestore, 'VehicleCount', 'VehicleCount');
+        const make = carMakes?.toUpperCase(); // Ensure we have the make in uppercase
+
+        let q = query(collection(projectExtensionFirestore, 'VehicleProducts'));
+        let g = collectionGroup(projectExtensionFirestore, 'VehicleProducts')
+        const activeFilters = [
+            carMakes, carModels,
+            carMinYear, carMaxYear,
+            searchKeywords.current ? searchKeywords.current : null,
+            minMileage, maxMileage, minPrice, maxPrice
+        ].filter(Boolean);
+
+        if (searchKeywords.current) {
+            q = query(q, where('keywords', 'array-contains', searchKeywords.current.toUpperCase()));
+        }
+        if (carMakes) {
+            q = query(q, where('make', '==', carMakes.toUpperCase()));
+        }
+        if (carModels) {
+            q = query(q, where('model', '==', carModels.toUpperCase()));
+        }
+        if (carBodyType) {
+            q = query(q, where('bodyType', '==', carBodyType));
+        }
+
+        if (carMinYear || carMaxYear) {
+            q = query(q, orderBy('regYear'));
+            if (carMinYear) {
+                q = query(q, where('regYear', '>=', carMinYear?.toString()));
             }
-        });
+            if (carMaxYear) {
+                q = query(q, where('regYear', '<=', carMaxYear?.toString()));
+            }
+        }
+
+        // If no range filters are applied, default to ordering by dateAdded
+        if (!carMinYear && !carMaxYear) {
+            q = query(q, orderBy('dateAdded', `${sortDirection}`));
+        }
+        if (lastVisible) {
+            q = query(q, startAfter(lastVisible));
+        }
+        if (activeFilters.length === 1 || activeFilters.length === 0) {
+            q = query(q, limit(itemsPerPage)); // Only limit to 10 if exactly one filter is active
+        }
 
         try {
+            const make = carMakes?.toUpperCase()
+
+
             const querySnapshot = await getDocs(q);
-            let items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Apply year filters client-side
-            if (carMinYear) {
-                const minYear = parseInt(carMinYear, 10);
-                items = items.filter(item => parseInt(item.regYear, 10) >= minYear);
-            }
 
-            if (carMaxYear) {
-                const maxYear = parseInt(carMaxYear, 10);
-                items = items.filter(item => parseInt(item.regYear, 10) <= maxYear);
-            }
-            if (minMileage) {
-                const minMileageValue = parseInt(minMileage, 10); // Convert minMileage to a number
-                items = items.filter(item => parseInt(item.mileage, 10) >= minMileageValue);
-            }
 
-            if (maxMileage) {
-                const maxMileageValue = parseInt(maxMileage, 10); // Convert maxMileage to a number
-                items = items.filter(item => parseInt(item.mileage, 10) <= maxMileageValue);
-            }
+            if (!querySnapshot.empty) {
+                let items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            setAllItems(items); // Store all fetched and filtered items
-            setDisplayItems(items.slice(0, itemsPerPage)); // Initialize display items for the first page
-            setHasMoreItems(items.length > itemsPerPage); // Determine if there are more items beyond the first page
+                // Filter items
+
+                if (minMileage) {
+                    items = items.filter(item => parseInt(item.mileage, 10) >= parseInt(minMileage, 10));
+                }
+                if (maxMileage) {
+                    items = items.filter(item => parseInt(item.mileage, 10) <= parseInt(maxMileage, 10));
+                }
+
+                if (minPrice && currenceyInside) {
+                    items = items.filter(item => parseFloat(currenceyInside) * parseFloat(item.fobPrice) >= parseInt(minPrice, 10));
+                }
+                if (maxPrice && currenceyInside) {
+                    items = items.filter(item => parseFloat(currenceyInside) * parseFloat(item.fobPrice) <= parseInt(maxPrice, 10));
+                }
+                // Sort items
+                // const selectedSortOption = sortOptionsArray.find(option => option.label === sortSelection);
+                // if (selectedSortOption) {
+                //     items = items.sort((a, b) => (selectedSortOption.direction === 'asc' ? a[selectedSortOption.field] - b[selectedSortOption.field] : b[selectedSortOption.field] - a[selectedSortOption.field]));
+                // }
+
+
+                const newSearchParams = new URLSearchParams({
+                    keywords: searchKeywords.current || '',
+                    carModels: carModels || '',
+                    carMakes: carMakes || '',
+                    carBodyType: carBodyType || '',
+                    carMinYear: carMinYear || '',
+                    carMaxYear: carMaxYear || '',
+                    minMileage: minMileage || '',
+                    maxMileage: maxMileage || '',
+                    minPrice: minPrice || '',
+                    maxPrice: maxPrice || '',
+                });
+
+
+
+                const itemsWithImages = await Promise.all(items.map(async (item) => {
+                    const folderRef = ref(projectExtensionStorage, item.id);
+                    const result = await listAll(folderRef);
+                    const urls = await Promise.all(result.items.map(async (fileRef) => {
+                        return await getDownloadURL(fileRef);
+                    }));
+                    return { ...item, images: urls };
+                }));
+
+                setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
+
+                // This part handles merging the image URLs into the existing map
+                const newImageUrlMap = itemsWithImages.reduce((acc, item) => {
+                    acc[item.id] = item.images;
+                    return acc;
+                }, {});
+
+                // Assuming setAllImageUrl is your state update function for the imageUrlMap
+                setAllImageUrl(prevMap => ({ ...prevMap, ...newImageUrlMap }));
+
+                setSearchParams(newSearchParams);
+                setAllItems(prevItems => [...prevItems, ...itemsWithImages]);
+                setDisplayItems(itemsWithImages.slice(0, itemsPerPage));
+
+                setHasMoreItems(querySnapshot.docs.length === itemsPerPage);
+                setIsLoading(false);
+
+
+            }
+            // setVehiclesCount(querySnapshot.docs.length);
+            // const vehicleCount = querySnapshot.docs.length;
+            // await updateDoc(vehicleCountExtension, {
+            //     [make]: vehicleCount
+            // })
+            // let items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // if (carMinYear) {
+            //     const minYear = parseInt(carMinYear, 10);
+            //     items = items.filter(item => parseInt(item.regYear, 10) >= minYear);
+            //     console.log('car min year here', items)
+            // }
+            // if (carMaxYear) {
+            //     const maxYear = parseInt(carMaxYear, 10);
+            //     items = items.filter(item => parseInt(item.regYear, 10) <= maxYear);
+            // }
+            // if (minMileage) {
+            //     const minMileageValue = parseInt(minMileage, 10); // Convert minMileage to a number
+            //     items = items.filter(item => parseInt(item.mileage, 10) >= minMileageValue);
+            // }
+            // if (maxMileage) {
+            //     const maxMileageValue = parseInt(maxMileage, 10); // Convert maxMileage to a number
+            //     items = items.filter(item => parseInt(item.mileage, 10) <= maxMileageValue);
+            // };
+
+            const snapshotCount = await getCountFromServer(q);
+            const totalCount = snapshotCount.data().count;
+            console.log('total count', totalCount);
+            // setAllItems(items);
+            // if (vehicleCount.exists() && imageUrlMap && items && newSearchParams) {
+            //     const data = vehicleCount.data();
+            //     const count = data[make] || data['ALL'];
+            //     setVehicleCount(count);
+            // }
+            // setDisplayItems(items.slice(0, itemsPerPage)); // Initialize display items for the first page
+            // setHasMoreItems(items.length > itemsPerPage);
+            // Determine if there are more items beyond the first page
         } catch (error) {
             console.error("Failed to fetch items:", error);
         } finally {
             setIsLoading(false);
+
         }
     };
+    const disableNextButton = currentPage + 1 > Math.ceil(allItems.length / itemsPerPage) && !hasMoreItems;
+
     const resetPagination = () => {
-        setCurrentPage(0); // Reset to first page
-        setPageSnapshots([]); // Clear snapshots
+        setCurrentPage(0);
+        setAllItems([]);
+        setLastVisible(null);
+        setDisplayItems([]);
+        setTotalPrices([]);
     };
+    const fetchGeneralData = () => {
+        resetPagination();
+        if (allItems <= 0) {
+            fetchItems();
+        }
+
+    };
+    useEffect(() => {
+        // Ensure fetchItems is only called when lastVisible is explicitly set to null
+        if (lastVisible === null) {
+            fetchItems();
+        }
+    }, [lastVisible]);
+
     // useEffect(() => {
+    //     const fetchMoreItemsIfNeeded = async () => {
+    //         const nextPageStartIndex = (currentPage + 1) * itemsPerPage;
+    //         if (nextPageStartIndex >= allItems.length && hasMoreItems) {
+    //             await fetchItems();
+    //         }
+    //     };
+
+    //     fetchMoreItemsIfNeeded();
+    // }, [currentPage, hasMoreItems]);
+    // useEffect(() => {
+
     //     fetchItems();
-    // }, [])
-    const fetchNext = () => {
-        const nextPage = currentPage + 1;
-        const newDisplayItems = allItems.slice(nextPage * itemsPerPage, (nextPage + 1) * itemsPerPage);
-        if (newDisplayItems.length > 0) {
-            setCurrentPage(nextPage);
+
+    // }, []);
+    // useEffect(() => {
+    //     // This will run after `itemsPerPage` is updated
+    //     if (itemsPerPage) {
+    //         fetchItems(50); // Assuming you want to fetch with a new limit, adjust as necessary
+    //     }
+    // }, [itemsPerPage]);
+    // Updated fetchNext function to handle pagination and dynamic item fetching efficiently
+    const [fetchSize, setFetchSize] = useState(10);
+    const [checkFetched, setCheckedFetched] = useState(false);
+    const fetchNext = async () => {
+        const nextPageStartIndex = (currentPage + 1) * itemsPerPage;
+
+        // Check if we need to fetch more items (when we're at the last page of the current items)
+        if (nextPageStartIndex >= allItems.length && hasMoreItems) {
+
+            setCurrentPage(currentPage + 1);
+            await fetchItems();
+            setCheckedFetched(true) // Fetch the next batch of items
+        }
+        if (allItems.length > nextPageStartIndex) {
+
+            setCurrentPage(currentPage + 1);
+
+            // Update to the next page index
+        }
+        // After fetching or if items are already available, move to the next page
+
+    };
+    console.log('current page', currentPage)
+    // useEffect(() => {
+    //     // Calculate the maximum possible current page based on the length of allItems
+    //     const maxFullPages = Math.floor(allItems.length / itemsPerPage);
+
+    //     // If the current page is less than the maximum full pages available, move to the next page
+    //     if (currentPage < maxFullPages && checkFetched === true) {
+    //         setCurrentPage(currentPage + 1);
+    //     }
+    // }, [allItems]); // Dependency on allItems to trigger the check whenever items are added
+
+
+    useEffect(() => {
+
+        const start = currentPage * itemsPerPage;
+        const end = start + itemsPerPage;
+        // Ensure that we have enough items to display for the current page
+        if (start < allItems.length) {
+            const newDisplayItems = allItems.slice(start, Math.min(end, allItems.length));  // Ensure not to exceed available items
             setDisplayItems(newDisplayItems);
-            setHasMoreItems((nextPage + 1) * itemsPerPage < allItems.length);
+
+        };
+
+    }, [currentPage, itemsPerPage, allItems, totalPrices]); // Respond to changes in currentPage or allItems
+
+    useEffect(() => {
+        handleCalculate(); // Recalculate prices whenever displayItems changes
+    }, [displayItems]);
+
+    const fetchPrevious = () => {
+        if (currentPage > 0) {
+            const prevPageStartIndex = (currentPage - 1) * itemsPerPage;
+            const prevPageItems = allItems.slice(prevPageStartIndex, prevPageStartIndex + itemsPerPage);
+            setDisplayItems(prevPageItems);
+            setCurrentPage(currentPage - 1);
         }
     };
 
-    const fetchPrevious = () => {
-        const prevPage = currentPage - 1;
-        if (prevPage >= 0) {
-            setCurrentPage(prevPage);
-            setDisplayItems(allItems.slice(prevPage * itemsPerPage, (prevPage + 1) * itemsPerPage));
-            // Always true if currentPage > 0 after decrement
-            setHasMoreItems(true);
-        }
-    };
-    const fetchData = () => {
-        resetPagination();
-        fetchItems();
-    };
-    useEffect(() => {
-        fetchData();
-    }, [])
+
+    // useEffect(() => {
+    //     // Calculate the range based on the current page
+    //     const start = currentPage * itemsPerPage;
+    //     const end = start + itemsPerPage;
+
+    //     // Slice the current items for display
+    //     const newDisplayItems = allItems.slice(start, end);
+    //     setDisplayItems(newDisplayItems);
+
+    //     // Update whether more items can be fetched or displayed
+    //     setHasMoreItems(allItems.length > end);
+    // }, [allItems, currentPage, itemsPerPage, vehicleCount]);
+
+
+
+
+    // const fetchData = () => {
+    //     resetPagination();
+    //     fetchItems();
+    // };
+    // useEffect(() => {
+    //     if (hasMoreItems === false) {
+    //         fetchData();
+    //     }
+    // }, [itemsPerPage, sortSelection, vehicleCount])
     // useEffect(() => {
     //     resetPagination();
 
     // }, [searchParams, carMakes, carModels, carBodyType, carMinYear, carMaxYear]);
 
-    const performSearch = () => {
-        updateSearchParams();
-    };
 
     //LOGIC FOR FILTERS
     //RENDER ITEMS FROM FLATLIST
     const handleGoToProduct = (id) => {
         navigate(`/ProductScreen/${id}`);
-    }
-    const renderCarItems = useCallback(({ item }) => {
+    };
+
+    const [totalPrices, setTotalPrices] = useState([]);
+    console.log('Prices', totalPrices)
+    const handleCalculate = () => {
+        const newTotalPrices = displayItems.map(item => {
+            const totalPriceCalculation = (parseFloat(item.fobPrice) * currentCurrency.jpyToUsd) +
+                (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap));
+            return totalPriceCalculation ? parseInt(totalPriceCalculation).toLocaleString() : '000';
+        });
+        setTotalPrices(newTotalPrices);  // Update state with all calculated total prices
+    };
+
+
+    const renderCarItems = useCallback(({ item, index }) => {
+
         const imageAspectRatio = 1.7
         const fobDollar = parseFloat(currentCurrency.jpyToUsd) * parseFloat(item.fobPrice);
         const formattedFobDollar = fobDollar ? parseInt(fobDollar).toLocaleString() : '000'; //FOB PRICE
         const totalPriceCalculation = (parseFloat(item.fobPrice) * currentCurrency.jpyToUsd) + (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap));
         const formattedTotalPrice = totalPriceCalculation ? parseInt(totalPriceCalculation).toLocaleString() : '000'; //TOTAL PRICE
+        const displayTotalPrice = totalPrices.length > index ? totalPrices?.[index] : '000';
+
+        const carImages = allImageUrl[item?.id];
+        const firstImageUri = carImages?.[0] || carSample; // Replace 'defaultImagePlaceholderUri' with an actual URI for a placeholder image
         return (
             <View style={{ borderRadius: 5, borderWidth: 1, borderColor: '#999', flex: 1, marginVertical: 5, width: '100%', alignSelf: 'center' }}>
                 <View style={{ padding: 5 }}>
@@ -3255,7 +3880,7 @@ const SearchCarDesignAlpha = () => {
                     </View>
                     <View style={{ flexDirection: screenWidth <= 768 ? 'column' : 'row', padding: 10, backgroundColor: '#fff' }}>
                         <Image
-                            source={{ uri: carSample }}
+                            source={{ uri: firstImageUri }}
                             style={{
                                 width: screenWidth <= 768 ? '100%' : 350,
                                 height: screenWidth <= 768 ? (screenWidth / imageAspectRatio) : 250, // Calculate the height based on the screen width and the image's aspect ratio
@@ -3270,9 +3895,15 @@ const SearchCarDesignAlpha = () => {
                             <Text style={{ color: 'blue', fontSize: 16, marginTop: -5 }}>
                                 {item.carDescription}
                             </Text>
-                            <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20 }}>
-                                US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{formattedFobDollar}</Text>
-                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 1 }}>
+                                    US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{formattedFobDollar}</Text>
+                                </Text>
+                                <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 2 }}>
+                                    US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{displayTotalPrice}</Text>
+                                </Text>
+                            </View>
+
                             {screenWidth <= 768 ? (
                                 <View style={{
                                     flexDirection: 'row',
@@ -3332,15 +3963,42 @@ const SearchCarDesignAlpha = () => {
 
                 </View>
             </View>
-        );
-    }, [currentCurrency, profitMap, screenWidth])
+        )
+    }, [currentCurrency, profitMap, screenWidth, allImageUrl, totalPrices])
     //RENDER ITEMS FROM FLATLIST
+    enableLegacyWebImplementation(true);
+    const carouselRef = useRef(null);
+    const carouselWidth = screenWidth
+    const carouselHeight = carouselWidth * 0.2; // Maintain an aspect ratio (e.g., 4:3)
+    const dataFilesExtra = [
+        { image: image },
+    ]
+
 
     return (
         <View style={{ flex: 3, }}>
             <StickyHeader />
             <View style={{ flex: 3 }}>
-                <View style={{ flexDirection: screenWidth <= 962 ? 'column' : 'row', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
+
+                <Carousel
+                    ref={carouselRef}
+                    autoPlay={false}
+                    width={screenWidth < 768 ? carouselWidth : carouselWidth * 1}
+                    height={screenWidth < 768 ? carouselHeight * 2.2 : carouselHeight * 1.2}
+                    data={dataFilesExtra}
+                    renderItem={({ item }) => (
+                        <View style={{ width: carouselWidth, height: screenWidth < 768 ? carouselHeight * 2.2 : carouselHeight * 1.2, justifyContent: 'center', alignItems: 'center', aspectRatio: 0.2 }}>
+                            <Image
+                                source={item.image}
+                                style={{ width: '100%', height: '100%', zIndex: -2 }}
+                                resizeMode="cover"
+                            />
+                        </View>
+
+                    )}
+                />
+
+                <View style={{ flexDirection: screenWidth <= 962 ? 'column' : 'row', alignItems: 'center', width: '100%', justifyContent: 'center', marginTop: '-15%' }}>
                     <View style={{
                         width: '100%',
                         maxWidth: screenWidth <= 1354 ? null : 650,
@@ -3351,6 +4009,12 @@ const SearchCarDesignAlpha = () => {
                         marginVertical: 10,
                         height: screenWidth < 456 ? null : 300,
                         flex: 1,
+                        backgroundColor: 'white',
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 5,
                     }}>
                         <View style={{
                             flexDirection: screenWidth < 456 ? 'column' : 'row',
@@ -3361,7 +4025,7 @@ const SearchCarDesignAlpha = () => {
                             zIndex: 10
                         }}>
                             <DropDownMakeSimple makes={makes} handleSelectMake={handleSelectMake} carMakes={carMakes} />
-                            <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModel={carModels} />
+                            <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModels={carModels} />
                             <DropDownBodyTypeSimple bodyType={bodyType} carBodyType={carBodyType} handleSelectBodyType={handleSelectBodyType} />
                         </View>
                         <View style={{
@@ -3416,6 +4080,7 @@ const SearchCarDesignAlpha = () => {
                                 }}
                                 placeholder='Search by make, model, or keyword '
                                 placeholderTextColor={'#ccc'}
+                                onChangeText={handleTextChange}
                             />
                         </View>
                         <View style={{ width: '100%', height: 50, paddingHorizontal: 5, }}>
@@ -3428,7 +4093,7 @@ const SearchCarDesignAlpha = () => {
                                     alignItems: 'center',
                                     flex: 1
                                 }}
-                                onPress={() => fetchData()}
+                                onPress={() => { fetchGeneralData(); }}
                             >
                                 <Text style={{ color: 'white' }}>Search</Text>
                             </TouchableOpacity>
@@ -3437,6 +4102,7 @@ const SearchCarDesignAlpha = () => {
                     </View>
                     <View style={{ marginHorizontal: 25 }} />
                     <View style={{
+                        backgroundColor: 'white',
                         width: '100%',
                         maxWidth: screenWidth <= 1354 ? null : 650,
                         flex: screenWidth > 962 ? 1 : null,
@@ -3446,7 +4112,12 @@ const SearchCarDesignAlpha = () => {
                         padding: 15,
                         marginVertical: 10,
                         height: screenWidth < 456 ? null : 300,
-                        zIndex: -2
+                        zIndex: -2,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 5,
 
                     }}>
                         <View style={{
@@ -3483,8 +4154,19 @@ const SearchCarDesignAlpha = () => {
                             marginBottom: 10,
                             zIndex: -2
                         }}>
+                            <Inspection
+                                isToggleDisabled={isToggleDisabled}
+                                toggleAnim={toggleAnim}
+                                handleToggle={handleToggle}
+                                switchTranslate={switchTranslate}
+                                switchColor={switchColor}
+                                setToggle={setToggle}
+                                toggle={toggle}
+                                handleToggleInspection={handleToggleInspection}
+                                selectedCountry={selectedCountry}
+                            />
                             <Insurance />
-                            <Inspection />
+
                             <TouchableOpacity
                                 style={{
                                     justifyContent: 'center',
@@ -3492,6 +4174,7 @@ const SearchCarDesignAlpha = () => {
                                     padding: 10,
                                     backgroundColor: 'blue'
                                 }}
+                                onPress={() => handleCalculate()}
                             >
                                 <Text style={{ color: 'white' }}>Calculate</Text>
                             </TouchableOpacity>
@@ -3556,31 +4239,42 @@ const SearchCarDesignAlpha = () => {
                     )}
                     <View style={{ flex: 3, maxWidth: 1070, paddingHorizontal: 10 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                            <Text style={{ fontStyle: 'italic' }}>0000 cars found</Text>
+                            <Text style={{ fontStyle: 'italic' }}>{vehicleCount} cars found</Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 20 }}>
                                 <Button title="Previous" onPress={fetchPrevious} disabled={currentPage === 0} />
-                                <Button title="Next" onPress={fetchNext} disabled={!hasMoreItems} />
+                                <Button title="Next" onPress={fetchNext} disabled={disableNextButton} />
                             </View>
                         </View>
-                        <View style={{ borderBottomWidth: 1, borderBottomColor: 'gray', padding: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10 }}>
+                        <View style={{ borderBottomWidth: 1, borderBottomColor: 'gray', padding: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10, zIndex: 10 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
                                 <Text>Sort by</Text>
-                                <SortBy />
+                                <SortBy sortOptionsArray={sortOptionsArray} sortSelection={sortSelection} handleSortChange={handleSortChange} />
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
                                 <Text>View Price in</Text>
                                 <ViewPrice />
                             </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5, zIndex: 5 }}>
                                 <Text>Per Page</Text>
-                                <PerPage />
+                                <PerPage handleItemsPerPage={handleItemsPerPage} itemsPerPage={itemsPerPage} resetPagination={resetPagination} />
                             </View>
                         </View>
-                        <FlatList
-                            data={displayItems}
-                            renderItem={renderCarItems}
-                            keyExtractor={(item) => item.id}
-                        />
+                        {isLoading && displayItems && allItems && currentCurrency ? (
+                            <View>
+                                {Array.from({ length: itemsPerPage }, (_, index) => (
+                                    <LoadingComponent key={index} />
+                                ))}
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={displayItems}
+                                renderItem={renderCarItems}
+                                keyExtractor={(item) => item.id}
+                            />
+
+                        )}
+
+
                     </View>
                     {screenWidth <= 962 && (
                         <View style={{ zIndex: -5, flexDirection: screenWidth <= 715 ? 'column' : 'row', alignItems: screenWidth <= 715 ? null : 'center' }}>
