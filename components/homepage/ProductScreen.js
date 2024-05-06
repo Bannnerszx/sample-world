@@ -1395,7 +1395,8 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
 
             stepIndicator: {
                 value: 1,
-                stepStatus: "Negotiation"
+                stepStatus: "Negotiation",
+                sideBarNotification: false,
             },
             inspectionIsRequired: inspectionIsRequired,
             inspectionName: inspectionName,

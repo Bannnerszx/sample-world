@@ -6,7 +6,7 @@ import { projectExtensionFirestore, projectExtensionStorage } from "../../fireba
 import { FlatGrid } from "react-native-super-grid";
 import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt } from "firebase/firestore";
 import { listAll, ref, getDownloadURL } from "firebase/storage";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { redirect, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthProvider";
 import { Slider, RangeSlider } from '@react-native-assets/slider'
 import carSample from '../../assets/2.jpg'
@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Center } from "native-base";
 import gifLogo from '../../assets/rename.gif'
 import Svg, { Mask, Path, G, Defs, Pattern, Use, Image, Rect, Text, Circle } from "react-native-svg";
+
 const StickyHeader = () => {
     const navigate = useNavigate();
     const searchQueryWorldRef = useRef('');
@@ -86,12 +87,12 @@ const StickyHeader = () => {
                 </View>
                 <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
                     <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                        <Text>Sign Up</Text>
+                        <TextRN>Sign Up</TextRN>
                     </TouchableOpacity>
                 </View>
                 <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
                     <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                        <Text >Log In CHANGES</Text>
+                        <TextRN >Log In CHANGES</TextRN>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -222,10 +223,10 @@ const MakerRanking = () => {
 
                 {ribbonComponent || (
                     <View style={ribbonStyle}>
-                        <Text style={styles.rankText}>{item.key}</Text>
+                        <TextRN style={styles.rankText}>{item.key}</TextRN>
                     </View>
                 )}
-                <Text style={styles.nameText}> {item.name}</Text>
+                <TextRN style={styles.nameText}> {item.name}</TextRN>
             </View>
         )
     }
@@ -233,7 +234,7 @@ const MakerRanking = () => {
     return (
         <View style={styles.container}>
 
-            <Text style={styles.header}>Maker Ranking</Text>
+            <TextRN style={styles.header}>Maker Ranking</TextRN>
             <FlatList
                 style={{ backgroundColor: '#f5f5f5' }}
                 data={rankings}
@@ -366,10 +367,10 @@ const ModelRanking = () => {
 
                 {ribbonComponent || (
                     <View style={ribbonStyle}>
-                        <Text style={styles.rankText}>{item.key}</Text>
+                        <TextRN style={styles.rankText}>{item.key}</TextRN>
                     </View>
                 )}
-                <Text style={styles.nameText}> {item.name}</Text>
+                <TextRN style={styles.nameText}> {item.name}</TextRN>
             </View>
         )
     }
@@ -377,7 +378,7 @@ const ModelRanking = () => {
     return (
         <View style={styles.container}>
 
-            <Text style={styles.header}>Maker Ranking</Text>
+            <TextRN style={styles.header}>Maker Ranking</TextRN>
             <FlatList
                 style={{ backgroundColor: '#f5f5f5' }}
                 data={rankings}
@@ -407,7 +408,7 @@ const SortBy = ({ sortOptionsArray, sortSelection, handleSortChange }) => {
                 },
             ]}
         >
-            <Text>{sortSelection}</Text>
+            <TextRN>{sortSelection}</TextRN>
             {isActive && (
                 <View style={{
                     position: 'absolute',
@@ -429,13 +430,13 @@ const SortBy = ({ sortOptionsArray, sortSelection, handleSortChange }) => {
                             <Pressable
                                 onPress={() => { handleSortChange(item); handleIsActive(false); }}
                             >
-                                <Text style={{
+                                <TextRN style={{
                                     padding: 10, // Adjust padding as needed
                                     borderBottomWidth: 1,
                                     borderBottomColor: '#eee',
                                 }}>
                                     {item.label}
-                                </Text>
+                                </TextRN>
                             </Pressable>
                         )}
                     />
@@ -478,7 +479,7 @@ const ViewPrice = () => {
                 },
             ]}
         >
-            <Text>USD</Text>
+            <TextRN>USD</TextRN>
             <AntDesign
                 name="down"
                 size={15}
@@ -519,7 +520,7 @@ const PerPage = ({ handleItemsPerPage, itemsPerPage, fetchData }) => {
                 },
             ]}
         >
-            <Text>{itemsPerPage}</Text>
+            <TextRN>{itemsPerPage}</TextRN>
             {isActive && (
                 <View style={{
                     position: 'absolute',
@@ -541,13 +542,13 @@ const PerPage = ({ handleItemsPerPage, itemsPerPage, fetchData }) => {
                             <Pressable
                                 onPress={() => { handleItemsPerPage(item); handleIsActive(false); }}
                             >
-                                <Text style={{
+                                <TextRN style={{
                                     padding: 10, // Adjust padding as needed
                                     borderBottomWidth: 1,
                                     borderBottomColor: '#eee',
                                 }}>
                                     {item}
-                                </Text>
+                                </TextRN>
                             </Pressable>
                         )}
                     />
@@ -571,6 +572,7 @@ const PerPage = ({ handleItemsPerPage, itemsPerPage, fetchData }) => {
 
 
 const FavoriteList = () => {
+    const { userEmail } = useContext(AuthContext);
     //screenwidth
     const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
     useEffect(() => {
@@ -584,7 +586,12 @@ const FavoriteList = () => {
     }, []);
     //screenwidth
 
-
+    const InfoColumn = ({ label, value }) => (
+        <View style={{ alignItems: 'center', marginHorizontal: screenWidth <= 768 ? 0 : 10, justifyContent: 'center' }}>
+            <TextRN style={{ fontWeight: 'bold', fontSize: 16 }}>{value}</TextRN>
+            <TextRN style={{ color: 'gray', fontSize: 16 }}>{label}</TextRN>
+        </View>
+    );
 
     //fetch currency
     const [currentCurrency, setCurrentCurrency] = useState('');
@@ -628,7 +635,7 @@ const FavoriteList = () => {
     //                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
     //                     <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
     //                         <MaterialCommunityIcons name="steering" size={25} />
-    //                         <Text> Right Hand</Text>
+    //                         <TextRN> Right Hand</TextRN>
     //                     </View>
     //                     <TouchableOpacity
     //                         style={{
@@ -643,7 +650,7 @@ const FavoriteList = () => {
     //                         }}
     //                     >
     //                         <AntDesign name="heart" size={15} color={'white'} />
-    //                         <Text style={{ color: 'white' }}>Add to Shortlist</Text>
+    //                         <TextRN style={{ color: 'white' }}>Add to Shortlist</TextRN>
     //                     </TouchableOpacity>
     //                 </View>
     //                 <View style={{ flexDirection: screenWidth <= 768 ? 'column' : 'row', padding: 10, backgroundColor: '#fff' }}>
@@ -657,15 +664,15 @@ const FavoriteList = () => {
     //                         }}
     //                     />
     //                     <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 10 }}>
-    //                         <Text style={{ fontWeight: 'bold', fontSize: 28, marginBottom: 5 }}>
+    //                         <TextRN style={{ fontWeight: 'bold', fontSize: 28, marginBottom: 5 }}>
     //                             {item.carName}
-    //                         </Text>
-    //                         <Text style={{ color: 'blue', fontSize: 16, marginTop: -5 }}>
+    //                         </TextRN>
+    //                         <TextRN style={{ color: 'blue', fontSize: 16, marginTop: -5 }}>
     //                             {item.carDescription}
-    //                         </Text>
-    //                         <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20 }}>
-    //                             US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{formattedFobDollar}</Text>
-    //                         </Text>
+    //                         </TextRN>
+    //                         <TextRN style={{ fontWeight: '700', fontSize: 16, marginVertical: 20 }}>
+    //                             US$ <TextRN style={{ fontSize: 30, fontWeight: '700' }}>{formattedFobDollar}</TextRN>
+    //                         </TextRN>
     //                         {screenWidth <= 768 ? (
     //                             <View style={{
     //                                 flexDirection: 'row',
@@ -684,20 +691,20 @@ const FavoriteList = () => {
     //                             </View>
     //                         ) : (
     //                             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, width: '100%', maxWidth: screenWidth <= 768 ? null : 480, justifyContent: 'space-between' }}>
-    //                                 <Text style={{ fontSize: 16 }}>
-    //                                     <Text style={{ color: 'gray', fontWeight: '500' }}>Year </Text>
-    //                                     <Text style={{ fontWeight: 'bold' }}> {item.regYear}/{item.regMonth}</Text>
-    //                                 </Text>
+    //                                 <TextRN style={{ fontSize: 16 }}>
+    //                                     <TextRN style={{ color: 'gray', fontWeight: '500' }}>Year </TextRN>
+    //                                     <TextRN style={{ fontWeight: 'bold' }}> {item.regYear}/{item.regMonth}</TextRN>
+    //                                 </TextRN>
     //                                 <View style={{ height: '100%', width: 1, backgroundColor: 'grey', marginHorizontal: 10 }} />
-    //                                 <Text style={{ fontSize: 16 }}>
-    //                                     <Text style={{ color: 'gray', fontWeight: '500' }}>Mileage </Text>
-    //                                     <Text style={{ fontWeight: 'bold' }}> {item.mileage} km</Text>
-    //                                 </Text>
+    //                                 <TextRN style={{ fontSize: 16 }}>
+    //                                     <TextRN style={{ color: 'gray', fontWeight: '500' }}>Mileage </TextRN>
+    //                                     <TextRN style={{ fontWeight: 'bold' }}> {item.mileage} km</TextRN>
+    //                                 </TextRN>
     //                                 <View style={{ height: '100%', width: 1, backgroundColor: 'grey', marginHorizontal: 10 }} />
-    //                                 <Text style={{ fontSize: 16 }}>
-    //                                     <Text style={{ color: 'gray', fontWeight: '500' }}>Exterior Color </Text>
-    //                                     <Text style={{ fontWeight: 'bold' }}> {item.exteriorColor}</Text>
-    //                                 </Text>
+    //                                 <TextRN style={{ fontSize: 16 }}>
+    //                                     <TextRN style={{ color: 'gray', fontWeight: '500' }}>Exterior Color </TextRN>
+    //                                     <TextRN style={{ fontWeight: 'bold' }}> {item.exteriorColor}</TextRN>
+    //                                 </TextRN>
     //                             </View>
     //                         )}
 
@@ -717,7 +724,7 @@ const FavoriteList = () => {
     //                             }}
     //                             onPress={() => handleGoToProduct(item.id)}
     //                         >
-    //                             <Text style={{ color: 'white', fontSize: 16 }}>Send Message</Text>
+    //                             <TextRN style={{ color: 'white', fontSize: 16 }}>Send Message</TextRN>
     //                         </TouchableOpacity>
     //                     </View>
     //                 </View>
@@ -728,8 +735,185 @@ const FavoriteList = () => {
     //     );
     // }, [currentCurrency, profitMap, screenWidth, allImageUrl])
     //RENDER ITEMS FROM FLATLIST
+    const [favorites, setFavorites] = useState([]);
+    const [reservationStatuses, setReservationStatuses] = useState({});
 
-  
+    useEffect(() => {
+        const fetchFavorites = async () => {
+            const accountRef = doc(projectExtensionFirestore, 'accounts', userEmail);
+            try {
+                const docSnap = await getDoc(accountRef);
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    if (Array.isArray(userData.favorites)) {
+                        setFavorites(userData.favorites);
+                    } else {
+                        console.warn("Favorites is not an array:", userData.favorites);
+                        setFavorites([]);
+                    }
+                } else {
+                    console.log("No such document!");
+                    setFavorites([]);
+                }
+            } catch (error) {
+                console.error("Error fetching favorites:", error);
+            }
+        };
+
+        fetchFavorites();
+    }, [userEmail]);
+
+    useEffect(() => {
+        const fetchStockStatuses = async () => {
+            const statusFetchPromises = favorites.map(favorite =>
+                getDoc(doc(projectExtensionFirestore, 'VehicleProducts', favorite.stockId))
+                    .then(docSnap => {
+                        if (docSnap.exists()) {
+                            return { stockId: favorite.stockId, stockStatus: docSnap.data().stockStatus };
+                        } else {
+                            console.log(`No vehicle product found for stock ID: ${favorite.stockId}`);
+                            return { stockId: favorite.stockId, stockStatus: 'Unknown' };
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching vehicle data for", favorite.stockId, error);
+                        return { stockId: favorite.stockId, stockStatus: 'Error' };
+                    })
+            );
+
+            Promise.all(statusFetchPromises)
+                .then(results => {
+                    const newStatuses = results.reduce((acc, curr) => {
+                        acc[curr.stockId] = curr.stockStatus;
+                        return acc;
+                    }, {});
+                    setReservationStatuses(newStatuses);
+                });
+        };
+
+        if (favorites.length > 0) {
+            fetchStockStatuses();
+        }
+    }, [favorites]);
+
+
+
+
+    const renderCarItems = useCallback(({ item, index }) => {
+        const imageAspectRatio = 1.7
+
+        return (
+            <View style={{ borderRadius: 5, borderWidth: 1, borderColor: '#999', flex: 1, marginVertical: 5, width: '100%', alignSelf: 'center' }}>
+                <View style={{ padding: 5 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                            <MaterialCommunityIcons name="steering" size={25} />
+                            <TextRN> Right Hand</TextRN>
+                        </View>
+                        <TouchableOpacity
+                            style={{
+                                backgroundColor: reservationStatuses[item.stockId] === 'Reserved' ? 'red' : 'blue', // Conditional background color
+                                padding: 10,
+                                alignItems: 'center',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between', // This spreads the children across the entire width
+                                width: '100%',
+                                maxWidth: 140,
+                                borderRadius: 5
+                            }}>
+                            <AntDesign name="heart" size={15} color={'white'} style={{  flex: 1 }} />
+                            <TextRN style={{ color: 'white', flex: 2, textAlign: 'left' }}>{reservationStatuses[item.stockId] === 'Reserved' ? 'Reserved' : 'On-Sale'}</TextRN>
+                        </TouchableOpacity>
+
+                    </View>
+                    <View style={{ flexDirection: screenWidth <= 768 ? 'column' : 'row', padding: 10, backgroundColor: '#fff' }}>
+                        <ImageRN
+                            source={{ uri: item.imageUrl }}
+                            style={{
+                                width: screenWidth <= 768 ? '100%' : 350,
+                                height: screenWidth <= 768 ? (screenWidth / imageAspectRatio) : 250, // Calculate the height based on the screen width and the image's aspect ratio
+                                resizeMode: 'cover',
+
+                            }}
+                        />
+
+                        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 10 }}>
+                            <TextRN style={{ fontWeight: 'bold', fontSize: 28, marginBottom: 5 }}>
+                                {item.carName}
+                            </TextRN>
+                            <TextRN style={{ color: 'blue', fontSize: 16, marginTop: -5 }}>
+                                {item.carDescription}
+                            </TextRN>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <TextRN style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 1 }}>
+                                    US$ <TextRN style={{ fontSize: 30, fontWeight: '700' }}>{'formatted dollar'}</TextRN>
+                                </TextRN>
+                            </View>
+
+                            {screenWidth <= 768 ? (
+                                <View style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-evenly',
+                                    alignItems: 'center',
+                                    marginVertical: 20,
+                                    borderTopWidth: 1,
+                                    borderTopColor: '#aaa',
+                                    borderBottomColor: '#aaa',
+                                    borderBottomWidth: 1,
+                                    padding: 15
+                                }}>
+                                    <InfoColumn label="Year" value={`${item.regYear}/${item.regMonth}`} />
+                                    <InfoColumn label="Mileage" value={`${item.mileage} km`} />
+                                    <InfoColumn label="Exterior Color" value={item.color} />
+                                </View>
+                            ) : (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, width: '100%', maxWidth: screenWidth <= 768 ? null : 480, justifyContent: 'space-between' }}>
+                                    <TextRN style={{ fontSize: 16 }}>
+                                        <TextRN style={{ color: 'gray', fontWeight: '500' }}>Year </TextRN>
+                                        <TextRN style={{ fontWeight: 'bold' }}> {item.regYear}/{item.regMonth}</TextRN>
+                                    </TextRN>
+                                    <View style={{ height: '100%', width: 1, backgroundColor: 'grey', marginHorizontal: 10 }} />
+                                    <TextRN style={{ fontSize: 16 }}>
+                                        <TextRN style={{ color: 'gray', fontWeight: '500' }}>Mileage </TextRN>
+                                        <TextRN style={{ fontWeight: 'bold' }}> {item.mileage} km</TextRN>
+                                    </TextRN>
+                                    <View style={{ height: '100%', width: 1, backgroundColor: 'grey', marginHorizontal: 10 }} />
+                                    <TextRN style={{ fontSize: 16 }}>
+                                        <TextRN style={{ color: 'gray', fontWeight: '500' }}>Exterior Color </TextRN>
+                                        <TextRN style={{ fontWeight: 'bold' }}> {item.color}</TextRN>
+                                    </TextRN>
+                                </View>
+                            )}
+
+                            <TouchableOpacity
+                                style={{
+                                    backgroundColor: 'blue',
+                                    padding: 10,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    alignSelf: screenWidth <= 768 ? null : 'flex-end',
+                                    maxWidth: screenWidth <= 768 ? null : 220,
+                                    width: '100%',
+                                    height: 50,
+                                    marginTop: 10,
+                                    marginRight: -20,
+                                    borderRadius: 5
+                                }}
+                            // onPress={() => handleGoToProduct(item.id)}
+                            >
+                                <TextRN style={{ color: 'white', fontSize: 16 }}>Send Message</TextRN>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+
+                </View>
+            </View>
+        )
+    }, [screenWidth, reservationStatuses])
+
+
+
     return (
         <View style={{ flex: 3 }}>
             <StickyHeader />
@@ -815,23 +999,25 @@ const FavoriteList = () => {
                     </View>
                     <View style={{ borderBottomWidth: 1, borderBottomColor: 'gray', padding: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10, zIndex: 10 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
-                            <Text>Sort by</Text>
+                            <TextRN>Sort by</TextRN>
                             <SortBy />
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
-                            <Text>View Price in</Text>
+                            <TextRN>View Price in</TextRN>
                             <ViewPrice />
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5, zIndex: 5 }}>
-                            <Text>Per Page</Text>
+                            <TextRN>Per Page</TextRN>
                             <PerPage />
                         </View>
                     </View>
-                    {/* <FlatList
-                        data={displayItems}
+                    <FlatList
+                        data={favorites}
                         renderItem={renderCarItems}
-                        keyExtractor={(item) => item.id}
-                    /> */}
+                        keyExtractor={(item, index) => item.id || index.toString()}
+                        extraData={favorites}
+                    />
+
                 </View>
                 {screenWidth <= 962 && (
                     <View style={{ zIndex: -5, flexDirection: screenWidth <= 715 ? 'column' : 'row', alignItems: screenWidth <= 715 ? null : 'center' }}>

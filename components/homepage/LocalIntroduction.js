@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { StyleSheet, Text as TextRN, View, Animated as AnimatedRN, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, ScrollView, Pressable, Linking, Modal, Image as ImageRN, Button, ActivityIndicator, PanResponder } from "react-native";
 import logo4 from '../../assets/RMJ logo for flag transparent.png';
-import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, MaterialIcons } from 'react-native-vector-icons';
+import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, MaterialIcons, Octicons } from 'react-native-vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from "../../firebaseConfig";
 import { FlatGrid } from "react-native-super-grid";
 import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt } from "firebase/firestore";
@@ -30,8 +30,8 @@ import Animated, {
     Layout
 } from 'react-native-reanimated';
 
-
 const StickyHeader = () => {
+    const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const searchQueryWorldRef = useRef('');
     const handleChangeQuery = (value) => {
@@ -45,6 +45,20 @@ const StickyHeader = () => {
     };
     const [scrollY] = useState(new AnimatedRN.Value(0));
 
+
+    {/* <>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
+                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text>Profile</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
+                            <TouchableOpacity onPress={logout} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text >Logout</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </> */}
+
     return (
         <AnimatedRN.View style={{
             borderBottomWidth: 1,
@@ -54,6 +68,8 @@ const StickyHeader = () => {
             left: 0,
             right: 0,
             height: 100,
+            borderTopColor: 'blue',
+            borderTopWidth: 2,
             backgroundColor: 'lightblue',
             justifyContent: 'center',
             backgroundColor: '#fff',
@@ -70,7 +86,11 @@ const StickyHeader = () => {
             ]
         }}>
             <View style={{ flexDirection: 'row', flex: 1 }}>
-                <View style={{ flex: 1, justifyContent: 'center' }}>
+                <TouchableOpacity
+                    onPress={() => navigate('/')}
+                    style={{ justifyContent: 'center', flex: 1 }}
+                >
+
                     <ImageRN
                         source={{ uri: logo4 }}
                         style={{
@@ -79,18 +99,15 @@ const StickyHeader = () => {
                         }}
                         resizeMode='contain'
                     />
-                </View>
+
+                </TouchableOpacity>
                 <View style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#f4f4f4',
-                    borderWidth: 0.5,
-                    padding: 5,
-                    borderRadius: 5,
-                    margin: 20,
+                    justifyContent: 'space-between',
                     flex: 3
                 }}>
-                    <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
+                    {/* <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
                     <TextInput
                         placeholder='Search by make, model, or keyword'
                         style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
@@ -99,18 +116,59 @@ const StickyHeader = () => {
                         defaultValue={searchQueryWorldRef.current}
                         onChangeText={handleChangeQuery}
                         onSubmitEditing={handleSearch}
-                    />
+                    /> */}
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>Used Car Stock</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>How to Buy</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>About Us</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>Local Introduction</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>Contact Us</TextRN>
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flex: 1 }} />
                 </View>
-                <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                    <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                        <TextRN>Sign Up</TextRN>
-                    </TouchableOpacity>
-                </View>
-                <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                    <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                        <TextRN >Log In CHANGES</TextRN>
-                    </TouchableOpacity>
-                </View>
+                {user ? (
+
+
+                    < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Favorite</TextRN>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <FontAwesome name="user" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Profile</TextRN>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Entypo name="log-out" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Log Out</TextRN>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/SignUp`)}>
+                            <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Sign Up</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/LoginForm`)} F>
+                            <Octicons name="sign-in" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log In</Text>
+                        </TouchableOpacity>
+                    </View>
+
+
+                )}
             </View>
         </AnimatedRN.View>
     )
@@ -529,7 +587,7 @@ const WorldMapValues = ({ children }) => {
                                                     marginRight: '5%',
                                                 }} />
                                             )}
-                                            style={{ flex: 1, width: '100%' }} 
+                                            style={{ flex: 1, width: '100%' }}
 
                                         />
                                     </View>
@@ -543,11 +601,11 @@ const WorldMapValues = ({ children }) => {
                                             geographies.map((geo) => <Geography key={geo.rsmKey} geography={geo}
                                                 style={{
                                                     default: {
-                                                        fill: "#DCD5E6", 
+                                                        fill: "#DCD5E6",
                                                         outline: "none",
                                                     },
                                                     hover: {
-                                                        fill: "#DCD5E6", 
+                                                        fill: "#DCD5E6",
                                                         outline: "none",
                                                     },
                                                     pressed: {
@@ -583,27 +641,65 @@ const WorldMapValues = ({ children }) => {
                                     }
 
                                     {regionAnnotations.map(({ region, coordinates, name }) => {
-
                                         if (selectedRegion !== region) {
                                             return (
-                                                <Annotation key={name} subject={coordinates} dx={-15} dy={-15}>
+                                                <Marker key={name} coordinates={coordinates}>
+
+                                                    <g
+                                                        fill="none"
+                                                        stroke="#E7535F"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        transform="translate(-12, -24)"
+                                                    >
+                                                        <circle cx="12" cy="10" r="3" />
+                                                        <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z" />
+                                                    </g>
+
+                                                    <line
+                                                        x1="0"
+                                                        y1="-22.5"
+                                                        x2="20"
+                                                        y2="-40"
+                                                        style={{ stroke: '#E7535F', strokeWidth: '0.5' }}
+                                                    />
+
+                                                    <line
+                                                        x1="20"
+                                                        y1="-40"
+                                                        x2="50"
+                                                        y2="-40"
+                                                        style={{ stroke: '#E7535F', strokeWidth: '0.5' }}
+                                                    />
+                                                    <circle
+                                                        cx="50"
+                                                        cy="-40"
+                                                        r="1"
+                                                        fill="#E7535F"
+                                                        stroke="#E7535F"
+                                                        strokeWidth="0.5"
+                                                    />
+
                                                     <text
-                                                        x="0"
-                                                        y="0"
-                                                        onClick={() => { handleRegionClick(region); handleZoomIn(region) }}
-                                                        style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '10px' }}
-                                                        textAnchor="middle"
+                                                        x="25"
+                                                        y="-45"
+                                                        onClick={() => { handleRegionClick(region); handleZoomIn(region); }}
+                                                        style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '10px', userSelect: 'none' }}
+                                                        textAnchor="start"
                                                         alignmentBaseline="middle"
-                                                        fill="red"
+                                                        fill="#E7535F"
                                                     >
                                                         {name}
                                                     </text>
-                                                </Annotation>
+                                                </Marker>
                                             );
                                         }
 
                                         return null;
                                     })}
+
+
 
 
                                 </ComposableMap>

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Dimensions, TouchableOpacity, Linking, ScrollView, Animated, Modal, Pressable, TextInput, FlatList, Image, ActivityIndicator, Platform, Button } from 'react-native';
 import React, { useEffect, useState, useRef, useContext, useCallback } from 'react';
-import { FontAwesome, FontAwesome5, Entypo, MaterialCommunityIcons, Ionicons, AntDesign, Fontisto, MaterialIcons } from 'react-native-vector-icons';
+import { FontAwesome, FontAwesome5, Entypo, MaterialCommunityIcons, Ionicons, AntDesign, Fontisto, MaterialIcons, Feather } from 'react-native-vector-icons';
 import { getFirestore, collection, where, query, onSnapshot, doc, getDoc, setDoc, serverTimestamp, orderBy, getDocs, updateDoc, limit, startAfter } from 'firebase/firestore';
 import { auth, db, addDoc, fetchSignInMethodsForEmail, app, firebaseConfig, projectExtensionFirestore, projectExtensionStorage } from '../firebaseConfig';
 import { AuthContext } from '../context/AuthProvider';
@@ -654,7 +654,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
     //fetch the carId
 
     //fetch customer email
-    //Reserved button
+    //Reserved buttons
     const [reservationStatus, setReservationStatus] = useState(false);
     useEffect(() => {
         const fetchVehicleDoc = async () => {
@@ -1094,7 +1094,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                                 onRequestClose={openModalRequest}
                                             >
                                                 <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
-                                                    <View style={{ backgroundColor: 'white', width: 992, height: '90%', padding: 10, borderRadius: 10 }}>
+                                                    <View style={{ backgroundColor: 'white', width: '100%', maxWidth: 768, height: '90%', padding: 10, borderRadius: 10 }}>
 
                                                         <ScrollView>
                                                             <OrderItem openModalRequest={openModalRequest} chatField={chatField} carData={carData} />
@@ -2191,9 +2191,9 @@ const InformationDataLeft = ({ setHideLeft, setShowInMobile, setRightVisible, se
         </View>
     )
 }
-const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClick }) => {
+const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClick, notification, setNotification, handleHover }) => {
 
-
+    console.log('THIS IS INSIDE INFORMATION DATA RIGHT', notification)
 
 
 
@@ -2208,15 +2208,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
     //     </View>
     // )}
 
-    // {currentStep.value === 3 && (
-    //     <View style={{ marginTop: 9, justifyContent: 'flex-start', borderTopWidth: .5, borderBottomWidth: .5, borderTopColor: '#ccc', borderBottomColor: '#ccc' }}>
-    //         <View style={{ padding: 16 }}>
-    //             <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>Order Item: </Text>
-    //             <Text style={{ color: '#aaa' }}>Please upload payment confirmation.</Text>
-    //             <PaymentNotification handleButtonClick={handleButtonClick} />
-    //         </View>
-    //     </View>
-    // )}
+
     // {currentStep.value === 4 && (
     //     <View style={{ marginTop: 9, justifyContent: 'flex-start', borderTopWidth: .5, borderBottomWidth: .5, borderTopColor: '#ccc', borderBottomColor: '#ccc' }}>
     //         <View style={{ padding: 16 }}>
@@ -2427,7 +2419,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
         // Fetch image URL for the vehicleData's referenceNumber
         fetchImageURL(folderRef);
     }, [carData?.stockID]);
-
+    const [hasHovered, setHasHovered] = useState(false);
 
     return (
         <View style={{ width: '100%' }}>
@@ -2492,9 +2484,10 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
                                 <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
                                     <View style={{
                                         backgroundColor: 'white',
-                                        maxWidth: 992,
+                                        maxWidth: 600,
                                         width: '100%',
-                                        height: '90%',
+                                        height: '100%',
+                                        maxHeight: 850,
                                         padding: 10,
                                         borderRadius: 3,
                                         shadowColor: 'black',
@@ -2510,7 +2503,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
                                             padding: 10,
                                             justifyContent: 'center',
                                             borderBottomColor: 'blue',
-                                            borderBottomWidth: 1,
+                                            borderBottomWidth: 2,
                                             marginBottom: 20,
                                             marginHorizontal: 10
                                         }}>
@@ -2524,6 +2517,16 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
 
                                 </View>
                             </Modal>
+                        </View>
+                    </View>
+                )}
+
+                {currentStep.value === 3 && (
+                    <View style={{ marginTop: 9, justifyContent: 'flex-start', borderTopWidth: .5, borderBottomWidth: .5, borderTopColor: '#ccc', borderBottomColor: '#ccc' }}>
+                        <View style={{ padding: 16 }}>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>Order Item: </Text>
+                            <Text style={{ color: '#aaa' }}>Please upload payment confirmation.</Text>
+                            <PaymentNotification handleButtonClick={handleButtonClick} />
                         </View>
                     </View>
                 )}
@@ -2820,7 +2823,41 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
                 ) : (<>
                     {
                         currentStep.value >= 2 && (
-                            <View style={{ padding: 20, backgroundColor: '#f0f0f0', borderRadius: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 }}>
+                            <Pressable
+                                onHoverIn={handleHover}
+                                disabled={notification === true}
+                                style={({ pressed, hovered }) => [
+                                    {
+                                        padding: notification === true ? 5 : 20, // Reduce padding after hover
+                                        borderRadius: 5,
+                                        backgroundColor: notification === true ? 'transparent' : '#f0f0f0', // Disable background color after hover
+                                        shadowColor: notification === true ? 'transparent' : '#000', // Disable shadow color after hover
+                                        shadowOffset: notification === true ? { width: 0, height: 0 } : { width: 0, height: 2 }, // Disable shadow offset after hover
+                                        shadowOpacity: notification === true ? 0 : 0.25, // Disable shadow opacity after hover
+                                        shadowRadius: notification === true ? 0 : 3.84, // Disable shadow radius after hover
+                                        elevation: notification === true ? 0 : 5,
+                                        position: 'relative',
+                                        overflow: 'visible' // Disable elevation after hover
+                                    }
+                                ]}
+                            >
+                                {notification === false && (
+                                    <View
+                                        style={{
+                                            position: 'absolute',
+                                            right: -10, // Adjust as needed to position correctly
+                                            top: -10, // Adjust as needed to position correctly
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: 10, // Half of width/height to make it a circle
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <AntDesign name="exclamationcircleo" color={'red'} size={25} />
+                                    </View>
+                                )}
+
                                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Text style={{
                                         fontSize: 16,
@@ -2852,7 +2889,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
                                     }}>Proforma Invoice:</Text>
                                     <Text style={{ flex: 1, fontSize: 16, color: 'black' }}>HELLO</Text>
                                 </View>
-                            </View>
+                            </Pressable>
 
                         )
                     }
@@ -5743,6 +5780,13 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
     };
     //STEP TRACKER
 
+    //CHECKMARK
+    const [isCheck, setIsCheck] = useState(false);
+    const checkButton = (option) => {
+        setIsCheck(option);
+
+    }
+    //CHECKMARK
 
     //CALENDAR
     const [selectedDate, setSelectedDate] = useState('');
@@ -5836,7 +5880,7 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                     </View>
 
                 </View> */}
-                {currentStep === 1 && (
+                {/* {currentStep === 1 && (
                     <View style={{ marginTop: 5 }}>
 
                         <View>
@@ -6506,9 +6550,9 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
 
                         </View>
                     </View>
-                )}
+                )} */}
 
-                {currentStep === 2 && (
+                {currentStep === 1 && (
                     <View style={{ marginTop: 5 }}>
                         <Text style={{ fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 20, marginHorizontal: 20 }}>Please Confirm the Details Below</Text>
 
@@ -6536,12 +6580,21 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                                 </View>
                             </View>
                         </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 20 }}>
+                            {isCheck ? (
+                                <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
+                            ) : (
+                                <Feather name='square' size={20} onPress={() => checkButton(true)} />
+                            )}
+                            <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
+                        </View>
                         <View style={{ marginTop: 20, flexDirection: 'row', paddingHorizontal: 20 }}>
-                            <TouchableOpacity style={{ backgroundColor: 'black', padding: 5, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 40 }}>
-                                <Text style={{ color: '#fff', fontWeight: '600' }}>Back</Text>
+                            <TouchableOpacity style={{ backgroundColor: 'white', padding: 5, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, borderColor: 'black', borderWidth: 2 }}>
+                                <Text style={{ color: 'black', fontWeight: '600', fontSize: 16 }}>Cancel</Text>
                             </TouchableOpacity>
-                            <View style={{ flex: 3 }} />
-                            <TouchableOpacity style={{ backgroundColor: '#7b9cff', padding: 5, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 40 }}
+
+                            <TouchableOpacity style={{ backgroundColor: '#7b9cff', padding: 5, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, marginLeft: '5%' }}
                                 onPress={() => {
                                     setOrderInvoice();
                                     addStep();
@@ -6550,7 +6603,7 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                                     handleButtonClick();
                                 }}
                             >
-                                <Text style={{ color: '#fff', fontWeight: '600' }}>Finish</Text>
+                                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Finish</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -6898,7 +6951,20 @@ const ProfileFormChatGroup = () => {
     //
 
     const [chatField, setChatField] = useState([]);
-    console.log('CHAT FIELD ID ON MAIN', chatField.stepIndicator)
+    const [notification, setNotification] = useState(null);
+    const handleHover = async () => {
+        setNotification(true);
+        try {
+            const chatDocRefExtension = doc(projectExtensionFirestore, 'chats', chatId);
+            await updateDoc(chatDocRefExtension, {
+                'stepIndicator.sideBarNotification': true
+            });
+        } catch (error) {
+            console.error('Error updating steps:', error);
+        }
+    }
+
+    // console.log('SIDE BAR NOTIFICATION', chatField.stepIndicator?.sideBarNotification)
 
     useEffect(() => {
         // Define the reference to the chat document with the specific chatId
@@ -6911,6 +6977,7 @@ const ProfileFormChatGroup = () => {
                 const chatData = chatDocSnapshot.data();
                 if (chatData) {
                     setChatField(chatData);
+                    setNotification(chatData?.stepIndicator.sideBarNotification)
                 }
 
             }
@@ -7281,6 +7348,9 @@ const ProfileFormChatGroup = () => {
                                                             openModalRequest={openModalRequest}
                                                             modalVisible={modalVisible}
                                                             handleButtonClick={handleButtonClick}
+                                                            notification={notification}
+                                                            setNotification={setNotification}
+                                                            handleHover={handleHover}
                                                         />
                                                     </ScrollView>
                                                 ) : null}
@@ -7515,6 +7585,9 @@ const ProfileFormChatGroup = () => {
                                                     openModalRequest={openModalRequest}
                                                     modalVisible={modalVisible}
                                                     handleButtonClick={handleButtonClick}
+                                                    notification={notification}
+                                                    setNotification={setNotification}
+                                                    handleHover={handleHover}
                                                 />
                                             </ScrollView>
                                         ) : null}

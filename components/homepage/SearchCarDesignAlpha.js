@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
-import { StyleSheet, Text, View, Animated as AnimatedRN, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, ScrollView, Pressable, Linking, Modal, Image, Button, ActivityIndicator, PanResponder } from "react-native";
+import { StyleSheet, Text, View, Animated as AnimatedRN, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, ScrollView, Pressable, Linking, Modal, Image, Button, ActivityIndicator, PanResponder, Alert } from "react-native";
 import logo4 from '../../assets/RMJ logo for flag transparent.png';
 import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo } from 'react-native-vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from "../../firebaseConfig";
 import { FlatGrid } from "react-native-super-grid";
-import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt, updateDoc, getCountFromServer, collectionGroup } from "firebase/firestore";
+import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt, updateDoc, getCountFromServer, collectionGroup, arrayUnion } from "firebase/firestore";
 import { listAll, ref, getDownloadURL } from "firebase/storage";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthProvider";
@@ -120,7 +120,7 @@ const StickyHeader = () => {
                     < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
                         <View style={{ flex: 1 }} />
                         <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                        <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <AntDesign name="heart" size={25} color={'blue'} />
                             <Text style={{ color: 'blue' }}>Favorite</Text>
                         </TouchableOpacity>
@@ -3012,10 +3012,39 @@ const LoadingComponent = () => {
         </View>
     );
 }
+const OpenModal = () => {
+    return (
+        <View style={{
+            position: 'absolute', // Ensure it's positioned over other elements
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            justifyContent: 'center', // Center vertically
+            alignItems: 'center', // Center horizontally
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 200  // Optional: for dimming background
+        }}>
+            <View style={{
+                backgroundColor: 'white', // Background color for the modal
+                padding: 20,
+                borderRadius: 10,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+            }}>
+                <Text style={{ fontSize: 24, fontWeight: 'bold' }}>SUCCESS</Text>
+                {/* Optionally, you can add more content or buttons here */}
+            </View>
+        </View>
+    );
+};
 
 const SearchCarDesignAlpha = () => {
     const navigate = useNavigate();
-
+    const { userEmail } = useContext(AuthContext)
 
 
 
@@ -3842,6 +3871,37 @@ const SearchCarDesignAlpha = () => {
         setTotalPrices(newTotalPrices);  // Update state with all calculated total prices
     };
 
+    const [favoriteModal, setFavoriteModal] = useState(false);
+    const openModalFavorite = () => {
+        setFavoriteModal(!favoriteModal);
+    }
+
+    const addToFavorites = async ({ car, firstImageUri }) => {
+        const newFavorite = {
+            carName: car.carName,
+            imageUrl: firstImageUri ? firstImageUri : 'No image yet',
+            referenceNumber: car.referenceNumber,
+            stockId: car.stockID,
+            fobPrice: car.fobPrice,
+            regYear: car.regYear,
+            regMonth: car.regMonth,
+            mileage: car.mileage,
+            steering: car.steering,
+            color: car.exteriorColor
+        };
+
+        try {
+            const accountTransaction = doc(projectExtensionFirestore, 'accounts', userEmail);
+            await updateDoc(accountTransaction, {
+                favorites: arrayUnion(newFavorite)
+            });
+            openModalFavorite();
+        } catch (error) {
+            console.error('Failed to add to favorites:', error);
+            window.alert('Failed to add car to favorites.');
+        }
+    };
+
 
     const renderCarItems = useCallback(({ item, index }) => {
 
@@ -3873,6 +3933,7 @@ const SearchCarDesignAlpha = () => {
                                 maxWidth: 140,
                                 borderRadius: 5
                             }}
+                            onPress={() => addToFavorites({ car: item, firstImageUri: firstImageUri })}
                         >
                             <AntDesign name="heart" size={15} color={'white'} />
                             <Text style={{ color: 'white' }}>Add to Shortlist</Text>
@@ -3888,6 +3949,7 @@ const SearchCarDesignAlpha = () => {
 
                             }}
                         />
+
                         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 10 }}>
                             <Text style={{ fontWeight: 'bold', fontSize: 28, marginBottom: 5 }}>
                                 {item.carName}
@@ -3976,7 +4038,7 @@ const SearchCarDesignAlpha = () => {
 
 
     return (
-        <View style={{ flex: 3, }}>
+        <View style={{ flex: 3 }}>
             <StickyHeader />
             <View style={{ flex: 3 }}>
 
@@ -4273,7 +4335,80 @@ const SearchCarDesignAlpha = () => {
                             />
 
                         )}
+                        <Modal
+                            animationType="fade"
+                            transparent={true}
+                            visible={favoriteModal}
+                            onRequestClose={openModalFavorite}
+                        >
+                            <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
+                                <View style={{
+                                    backgroundColor: 'transparent',
+                                    maxWidth: 450,
+                                    width: '100%',
+                                    height: '100%',
+                                    maxHeight: 350,
+                                    padding: 10,
+                                    borderRadius: 5,
+                                    shadowColor: 'black',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 3,
+                                    elevation: 5, // for Android shadow
 
+                                }}>
+                                    {/* <TouchableOpacity onPress={() => { openModalFavorite() }} style={{ alignSelf: 'flex-end', marginRight: 5, marginBottom: 5 }}>
+                                        <Text style={{ color: 'gray', fontSize: '1.2em', fontWeight: '700' }}>X</Text>
+                                    </TouchableOpacity> */}
+                                    <View style={{
+                                        backgroundColor: '#4CAF50',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        padding: 20,
+                                        borderTopLeftRadius: 10,
+                                        borderTopRightRadius: 10
+                                    }}>
+                                        <AntDesign name="checkcircle" size={'7em'} color="white" />
+                                    </View>
+                                    <View style={{
+                                        padding: 20,
+                                        backgroundColor: 'white',
+                                        borderBottomLeftRadius: 10,
+                                        borderBottomRightRadius: 10
+                                    }}>
+                                        <View style={{
+                                            alignItems: 'center',
+                                        }}>
+                                            <Text style={{
+                                                fontSize: 24,
+                                                fontWeight: 'bold',
+                                                marginBottom: 10,
+                                            }}>Success</Text>
+                                            <Text style={{
+                                                fontSize: 16,
+                                                textAlign: 'center',
+                                                marginBottom: 20,
+                                            }}>Added to favorites!</Text>
+                                        </View>
+                                        <TouchableOpacity style={{
+                                            backgroundColor: '#007BFF',
+                                            paddingVertical: 10,
+                                            paddingHorizontal: 30,
+                                            borderRadius: 5,
+                                            marginBottom: 20,
+                                            alignSelf: 'center',
+                                        }} onPress={() => openModalFavorite()}>
+                                            <Text style={{
+                                                color: 'white',
+                                                fontSize: 18,
+                                                fontWeight: 'bold',
+                                            }}>Close</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
+                            </View>
+                        </Modal>
 
                     </View>
                     {screenWidth <= 962 && (

@@ -161,12 +161,12 @@ const StickyHeader = () => {
                             <Text style={{ color: 'blue' }}>Favorite</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/SignUp`)}>
                             <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
                             <Text style={{ color: 'blue' }}>Sign Up</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/LoginForm`)}F>
                             <Octicons name="sign-in" size={25} color={'blue'} />
                             <Text style={{ color: 'blue' }}>Log In</Text>
                         </TouchableOpacity>
