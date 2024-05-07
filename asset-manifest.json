@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/sample-world/static/css/main.cc44b06b.css",
-    "main.js": "/sample-world/static/js/main.fc725a8d.js",
+    "main.js": "/sample-world/static/js/main.3671866d.js",
     "static/js/120.d49ea698.chunk.js": "/sample-world/static/js/120.d49ea698.chunk.js",
     "static/js/856.7a270e76.chunk.js": "/sample-world/static/js/856.7a270e76.chunk.js",
     "static/js/382.c0d0aa61.chunk.js": "/sample-world/static/js/382.c0d0aa61.chunk.js",
@@ -166,6 +166,6 @@
     "static/css/469.7a0d34d7.css",
     "static/js/469.273b7193.js",
     "static/css/main.cc44b06b.css",
-    "static/js/main.fc725a8d.js"
+    "static/js/main.3671866d.js"
   ]
 }
