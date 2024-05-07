@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext, useRef, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Linking, FlatList, Pressable, TextInput, Modal, Animated as AnimatedRN, useWindowDimensions } from 'react-native';
-import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, Fontisto, MaterialCommunityIcons } from 'react-native-vector-icons';
+import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, Fontisto, MaterialCommunityIcons, Octicons } from 'react-native-vector-icons';
 import { firebaseConfig, db, where, getFirestore } from '../../firebaseConfig';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { doc, getDoc, onSnapshot, serverTimestamp, addDoc, collection, getDocs, setDoc, query, orderBy, limit, arrayUnion, updateDoc } from "firebase/firestore";
@@ -35,82 +35,22 @@ import { Feather } from '@expo/vector-icons';
 const StickyHeader = () => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
-    const [searchQueryWorld, setSearchQuery] = useState('');
+    const searchQueryWorldRef = useRef('');
+    const handleChangeQuery = (value) => {
+        searchQueryWorldRef.current = value;
+    };
 
     const handleSearch = () => {
-        if (searchQueryWorld.trim() !== '') {
-            // Navigate to SearchCar.js with the searchQuery as a route parameter
-            navigate(`/SearchCar/${searchQueryWorld}`);
+        if (searchQueryWorldRef.current.trim() !== '') {
+            navigate(`/SearchCar?searchTerm=${searchQueryWorldRef.current}`)
         }
     };
     const [scrollY] = useState(new AnimatedRN.Value(0));
-    //BREAKPOINT
-    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-    useEffect(() => {
-        const handleDimensionsChange = ({ window }) => {
-            setScreenWidth(window.width);
-        };
-
-        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
-
-        return () => subscription.remove();
-    }, []);
 
 
-    return (
-
-        <AnimatedRN.View
-            style={{
-                borderBottomWidth: 1,
-                borderBottomColor: '#aaa',
-                position: 'sticky',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 100,
-                backgroundColor: 'lightblue',
-                justifyContent: 'center',
-                backgroundColor: '#fff', // Background color // Gradient effect (won't work in React Native) // CSS gradient
-                zIndex: 1000,
-                transform: [
-                    {
-                        translateY: scrollY.interpolate({
-                            inputRange: [0, 100],
-                            outputRange: [0, -100],
-                            extrapolate: 'clamp'
-                        })
-                    }
-                ]
-            }}
-        >
-            <View style={{ flexDirection: 'row', flex: 1, }}>
-                <TouchableOpacity onPress={() => navigate('/')} style={{ flex: 1, justifyContent: 'center', }}>
-                    <Image source={{ uri: logo4 }} style={{ flex: 1, resizeMode: 'contain', aspectRatio: 1 }} />
-                </TouchableOpacity>
-                <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#f4f4f4',
-                    borderWidth: 0.5,
-                    padding: 5,
-                    borderRadius: 5,
-                    margin: 20,
-                    flex: 3
-                }}>
-                    <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
-                    <TextInput
-                        placeholder='Search by make, model, or keyword'
-                        style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
-                        textAlignVertical='center'
-                        placeholderTextColor={'gray'}
-                        onChangeText={text => setSearchQuery(text)}
-                        onSubmitEditing={handleSearch}// Call handleSearch with the entered text
-                    />
-                </View>
-                {user ? (
-                    <>
+    {/* <>
                         <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                            <TouchableOpacity onPress={() => navigate(`/Profile`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
                                 <Text>Profile</Text>
                             </TouchableOpacity>
                         </View>
@@ -119,24 +59,121 @@ const StickyHeader = () => {
                                 <Text >Logout</Text>
                             </TouchableOpacity>
                         </View>
-                    </>
+                    </> */}
+
+    return (
+        <AnimatedRN.View style={{
+            borderBottomWidth: 1,
+            borderBottomColor: '#aaa',
+            position: 'sticky',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 100,
+            borderTopColor: 'blue',
+            borderTopWidth: 2,
+            backgroundColor: 'lightblue',
+            justifyContent: 'center',
+            backgroundColor: '#fff',
+            zIndex: 1000,
+            boxShadow: '0 2px 10px rgba(3, 3, 3, 0.3)',
+            transform: [
+                {
+                    translateY: scrollY.interpolate({
+                        inputRange: [0, 100],
+                        outputRange: [0, -100],
+                        extrapolate: 'clamp'
+                    })
+                }
+            ]
+        }}>
+            <View style={{ flexDirection: 'row', flex: 1 }}>
+                <TouchableOpacity
+                    onPress={() => navigate('/')}
+                    style={{ justifyContent: 'center', flex: 1 }}
+                >
+
+                    <Image
+                        source={{ uri: logo4 }}
+                        style={{
+                            flex: 1,
+                            aspectRatio: 1
+                        }}
+                        resizeMode='contain'
+                    />
+
+                </TouchableOpacity>
+                <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flex: 3
+                }}>
+                    {/* <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
+                    <TextInput
+                        placeholder='Search by make, model, or keyword'
+                        style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
+                        textAlignVertical='center'
+                        placeholderTextColor={'gray'}
+                        defaultValue={searchQueryWorldRef.current}
+                        onChangeText={handleChangeQuery}
+                        onSubmitEditing={handleSearch}
+                    /> */}
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Used Car Stock</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>How to Buy</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>About Us</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Local Introduction</Text>
+                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Contact Us</Text>
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flex: 1 }} />
+                </View>
+                {user ? (
+
+
+                    < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <FontAwesome name="user" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Profile</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Entypo name="log-out" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log Out</Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
-                    <>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                            <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text>Sign Up</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                            <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                                <Text >Log In</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Sign Up</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Octicons name="sign-in" size={25} color={'blue'} />
+                            <Text style={{ color: 'blue' }}>Log In</Text>
+                        </TouchableOpacity>
+                    </View>
+
+
                 )}
             </View>
         </AnimatedRN.View>
-    );
+    )
 };
 const SearchCountry = ({ setIsError, isError, handleSelectCountry, selectedCountry, setSelectCountry, setSelectPort }) => {
     const { userEmail } = useContext(AuthContext);

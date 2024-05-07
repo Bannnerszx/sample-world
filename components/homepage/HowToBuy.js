@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { StyleSheet, Text as TextRN, View, Animated, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, ScrollView, Pressable, Linking, Modal, Image as ImageRN, Button, ActivityIndicator, PanResponder } from "react-native";
 import logo4 from '../../assets/RMJ logo for flag transparent.png';
-import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo } from 'react-native-vector-icons';
+import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, Octicons } from 'react-native-vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from "../../firebaseConfig";
 import { FlatGrid } from "react-native-super-grid";
 import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt } from "firebase/firestore";
@@ -15,290 +15,9 @@ import { Center } from "native-base";
 import gifLogo from '../../assets/rename.gif'
 import Svg, { Mask, Path, G, Defs, Pattern, Use, Image, Rect, Text, Circle } from "react-native-svg";
 
-const StickyFooter = () => {
-    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-    useEffect(() => {
-        const handleDimensionsChange = ({ window }) => {
-            setScreenWidth(window.width);
-        };
 
-        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
-
-        return () => subscription.remove();
-    }, []);
-    const styles = StyleSheet.create({
-        footerContainer: {
-            borderTopWidth: 1,
-            borderTopColor: '#ddd',
-            padding: 20,
-            marginTop: '5%',
-            backgroundColor: '#fff',
-
-            // assuming a white background
-        },
-        linkSection: {
-            flex: 1,
-            flexDirection: 'row', // Ensures items are laid out in a row
-            flexWrap: 'wrap', // Allows items to wrap to the next line
-            padding: 10, // Adjusts padding around the entire section
-            justifyContent: 'space-between', // Places space between the child items
-        },
-        item: {
-            // Common style for all items
-            flex: 1,// Each item takes up half the width of the container
-            padding: 5,
-
-            // Padding within each item
-            // No justifyContent or alignItems here
-        },
-        firstColumn: {
-            // Specific style for the first column
-            alignItems: 'flex-start', // Aligns text to the start of the column
-        },
-        secondColumn: {
-            // Specific style for the second column
-            alignItems: 'flex-start',
-
-        },
-        title: {
-            // Style for the text inside each item
-            textAlign: 'left', // Center align text
-            fontWeight: '500',
-            flex: 1
-        },
-        sectionTitle: {
-            // Style for the section title
-            borderBottomWidth: 1,
-            borderBottomColor: '#ddd',
-            paddingBottom: 5,
-            marginBottom: 10,
-            fontWeight: 'bold'
-            // Add other styling like font weight, text transform, etc.
-        },
-        sectionContainer: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            maxWidth: 1300,
-            alignSelf: 'center',
-            width: '100%',
-            padding: 10
-        },
-        infoSection: {
-            flex: 2,
-            maxWidth: screenWidth < 768 ? '100%' : 250,
-            marginRight: 20// takes more space for the company info
-        },
-        logo: {
-            width: '100%',
-            height: 60, // Adjust height accordingly
-            marginBottom: 20,
-        },
-        companyAddress: {
-            marginBottom: 5,
-            marginVertical: 10
-        },
-        companyContact: {
-            marginBottom: 5,
-            marginVertical: 10
-        },
-        contactButton: {
-            backgroundColor: 'blue',
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            marginVertical: 10,
-            marginTop: 10,
-            marginHorizontal: -1,
-            borderRadius: 5,
-            alignItems: 'center'
-        },
-        contactButtonText: {
-            color: 'white',
-        },
-        policyLinks: {
-            borderTopWidth: 2,
-            borderBottomWidth: 2,
-            borderColor: '#ddd',
-            paddingTop: 5,
-            marginTop: 10,
-            paddingBottom: 5,
-        },
-        policyText: {
-            marginBottom: 5,
-            paddingBottom: 5
-        },
-        linkSection: {
-            flex: 1,
-            padding: 5
-        },
-
-        linkText: {
-            marginBottom: 5,
-            fontWeight: '500'
-        },
-        socialMediaSection: {
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-end', // Evenly space items apart
-            padding: 10,
-            paddingVertical: 10,
-            alignSelf: 'center',
-            maxWidth: 1300,
-            width: '100%',
-
-        },
-        iconsRow: {
-            flexDirection: 'row',
-            justifyContent: 'space-evenly', // Center icons horizontally
-            alignItems: 'center', // Center icons vertically
-            width: '100%', // Take the full width to center icons on the screen
-            marginBottom: screenWidth < 768 ? 10 : 5,
-            maxWidth: 150,
-            alignSelf: screenWidth < 768 ? 'center' : 'flex-end'// Adjust based on the screen width
-        },
-        copyRightSection: {
-            alignItems: screenWidth < 768 ? 'center' : 'flex-end',
-            justifyContent: screenWidth < 768 ? 'center' : 'flex-end',
-            width: '100%'
-        },
-        copyRightText: {
-            textAlign: 'center', // Center the text horizontally
-            fontSize: screenWidth < 768 ? 12 : 14, // Adjust the font size based on the screen width
-            marginTop: screenWidth < 768 ? 5 : 10, // Adjust the margin top based on the screen width
-        },
-        socialIcon: {
-            marginHorizontal: screenWidth < 768 ? 5 : 10, // Adjust spacing between icons
-        },
-        // ... other styles you may need
-    });
-    const maker = [
-        { key: 'TOYOTA' },
-        { key: 'MAZDA' },
-        { key: 'NISSAN' },
-        { key: 'BMW' },
-        { key: 'HONDA' },
-        { key: 'LAND ROVER' },
-        { key: 'MITSUBISHI' },
-        { key: 'ISUZU' },
-        { key: 'MERCEDES-BENZ' },
-        { key: 'JEEP' },
-        { key: 'VOLKSWAGEN' },
-    ];
-    const bodyType = [
-        { key: 'Couper' },
-        { key: 'Convertible' },
-        { key: 'Sedan' },
-        { key: 'Wagon' },
-        { key: 'Hatchback' },
-        { key: 'Van' },
-        { key: 'Truck' },
-        { key: 'SUV' },
-    ];
-    const renderItem = ({ item, index }) => {
-        // Determine column based on index
-        const isFirstColumn = index % 2 === 0;
-
-        return (
-            <View style={[styles.item, isFirstColumn ? styles.firstColumn : styles.secondColumn]}>
-                <TextRN style={styles.title}>{item.key}</TextRN>
-            </View>
-        );
-    };
-    const numColumns = screenWidth < 992 ? 1 : 2;
-
-    const renderItemBodyType = ({ item, index }) => {
-        return (
-            <View style={[styles.item, styles.firstColumn]}>
-                <TextRN style={styles.title}>{item.key}</TextRN>
-            </View>
-        );
-    };
-    return (
-        <View style={styles.footerContainer}>
-            <View style={styles.sectionContainer}>
-
-                <View style={styles.infoSection}>
-                    <ImageRN
-                        source={{ uri: gifLogo }}
-                        resizeMode='contain'
-                        style={styles.logo}
-                    />
-                    <TextRN style={styles.companyAddress}>26-2 Takara Tsutsumi-cho, Toyota-city, Aichi 473-90932 Japan</TextRN>
-                    <TextRN style={styles.companyContact}>Tel +81-565-85-0602</TextRN>
-                    <TextRN>Fax +81-565-85-0606</TextRN>
-                    <TouchableOpacity style={styles.contactButton}>
-                        <TextRN style={styles.contactButtonText}>Contact Us</TextRN>
-                    </TouchableOpacity>
-                    <View style={styles.policyLinks}>
-                        <TextRN style={[styles.policyText, { borderBottomWidth: 2, borderBottomColor: '#DDD' }]}>Terms of Use</TextRN>
-                        <TextRN style={[styles.policyText, { borderBottomWidth: 2, borderBottomColor: '#DDD' }]}>Privacy Policy</TextRN>
-                        <TextRN style={[styles.policyText, { marginBottom: -2 }]}>Cookie Policy</TextRN>
-                    </View>
-                </View>
-                {screenWidth < 768 ? null : (
-                    <>
-                        <View style={styles.linkSection}>
-                            <TextRN style={styles.sectionTitle}>Contents</TextRN>
-                            <TextRN style={styles.linkText}>Used Car Stock</TextRN>
-                            <TextRN style={styles.linkText}>How to Buy</TextRN>
-                            <TextRN style={styles.linkText}>About Us</TextRN>
-                            <TextRN style={styles.linkText}>Local Introduction</TextRN>
-                            <TextRN style={styles.linkText}>Contact Us</TextRN>
-                        </View>
-
-                        <View style={styles.linkSection}>
-                            <TextRN style={styles.sectionTitle}>Makers</TextRN>
-                            <FlatList
-                                data={maker}
-                                renderItem={renderItem}
-                                keyExtractor={item => item.key}
-                                numColumns={numColumns}
-                                scrollEnabled={false}
-                                key={numColumns}
-                            />
-                        </View>
-
-                        <View style={styles.linkSection}>
-                            <TextRN style={styles.sectionTitle}>Body Types</TextRN>
-                            <FlatList
-                                data={bodyType}
-                                renderItem={renderItemBodyType}
-                                keyExtractor={item => item.key}
-                                scrollEnabled={false}
-                            />
-
-                        </View>
-
-                        <View style={styles.linkSection}>
-                            <TextRN style={styles.sectionTitle}>Find Car</TextRN>
-                            <TextRN style={styles.linkText}>Browse All Stock</TextRN>
-                            <TextRN style={styles.linkText}>Sale Cars</TextRN>
-                            <TextRN style={styles.linkText}>Recommended Cars</TextRN>
-                            <TextRN style={styles.linkText}>Luxury Cars</TextRN>
-                        </View>
-                    </>
-                )}
-
-            </View>
-
-            <View style={styles.socialMediaSection}>
-                <View style={styles.iconsRow}>
-                    <AntDesign name="linkedin-square" size={20} color={'blue'} />
-                    <AntDesign name="twitter" size={20} color={'blue'} />
-                    <Ionicons name="logo-facebook" size={20} color={'blue'} />
-                    <Entypo name="instagram" size={20} color={'blue'} />
-                </View>
-                <View style={styles.copyRightSection}>
-                    <TextRN style={styles.copyRightText}>
-                        Copyright © Real Motor Japan All Rights Reserved.
-                    </TextRN>
-                </View>
-            </View>
-
-        </View>
-    );
-};
 const StickyHeader = () => {
+    const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const searchQueryWorldRef = useRef('');
     const handleChangeQuery = (value) => {
@@ -312,6 +31,20 @@ const StickyHeader = () => {
     };
     const [scrollY] = useState(new Animated.Value(0));
 
+
+    {/* <>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
+                            <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text>Profile</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
+                            <TouchableOpacity onPress={logout} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
+                                <Text >Logout</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </> */}
+
     return (
         <Animated.View style={{
             borderBottomWidth: 1,
@@ -321,6 +54,8 @@ const StickyHeader = () => {
             left: 0,
             right: 0,
             height: 100,
+            borderTopColor: 'blue',
+            borderTopWidth: 2,
             backgroundColor: 'lightblue',
             justifyContent: 'center',
             backgroundColor: '#fff',
@@ -337,8 +72,12 @@ const StickyHeader = () => {
             ]
         }}>
             <View style={{ flexDirection: 'row', flex: 1 }}>
-                <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <Image
+                <TouchableOpacity
+                    onPress={() => navigate('/')}
+                    style={{ justifyContent: 'center', flex: 1 }}
+                >
+
+                    <ImageRN
                         source={{ uri: logo4 }}
                         style={{
                             flex: 1,
@@ -346,18 +85,15 @@ const StickyHeader = () => {
                         }}
                         resizeMode='contain'
                     />
-                </View>
+
+                </TouchableOpacity>
                 <View style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#f4f4f4',
-                    borderWidth: 0.5,
-                    padding: 5,
-                    borderRadius: 5,
-                    margin: 20,
+                    justifyContent: 'space-between',
                     flex: 3
                 }}>
-                    <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
+                    {/* <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
                     <TextInput
                         placeholder='Search by make, model, or keyword'
                         style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
@@ -366,18 +102,59 @@ const StickyHeader = () => {
                         defaultValue={searchQueryWorldRef.current}
                         onChangeText={handleChangeQuery}
                         onSubmitEditing={handleSearch}
-                    />
+                    /> */}
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>Used Car Stock</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>How to Buy</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>About Us</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>Local Introduction</TextRN>
+                    <TextRN style={{ flex: 1, fontWeight: 'bold' }}>Contact Us</TextRN>
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flex: 1 }} />
                 </View>
-                <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, }}>
-                    <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                        <Text>Sign Up</Text>
-                    </TouchableOpacity>
-                </View>
-                <View style={{ margin: 20, borderWidth: 1, borderRadius: 5, marginLeft: -10 }}>
-                    <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ justifyContent: 'center', flex: 1, marginHorizontal: 10, paddingHorizontal: 10 }}>
-                        <Text >Log In CHANGES</Text>
-                    </TouchableOpacity>
-                </View>
+                {user ? (
+
+
+                    < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Favorite</TextRN>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <FontAwesome name="user" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Profile</TextRN>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Entypo name="log-out" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Log Out</TextRN>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+                        <View style={{ flex: 1 }} />
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <AntDesign name="heart" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Favorite</TextRN>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Sign Up</TextRN>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                            <Octicons name="sign-in" size={25} color={'blue'} />
+                            <TextRN style={{ color: 'blue' }}>Log In</TextRN>
+                        </TouchableOpacity>
+                    </View>
+
+
+                )}
             </View>
         </Animated.View>
     )
@@ -788,7 +565,289 @@ const SignUpView = () => {
 
     );
 };
+const StickyFooter = () => {
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
 
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+    const styles = StyleSheet.create({
+        footerContainer: {
+            borderTopWidth: 1,
+            borderTopColor: '#ddd',
+            padding: 20,
+            marginTop: '5%',
+            backgroundColor: '#fff',
+
+            // assuming a white background
+        },
+        linkSection: {
+            flex: 1,
+            flexDirection: 'row', // Ensures items are laid out in a row
+            flexWrap: 'wrap', // Allows items to wrap to the next line
+            padding: 10, // Adjusts padding around the entire section
+            justifyContent: 'space-between', // Places space between the child items
+        },
+        item: {
+            // Common style for all items
+            flex: 1,// Each item takes up half the width of the container
+            padding: 5,
+
+            // Padding within each item
+            // No justifyContent or alignItems here
+        },
+        firstColumn: {
+            // Specific style for the first column
+            alignItems: 'flex-start', // Aligns text to the start of the column
+        },
+        secondColumn: {
+            // Specific style for the second column
+            alignItems: 'flex-start',
+
+        },
+        title: {
+            // Style for the text inside each item
+            textAlign: 'left', // Center align text
+            fontWeight: '500',
+            flex: 1
+        },
+        sectionTitle: {
+            // Style for the section title
+            borderBottomWidth: 1,
+            borderBottomColor: '#ddd',
+            paddingBottom: 5,
+            marginBottom: 10,
+            fontWeight: 'bold'
+            // Add other styling like font weight, text transform, etc.
+        },
+        sectionContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            maxWidth: 1300,
+            alignSelf: 'center',
+            width: '100%',
+            padding: 10
+        },
+        infoSection: {
+            flex: 2,
+            maxWidth: screenWidth < 768 ? '100%' : 250,
+            marginRight: 20// takes more space for the company info
+        },
+        logo: {
+            width: '100%',
+            height: 60, // Adjust height accordingly
+            marginBottom: 20,
+        },
+        companyAddress: {
+            marginBottom: 5,
+            marginVertical: 10
+        },
+        companyContact: {
+            marginBottom: 5,
+            marginVertical: 10
+        },
+        contactButton: {
+            backgroundColor: 'blue',
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            marginVertical: 10,
+            marginTop: 10,
+            marginHorizontal: -1,
+            borderRadius: 5,
+            alignItems: 'center'
+        },
+        contactButtonText: {
+            color: 'white',
+        },
+        policyLinks: {
+            borderTopWidth: 2,
+            borderBottomWidth: 2,
+            borderColor: '#ddd',
+            paddingTop: 5,
+            marginTop: 10,
+            paddingBottom: 5,
+        },
+        policyText: {
+            marginBottom: 5,
+            paddingBottom: 5
+        },
+        linkSection: {
+            flex: 1,
+            padding: 5
+        },
+
+        linkText: {
+            marginBottom: 5,
+            fontWeight: '500'
+        },
+        socialMediaSection: {
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-end', // Evenly space items apart
+            padding: 10,
+            paddingVertical: 10,
+            alignSelf: 'center',
+            maxWidth: 1300,
+            width: '100%',
+
+        },
+        iconsRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-evenly', // Center icons horizontally
+            alignItems: 'center', // Center icons vertically
+            width: '100%', // Take the full width to center icons on the screen
+            marginBottom: screenWidth < 768 ? 10 : 5,
+            maxWidth: 150,
+            alignSelf: screenWidth < 768 ? 'center' : 'flex-end'// Adjust based on the screen width
+        },
+        copyRightSection: {
+            alignItems: screenWidth < 768 ? 'center' : 'flex-end',
+            justifyContent: screenWidth < 768 ? 'center' : 'flex-end',
+            width: '100%'
+        },
+        copyRightText: {
+            textAlign: 'center', // Center the text horizontally
+            fontSize: screenWidth < 768 ? 12 : 14, // Adjust the font size based on the screen width
+            marginTop: screenWidth < 768 ? 5 : 10, // Adjust the margin top based on the screen width
+        },
+        socialIcon: {
+            marginHorizontal: screenWidth < 768 ? 5 : 10, // Adjust spacing between icons
+        },
+        // ... other styles you may need
+    });
+    const maker = [
+        { key: 'TOYOTA' },
+        { key: 'MAZDA' },
+        { key: 'NISSAN' },
+        { key: 'BMW' },
+        { key: 'HONDA' },
+        { key: 'LAND ROVER' },
+        { key: 'MITSUBISHI' },
+        { key: 'ISUZU' },
+        { key: 'MERCEDES-BENZ' },
+        { key: 'JEEP' },
+        { key: 'VOLKSWAGEN' },
+    ];
+    const bodyType = [
+        { key: 'Couper' },
+        { key: 'Convertible' },
+        { key: 'Sedan' },
+        { key: 'Wagon' },
+        { key: 'Hatchback' },
+        { key: 'Van' },
+        { key: 'Truck' },
+        { key: 'SUV' },
+    ];
+    const renderItem = ({ item, index }) => {
+        // Determine column based on index
+        const isFirstColumn = index % 2 === 0;
+
+        return (
+            <View style={[styles.item, isFirstColumn ? styles.firstColumn : styles.secondColumn]}>
+                <TextRN style={styles.title}>{item.key}</TextRN>
+            </View>
+        );
+    };
+    const numColumns = screenWidth < 992 ? 1 : 2;
+
+    const renderItemBodyType = ({ item, index }) => {
+        return (
+            <View style={[styles.item, styles.firstColumn]}>
+                <TextRN style={styles.title}>{item.key}</TextRN>
+            </View>
+        );
+    };
+    return (
+        <View style={styles.footerContainer}>
+            <View style={styles.sectionContainer}>
+
+                <View style={styles.infoSection}>
+                    <ImageRN
+                        source={{ uri: gifLogo }}
+                        resizeMode='contain'
+                        style={styles.logo}
+                    />
+                    <TextRN style={styles.companyAddress}>26-2 Takara Tsutsumi-cho, Toyota-city, Aichi 473-90932 Japan</TextRN>
+                    <TextRN style={styles.companyContact}>Tel +81-565-85-0602</TextRN>
+                    <TextRN>Fax +81-565-85-0606</TextRN>
+                    <TouchableOpacity style={styles.contactButton}>
+                        <TextRN style={styles.contactButtonText}>Contact Us</TextRN>
+                    </TouchableOpacity>
+                    <View style={styles.policyLinks}>
+                        <TextRN style={[styles.policyText, { borderBottomWidth: 2, borderBottomColor: '#DDD' }]}>Terms of Use</TextRN>
+                        <TextRN style={[styles.policyText, { borderBottomWidth: 2, borderBottomColor: '#DDD' }]}>Privacy Policy</TextRN>
+                        <TextRN style={[styles.policyText, { marginBottom: -2 }]}>Cookie Policy</TextRN>
+                    </View>
+                </View>
+                {screenWidth < 768 ? null : (
+                    <>
+                        <View style={styles.linkSection}>
+                            <TextRN style={styles.sectionTitle}>Contents</TextRN>
+                            <TextRN style={styles.linkText}>Used Car Stock</TextRN>
+                            <TextRN style={styles.linkText}>How to Buy</TextRN>
+                            <TextRN style={styles.linkText}>About Us</TextRN>
+                            <TextRN style={styles.linkText}>Local Introduction</TextRN>
+                            <TextRN style={styles.linkText}>Contact Us</TextRN>
+                        </View>
+
+                        <View style={styles.linkSection}>
+                            <TextRN style={styles.sectionTitle}>Makers</TextRN>
+                            <FlatList
+                                data={maker}
+                                renderItem={renderItem}
+                                keyExtractor={item => item.key}
+                                numColumns={numColumns}
+                                scrollEnabled={false}
+                                key={numColumns}
+                            />
+                        </View>
+
+                        <View style={styles.linkSection}>
+                            <TextRN style={styles.sectionTitle}>Body Types</TextRN>
+                            <FlatList
+                                data={bodyType}
+                                renderItem={renderItemBodyType}
+                                keyExtractor={item => item.key}
+                                scrollEnabled={false}
+                            />
+
+                        </View>
+
+                        <View style={styles.linkSection}>
+                            <TextRN style={styles.sectionTitle}>Find Car</TextRN>
+                            <TextRN style={styles.linkText}>Browse All Stock</TextRN>
+                            <TextRN style={styles.linkText}>Sale Cars</TextRN>
+                            <TextRN style={styles.linkText}>Recommended Cars</TextRN>
+                            <TextRN style={styles.linkText}>Luxury Cars</TextRN>
+                        </View>
+                    </>
+                )}
+
+            </View>
+
+            <View style={styles.socialMediaSection}>
+                <View style={styles.iconsRow}>
+                    <AntDesign name="linkedin-square" size={20} color={'blue'} />
+                    <AntDesign name="twitter" size={20} color={'blue'} />
+                    <Ionicons name="logo-facebook" size={20} color={'blue'} />
+                    <Entypo name="instagram" size={20} color={'blue'} />
+                </View>
+                <View style={styles.copyRightSection}>
+                    <TextRN style={styles.copyRightText}>
+                        Copyright © Real Motor Japan All Rights Reserved.
+                    </TextRN>
+                </View>
+            </View>
+
+        </View>
+    );
+};
 const HowToBuy = () => {
     return (
         <View style={{ flex: 3 }}>

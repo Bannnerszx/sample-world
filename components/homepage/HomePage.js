@@ -1,6 +1,6 @@
 import { ImageBackground, StyleSheet, Text, View, Animated, Easing, TouchableOpacity, TouchableWithoutFeedback, Dimensions, TextInput, FlatList, Image, ScrollView, Pressable, Linking, Modal } from 'react-native';
 import React, { useEffect, useState, useRef, useMemo, useContext, useCallback, useLayoutEffect } from 'react';
-import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, MaterialCommunityIcons , Octicons} from 'react-native-vector-icons';
+import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, MaterialCommunityIcons, Octicons } from 'react-native-vector-icons';
 import { FontAwesome5Brands } from '@expo/vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from '../../firebaseConfig';
 import { addDoc, collection, doc, getDocs, query, getDoc, onSnapshot, where, orderBy, limit, } from 'firebase/firestore';
@@ -136,7 +136,7 @@ const StickyHeader = () => {
                     < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
                         <View style={{ flex: 1 }} />
                         <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                        <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <AntDesign name="heart" size={25} color={'blue'} />
                             <Text style={{ color: 'blue' }}>Favorite</Text>
                         </TouchableOpacity>
@@ -161,12 +161,12 @@ const StickyHeader = () => {
                             <Text style={{ color: 'blue' }}>Favorite</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/SignUp`)}>
+                        <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
                             <Text style={{ color: 'blue' }}>Sign Up</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/LoginForm`)}F>
+                        <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <Octicons name="sign-in" size={25} color={'blue'} />
                             <Text style={{ color: 'blue' }}>Log In</Text>
                         </TouchableOpacity>
@@ -3237,13 +3237,13 @@ const HomePage = () => {
                                 marginRight: 5,
                                 marginTop: screenWidth < 644 ? 10 : 0,
                                 width: '100%',
-                            
+
                             }}
                             placeholder='Search by make, model, or keyword '
                             placeholderTextColor={'#ccc'}
                             onChangeText={handleTextChange}
                         />
-                        <View style={{marginHorizontal: 10}}/>
+                        <View style={{ marginHorizontal: 10 }} />
                         <TouchableOpacity
                             onPress={() => handleSearch()}
                             style={{

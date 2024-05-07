@@ -131,7 +131,7 @@ const StickyHeader = () => {
                     < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
                         <View style={{ flex: 1 }} />
                         <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                        <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <AntDesign name="heart" size={25} color={'blue'} />
                             <TextRN style={{ color: 'blue' }}>Favorite</TextRN>
                         </TouchableOpacity>
@@ -153,17 +153,17 @@ const StickyHeader = () => {
                         <View style={{ flex: 1 }} />
                         <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <AntDesign name="heart" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Favorite</Text>
+                            <TextRN style={{ color: 'blue' }}>Favorite</TextRN>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/SignUp`)}>
+                        <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Sign Up</Text>
+                            <TextRN style={{ color: 'blue' }}>Sign Up</TextRN>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }} onPress={() => navigate(`/LoginForm`)} F>
+                        <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                             <Octicons name="sign-in" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Log In</Text>
+                            <TextRN style={{ color: 'blue' }}>Log In</TextRN>
                         </TouchableOpacity>
                     </View>
 
