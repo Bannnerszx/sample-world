@@ -801,7 +801,8 @@ const FavoriteList = () => {
 
     const renderCarItems = useCallback(({ item, index }) => {
         const imageAspectRatio = 1.7
-
+        const fobDollar = parseFloat(currentCurrency.jpyToUsd) * parseFloat(item.fobPrice);
+        const formattedFobDollar = fobDollar ? parseInt(fobDollar).toLocaleString() : '000'; //FOB PRICE
         return (
             <View style={{ borderRadius: 5, borderWidth: 1, borderColor: '#999', flex: 1, marginVertical: 5, width: '100%', alignSelf: 'center' }}>
                 <View style={{ padding: 5 }}>
@@ -821,7 +822,7 @@ const FavoriteList = () => {
                                 maxWidth: 140,
                                 borderRadius: 5
                             }}>
-                            <AntDesign name="heart" size={15} color={'white'} style={{  flex: 1 }} />
+                            <AntDesign name="heart" size={15} color={'white'} style={{ flex: 1 }} />
                             <TextRN style={{ color: 'white', flex: 2, textAlign: 'left' }}>{reservationStatuses[item.stockId] === 'Reserved' ? 'Reserved' : 'On-Sale'}</TextRN>
                         </TouchableOpacity>
 
@@ -846,7 +847,7 @@ const FavoriteList = () => {
                             </TextRN>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <TextRN style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 1 }}>
-                                    US$ <TextRN style={{ fontSize: 30, fontWeight: '700' }}>{'formatted dollar'}</TextRN>
+                                    US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{formattedFobDollar}</Text>
                                 </TextRN>
                             </View>
 
