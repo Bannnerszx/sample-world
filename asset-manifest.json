@@ -1,12 +1,12 @@
 {
   "files": {
     "main.css": "/sample-world/static/css/main.cc44b06b.css",
-    "main.js": "/sample-world/static/js/main.3671866d.js",
+    "main.js": "/sample-world/static/js/main.0e821190.js",
     "static/js/120.d49ea698.chunk.js": "/sample-world/static/js/120.d49ea698.chunk.js",
     "static/js/856.7a270e76.chunk.js": "/sample-world/static/js/856.7a270e76.chunk.js",
     "static/js/382.c0d0aa61.chunk.js": "/sample-world/static/js/382.c0d0aa61.chunk.js",
     "static/css/469.7a0d34d7.css": "/sample-world/static/css/469.7a0d34d7.css",
-    "static/js/469.273b7193.js": "/sample-world/static/js/469.273b7193.js",
+    "static/js/469.1cb30e63.js": "/sample-world/static/js/469.1cb30e63.js",
     "static/media/Thank Followers (Facebook Cover) (facebook cover photo).png": "/sample-world/static/media/Thank Followers (Facebook Cover) (facebook cover photo).9736a6319b01b17fa321.png",
     "static/media/MaterialCommunityIcons.ttf": "/sample-world/static/media/MaterialCommunityIcons.5d42b4e60858731e7b65.ttf",
     "static/media/RMJ logo for flag.jpg": "/sample-world/static/media/RMJ logo for flag.58aee57b72633bba0afc.jpg",
@@ -164,8 +164,8 @@
   },
   "entrypoints": [
     "static/css/469.7a0d34d7.css",
-    "static/js/469.273b7193.js",
+    "static/js/469.1cb30e63.js",
     "static/css/main.cc44b06b.css",
-    "static/js/main.3671866d.js"
+    "static/js/main.0e821190.js"
   ]
 }
