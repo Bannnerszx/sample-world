@@ -4035,7 +4035,16 @@ const SearchCarDesignAlpha = () => {
     const dataFilesExtra = [
         { image: image },
     ]
+    const [isSearchModalVisible, setSearchModalVisible] = useState(false);
+    const [isCalculatorModalVisible, setCalculatorModalVisible] = useState(false);
 
+    const toggleSearchModal = () => {
+        setSearchModalVisible(!isSearchModalVisible);
+    };
+
+    const toggleCalculatorModal = () => {
+        setCalculatorModalVisible(!isCalculatorModalVisible);
+    };
 
     return (
         <View style={{ flex: 3 }}>
@@ -4060,199 +4069,311 @@ const SearchCarDesignAlpha = () => {
                     )}
                 />
 
-                <View style={{ flexDirection: screenWidth <= 962 ? 'column' : 'row', alignItems: 'center', width: '100%', justifyContent: 'center', marginTop: '-15%' }}>
-                    <View style={{
-                        width: '100%',
-                        maxWidth: screenWidth <= 1354 ? null : 650,
-                        borderWidth: 1,
-                        borderRadius: 5,
-                        borderColor: '#ccc',
-                        padding: 15,
-                        marginVertical: 10,
-                        height: screenWidth < 456 ? null : 300,
-                        flex: 1,
-                        backgroundColor: 'white',
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 5,
-                    }}>
-                        <View style={{
-                            flexDirection: screenWidth < 456 ? 'column' : 'row',
-                            flexWrap: 'wrap',
-                            alignItems: screenWidth < 456 ? null : 'center',
-                            justifyContent: screenWidth < 456 ? null : 'space-between',
-                            marginBottom: 10,
-                            zIndex: 10
-                        }}>
-                            <DropDownMakeSimple makes={makes} handleSelectMake={handleSelectMake} carMakes={carMakes} />
-                            <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModels={carModels} />
-                            <DropDownBodyTypeSimple bodyType={bodyType} carBodyType={carBodyType} handleSelectBodyType={handleSelectBodyType} />
-                        </View>
-                        <View style={{
-                            flexDirection: screenWidth < 456 ? 'column' : 'row',
-                            flexWrap: 'wrap',
-                            alignItems: screenWidth < 456 ? null : 'center',
-                            justifyContent: screenWidth < 456 ? null : 'space-between',
-                            marginBottom: 5,
-                            zIndex: 8,
-                        }}>
-                            <View style={{ alignItems: screenWidth < 456 ? 'center' : null, flexDirection: screenWidth < 456 ? 'row' : 'column', flex: 1, zIndex: 11 }}>
-                                <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 8, flex: 1 }}>
-                                    <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
+                <View style={{ marginTop: '-15%' }}>
+
+                    {screenWidth <= 962 && (
+                        <View style={{ flexDirection: screenWidth <= 962 ? 'column' : 'row', alignItems: 'center', padding: 20 }}>
+                            <TouchableOpacity onPress={toggleSearchModal} style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingHorizontal: '5%',
+                                width: '100%',
+                                paddingVertical: 20,
+                                backgroundColor: 'white',
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 5,
+                                borderTopLeftRadius: 5,
+                                borderTopRightRadius: 5
+
+                            }}>
+                                <Entypo name="magnifying-glass" size={25} />
+                                <Text style={{
+                                    fontWeight: 'bold',
+                                    fontSize: 16
+                                }}>Find Used Cars</Text>
+                            </TouchableOpacity>
+                            <Modal
+                                animationType="fade"
+                                transparent={true}
+                                visible={isSearchModalVisible}
+                                onRequestClose={toggleSearchModal}
+                            >
+                                <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
+                                    <View style={{
+                                        backgroundColor: 'white',
+                                        width: '100%',
+                                        height: '100%',
+                                        maxHeight: 700,
+                                        padding: 10,
+                                        borderRadius: 5,
+                                        shadowColor: 'black',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 3,
+                                        elevation: 5, // for Android shadow
+
+                                    }}>
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginBottom: 10,
+                                        }}>
+                                            <Text style={{
+                                                fontWeight: 'bold',
+                                                fontSize: 18,
+                                            }}>Filter Results</Text>
+                                            <TouchableOpacity onPress={toggleSearchModal} style={{ alignSelf: 'flex-end', }}>
+                                                <Text style={{
+                                                    color: 'gray',
+                                                    fontSize: 18,
+                                                    fontWeight: '700',
+                                                }}>X</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        {/* <TouchableOpacity onPress={() => { openModalFavorite() }} style={{ alignSelf: 'flex-end', marginRight: 5, marginBottom: 5 }}>
+                                        <Text style={{ color: 'gray', fontSize: '1.2em', fontWeight: '700' }}>X</Text>
+                                    </TouchableOpacity> */}
+                                        <DropDownMakeSimple makes={makes} handleSelectMake={handleSelectMake} carMakes={carMakes} />
+                                        <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModels={carModels} />
+                                        <DropDownBodyTypeSimple bodyType={bodyType} carBodyType={carBodyType} handleSelectBodyType={handleSelectBodyType} />
+                                        <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
+                                        <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
+                                        <DropDownMinYearSimple carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
+                                        <DropDownMaxYearSimple carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
+                                        <DropDownMinPriceSimple minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
+                                        <DropDownMaxPriceSimple maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
+                                    </View>
+
                                 </View>
-                                <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 6, marginTop: screenWidth < 456 ? null : -10, flex: 1 }}>
-                                    <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
-                                </View>
+                            </Modal>
+                            <View style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingHorizontal: '5%',
+                                width: '100%',
+                                paddingVertical: 20,
+                                backgroundColor: 'white',
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 5,
+                                borderBottomLeftRadius: 5,
+                                borderBottomRightRadius: 5
+                            }}>
+                                <FontAwesome name="calculator" size={25} />
+                                <Text style={{
+                                    fontWeight: 'bold',
+                                    fontSize: 16
+                                }}>Total Price Calculators</Text>
                             </View>
-
-                            <View style={{ alignItems: screenWidth < 456 ? 'center' : null, flexDirection: screenWidth < 456 ? 'row' : 'column', flex: 1, zIndex: 10 }}>
-                                <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 6, flex: 1 }}>
-                                    <DropDownMinYearSimple carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
-                                </View>
-                                <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 5, marginTop: screenWidth < 456 ? null : -10, flex: 1 }}>
-                                    <DropDownMaxYearSimple carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
-                                </View>
-                            </View>
-
-                            <View style={{ alignItems: screenWidth < 456 ? 'center' : null, flexDirection: screenWidth < 456 ? 'row' : 'column', flex: 1, zIndex: 9 }}>
-                                <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 5, flex: 1 }}>
-                                    <DropDownMinPriceSimple minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
-                                </View>
-                                <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 4, marginTop: screenWidth < 456 ? null : -10, flex: 1 }}>
-                                    <DropDownMaxPriceSimple maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
-                                </View>
-                            </View>
-
                         </View>
-                        <View style={{ flex: 1, paddingHorizontal: 5, marginBottom: 9, }}>
-                            <TextInput
-                                style={{
-                                    flex: 1,
-                                    padding: 10,
-                                    paddingVertical: 10,
-                                    paddingRight: 5,
-                                    borderWidth: 1.2,
-                                    borderColor: '#eee',
-                                    borderRadius: 2,
-                                    marginTop: screenWidth < 644 ? 10 : 0,
-                                    width: '100%',
+                    )}
 
-                                }}
-                                placeholder='Search by make, model, or keyword '
-                                placeholderTextColor={'#ccc'}
-                                onChangeText={handleTextChange}
-                            />
-                        </View>
-                        <View style={{ width: '100%', height: 50, paddingHorizontal: 5, }}>
-                            <TouchableOpacity
-                                style={{
-                                    justifyContent: 'center',
-                                    borderRadius: 5,
-                                    padding: 10,
-                                    backgroundColor: 'blue',
+
+                    {screenWidth > 962 && (
+                        <View style={{ flexDirection: screenWidth <= 962 ? 'column' : 'row', alignItems: 'center', width: '100%', justifyContent: 'center', }}>
+                            <View style={{
+                                width: '100%',
+                                maxWidth: screenWidth <= 1354 ? null : 650,
+                                borderWidth: 1,
+                                borderRadius: 5,
+                                borderColor: '#ccc',
+                                padding: 15,
+                                marginVertical: 10,
+                                height: screenWidth < 456 ? null : 300,
+                                flex: 1,
+                                backgroundColor: 'white',
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 5,
+                            }}>
+                                <View style={{
+                                    flexDirection: screenWidth < 456 ? 'column' : 'row',
+                                    flexWrap: 'wrap',
+                                    alignItems: screenWidth < 456 ? null : 'center',
+                                    justifyContent: screenWidth < 456 ? null : 'space-between',
+                                    marginBottom: 10,
+                                    zIndex: 10
+                                }}>
+                                    <DropDownMakeSimple makes={makes} handleSelectMake={handleSelectMake} carMakes={carMakes} />
+                                    <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModels={carModels} />
+                                    <DropDownBodyTypeSimple bodyType={bodyType} carBodyType={carBodyType} handleSelectBodyType={handleSelectBodyType} />
+                                </View>
+                                <View style={{
+                                    flexDirection: screenWidth < 456 ? 'column' : 'row',
+                                    flexWrap: 'wrap',
+                                    alignItems: screenWidth < 456 ? null : 'center',
+                                    justifyContent: screenWidth < 456 ? null : 'space-between',
+                                    marginBottom: 5,
+                                    zIndex: 8,
+                                }}>
+                                    <View style={{ alignItems: screenWidth < 456 ? 'center' : null, flexDirection: screenWidth < 456 ? 'row' : 'column', flex: 1, zIndex: 11 }}>
+                                        <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 8, flex: 1 }}>
+                                            <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
+                                        </View>
+                                        <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 6, marginTop: screenWidth < 456 ? null : -10, flex: 1 }}>
+                                            <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
+                                        </View>
+                                    </View>
+
+                                    <View style={{ alignItems: screenWidth < 456 ? 'center' : null, flexDirection: screenWidth < 456 ? 'row' : 'column', flex: 1, zIndex: 10 }}>
+                                        <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 6, flex: 1 }}>
+                                            <DropDownMinYearSimple carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
+                                        </View>
+                                        <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 5, marginTop: screenWidth < 456 ? null : -10, flex: 1 }}>
+                                            <DropDownMaxYearSimple carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
+                                        </View>
+                                    </View>
+
+                                    <View style={{ alignItems: screenWidth < 456 ? 'center' : null, flexDirection: screenWidth < 456 ? 'row' : 'column', flex: 1, zIndex: 9 }}>
+                                        <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 5, flex: 1 }}>
+                                            <DropDownMinPriceSimple minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
+                                        </View>
+                                        <View style={{ width: screenWidth < 456 ? null : '100%', zIndex: 4, marginTop: screenWidth < 456 ? null : -10, flex: 1 }}>
+                                            <DropDownMaxPriceSimple maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
+                                        </View>
+                                    </View>
+
+                                </View>
+                                <View style={{ flex: 1, paddingHorizontal: 5, marginBottom: 9, }}>
+                                    <TextInput
+                                        style={{
+                                            flex: 1,
+                                            padding: 10,
+                                            paddingVertical: 10,
+                                            paddingRight: 5,
+                                            borderWidth: 1.2,
+                                            borderColor: '#eee',
+                                            borderRadius: 2,
+                                            marginTop: screenWidth < 644 ? 10 : 0,
+                                            width: '100%',
+
+                                        }}
+                                        placeholder='Search by make, model, or keyword '
+                                        placeholderTextColor={'#ccc'}
+                                        onChangeText={handleTextChange}
+                                    />
+                                </View>
+                                <View style={{ width: '100%', height: 50, paddingHorizontal: 5, }}>
+                                    <TouchableOpacity
+                                        style={{
+                                            justifyContent: 'center',
+                                            borderRadius: 5,
+                                            padding: 10,
+                                            backgroundColor: 'blue',
+                                            alignItems: 'center',
+                                            flex: 1
+                                        }}
+                                        onPress={() => { fetchGeneralData(); }}
+                                    >
+                                        <Text style={{ color: 'white' }}>Search</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                            </View>
+                            <View style={{ marginHorizontal: 25 }} />
+                            <View style={{
+                                backgroundColor: 'white',
+                                width: '100%',
+                                maxWidth: screenWidth <= 1354 ? null : 650,
+                                flex: screenWidth > 962 ? 1 : null,
+                                borderWidth: 1,
+                                borderRadius: 5,
+                                borderColor: '#ccc',
+                                padding: 15,
+                                marginVertical: 10,
+                                height: screenWidth < 456 ? null : 300,
+                                zIndex: -2,
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 5,
+
+                            }}>
+                                <View style={{
+                                    flexDirection: 'row',
                                     alignItems: 'center',
-                                    flex: 1
-                                }}
-                                onPress={() => { fetchGeneralData(); }}
-                            >
-                                <Text style={{ color: 'white' }}>Search</Text>
-                            </TouchableOpacity>
-                        </View>
+                                    justifyContent: 'space-between',
+                                    marginBottom: 10
+                                }}>
+                                    <Text style={{ fontWeight: 'bold' }}>TOTAL PRICE CALCULATOR</Text>
+                                    <TouchableOpacity
+                                        style={{
+                                            justifyContent: 'center',
+                                            borderRadius: 5,
+                                            padding: 10,
+                                            backgroundColor: 'blue'
+                                        }}
+                                    >
+                                        <Text style={{ color: 'white' }}>Sign-In</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    marginBottom: 10,
+                                    zIndex: 5
+                                }}>
+                                    <DropDownSelectCountry selectedCountry={selectedCountry} handleSelectCountry={handleSelectCountry} countryData={countryData} />
+                                    <DropDownSelectPort selectedPort={selectedPort} handleSelectPort={handleSelectPort} ports={ports} />
+                                </View>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: 10,
+                                    zIndex: -2
+                                }}>
+                                    <Inspection
+                                        isToggleDisabled={isToggleDisabled}
+                                        toggleAnim={toggleAnim}
+                                        handleToggle={handleToggle}
+                                        switchTranslate={switchTranslate}
+                                        switchColor={switchColor}
+                                        setToggle={setToggle}
+                                        toggle={toggle}
+                                        handleToggleInspection={handleToggleInspection}
+                                        selectedCountry={selectedCountry}
+                                    />
+                                    <Insurance />
 
-                    </View>
-                    <View style={{ marginHorizontal: 25 }} />
-                    <View style={{
-                        backgroundColor: 'white',
-                        width: '100%',
-                        maxWidth: screenWidth <= 1354 ? null : 650,
-                        flex: screenWidth > 962 ? 1 : null,
-                        borderWidth: 1,
-                        borderRadius: 5,
-                        borderColor: '#ccc',
-                        padding: 15,
-                        marginVertical: 10,
-                        height: screenWidth < 456 ? null : 300,
-                        zIndex: -2,
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 5,
+                                    <TouchableOpacity
+                                        style={{
+                                            justifyContent: 'center',
+                                            borderRadius: 5,
+                                            padding: 10,
+                                            backgroundColor: 'blue'
+                                        }}
+                                        onPress={() => handleCalculate()}
+                                    >
+                                        <Text style={{ color: 'white' }}>Calculate</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={{ marginTop: 10, padding: 10 }}>
+                                    <Text style={{
+                                        flex: 1,
+                                        marginBottom: 5
+                                    }}>Total Price calculator will estimate the total price of the cars based on your shipping desstination port and other preferences</Text>
+                                    <Text style={{
+                                        flex: 1,
+                                        fontSize: 12,
+                                        color: 'grey'
+                                    }}>Note: In some cases the total price cannot be estimated.</Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
 
-                    }}>
-                        <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 10
-                        }}>
-                            <Text style={{ fontWeight: 'bold' }}>TOTAL PRICE CALCULATOR</Text>
-                            <TouchableOpacity
-                                style={{
-                                    justifyContent: 'center',
-                                    borderRadius: 5,
-                                    padding: 10,
-                                    backgroundColor: 'blue'
-                                }}
-                            >
-                                <Text style={{ color: 'white' }}>Sign-In</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            marginBottom: 10,
-                            zIndex: 5
-                        }}>
-                            <DropDownSelectCountry selectedCountry={selectedCountry} handleSelectCountry={handleSelectCountry} countryData={countryData} />
-                            <DropDownSelectPort selectedPort={selectedPort} handleSelectPort={handleSelectPort} ports={ports} />
-                        </View>
-                        <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 10,
-                            zIndex: -2
-                        }}>
-                            <Inspection
-                                isToggleDisabled={isToggleDisabled}
-                                toggleAnim={toggleAnim}
-                                handleToggle={handleToggle}
-                                switchTranslate={switchTranslate}
-                                switchColor={switchColor}
-                                setToggle={setToggle}
-                                toggle={toggle}
-                                handleToggleInspection={handleToggleInspection}
-                                selectedCountry={selectedCountry}
-                            />
-                            <Insurance />
-
-                            <TouchableOpacity
-                                style={{
-                                    justifyContent: 'center',
-                                    borderRadius: 5,
-                                    padding: 10,
-                                    backgroundColor: 'blue'
-                                }}
-                                onPress={() => handleCalculate()}
-                            >
-                                <Text style={{ color: 'white' }}>Calculate</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={{ marginTop: 10, padding: 10 }}>
-                            <Text style={{
-                                flex: 1,
-                                marginBottom: 5
-                            }}>Total Price calculator will estimate the total price of the cars based on your shipping desstination port and other preferences</Text>
-                            <Text style={{
-                                flex: 1,
-                                fontSize: 12,
-                                color: 'grey'
-                            }}>Note: In some cases the total price cannot be estimated.</Text>
-                        </View>
-                    </View>
                 </View>
                 {/* <ScrollView
                         horizontal
