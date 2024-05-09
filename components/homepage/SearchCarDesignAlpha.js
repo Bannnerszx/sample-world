@@ -3304,10 +3304,10 @@ const SearchCarDesignAlpha = () => {
         return () => subscription.remove();
     }, []);
     //screenwidth
-    const InfoColumn = ({ label, value }) => (
-        <View style={{ alignItems: 'center', marginHorizontal: screenWidth <= 768 ? 0 : 10, justifyContent: 'center' }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{value}</Text>
-            <Text style={{ color: 'gray', fontSize: 16 }}>{label}</Text>
+    const InfoColumn = ({ label, value, flex }) => (
+        <View style={{ alignItems: 'center', marginHorizontal: screenWidth < 468 ? 10 : 5, justifyContent: 'center', flex: flex, }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'center', }}>{value}</Text>
+            <Text style={{ color: 'gray', fontSize: 16, textAlign: 'center', }}>{label}</Text>
         </View>
     );
 
@@ -3976,11 +3976,11 @@ const SearchCarDesignAlpha = () => {
                                     borderTopColor: '#aaa',
                                     borderBottomColor: '#aaa',
                                     borderBottomWidth: 1,
-                                    padding: 15
+                                    padding: 15,
                                 }}>
-                                    <InfoColumn label="Year" value={`${item.regYear}/${item.regMonth}`} />
-                                    <InfoColumn label="Mileage" value={`${item.mileage} km`} />
-                                    <InfoColumn label="Exterior Color" value={item.exteriorColor} />
+                                    <InfoColumn label="Year" value={`${item.regYear}/${item.regMonth}`} flex={1} />
+                                    <InfoColumn label="Mileage" value={`${item.mileage} km`} flex={1} />
+                                    <InfoColumn label="Exterior Color" value={item.exteriorColor} flex={1.5} />
                                 </View>
                             ) : (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, width: '100%', maxWidth: screenWidth <= 768 ? null : 480, justifyContent: 'space-between' }}>
@@ -4046,6 +4046,7 @@ const SearchCarDesignAlpha = () => {
         setCalculatorModalVisible(!isCalculatorModalVisible);
     };
 
+
     return (
         <View style={{ flex: 3 }}>
             <StickyHeader />
@@ -4102,12 +4103,12 @@ const SearchCarDesignAlpha = () => {
                                 visible={isSearchModalVisible}
                                 onRequestClose={toggleSearchModal}
                             >
-                                <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
-                                    <View style={{
+                                <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center', padding: 10 }}>
+                                    <ScrollView style={{
                                         backgroundColor: 'white',
                                         width: '100%',
                                         height: '100%',
-                                        maxHeight: 700,
+                                        maxHeight: 900,
                                         padding: 10,
                                         borderRadius: 5,
                                         shadowColor: 'black',
@@ -4138,20 +4139,93 @@ const SearchCarDesignAlpha = () => {
                                         {/* <TouchableOpacity onPress={() => { openModalFavorite() }} style={{ alignSelf: 'flex-end', marginRight: 5, marginBottom: 5 }}>
                                         <Text style={{ color: 'gray', fontSize: '1.2em', fontWeight: '700' }}>X</Text>
                                     </TouchableOpacity> */}
-                                        <DropDownMakeSimple makes={makes} handleSelectMake={handleSelectMake} carMakes={carMakes} />
-                                        <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModels={carModels} />
-                                        <DropDownBodyTypeSimple bodyType={bodyType} carBodyType={carBodyType} handleSelectBodyType={handleSelectBodyType} />
-                                        <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
-                                        <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
-                                        <DropDownMinYearSimple carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
-                                        <DropDownMaxYearSimple carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
-                                        <DropDownMinPriceSimple minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
-                                        <DropDownMaxPriceSimple maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
-                                    </View>
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 8 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Make:</Text>
+                                            <DropDownMakeSimple makes={makes} handleSelectMake={handleSelectMake} carMakes={carMakes} />
+                                        </View>
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 7 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Model:</Text>
+                                            <DropDownModelSimple model={models} handleSelectModel={handleSelectModel} carModels={carModels} />
+                                        </View>
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 6 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>BodyType:</Text>
+                                            <DropDownBodyTypeSimple bodyType={bodyType} carBodyType={carBodyType} handleSelectBodyType={handleSelectBodyType} />
+                                        </View>
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 5 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Mileage:</Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                                                <DropDownMinMileageSimple minMileageData={minMileageData} handleSelectMinMileage={handleSelectMinMileage} minMileage={minMileage} />
+                                                <Text> - </Text>
+                                                <DropDownMaxMileageSimple maxMileageData={maxMileageData} handleSelectMaxMileage={handleSelectMaxMileage} maxMileage={maxMileage} />
+                                            </View>
+                                        </View>
+
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 4 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Year:</Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                                                <DropDownMinYearSimple carMinYear={carMinYear} handleSelectMinYear={handleSelectMinYear} />
+                                                <Text> - </Text>
+                                                <DropDownMaxYearSimple carMaxYear={carMaxYear} handleSelectMaxYear={handleSelectMaxYear} />
+                                            </View>
+
+                                        </View>
+
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 3 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Price:</Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                                                <DropDownMinPriceSimple minPrice={minPrice} handleSelectMinPrice={handleSelectMinPrice} minPriceData={minPriceData} />
+                                                <Text> - </Text>
+                                                <DropDownMaxPriceSimple maxPrice={maxPrice} handleSelectMaxPrice={handleSelectMaxPrice} maxPriceData={maxPriceData} />
+                                            </View>
+                                        </View>
+                                        <View style={{ marginBottom: 20, padding: 5, zIndex: 3 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Keywords:</Text>
+                                            <TextInput
+                                                style={{
+                                                    flex: 1,
+                                                    padding: 10,
+                                                    paddingVertical: 10,
+                                                    paddingRight: 5,
+                                                    borderWidth: 1.2,
+                                                    borderColor: '#eee',
+                                                    borderRadius: 2,
+                                                    marginTop: screenWidth < 644 ? 10 : 0,
+                                                    width: '100%',
+
+                                                }}
+                                                placeholder='Search by make, model, or keyword '
+                                                placeholderTextColor={'#ccc'}
+                                                onChangeText={handleTextChange}
+                                            />
+
+                                        </View>
+                                        <View style={{ width: '100%', height: 60, paddingHorizontal: 5, padding: 5, }}>
+                                            <TouchableOpacity
+                                                style={{
+                                                    justifyContent: 'center',
+                                                    borderRadius: 5,
+                                                    padding: 10,
+                                                    backgroundColor: 'blue',
+                                                    alignItems: 'center',
+                                                    flex: 1
+                                                }}
+                                                onPress={() => { fetchGeneralData(); toggleSearchModal(); }}
+                                            >
+                                                <Text style={{ color: 'white' }}>Search</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+
+
+                                    </ScrollView>
+
+
+
+
 
                                 </View>
                             </Modal>
-                            <View style={{
+                            <TouchableOpacity onPress={toggleCalculatorModal} style={{
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
@@ -4166,13 +4240,72 @@ const SearchCarDesignAlpha = () => {
                                 elevation: 5,
                                 borderBottomLeftRadius: 5,
                                 borderBottomRightRadius: 5
+
                             }}>
                                 <FontAwesome name="calculator" size={25} />
                                 <Text style={{
                                     fontWeight: 'bold',
                                     fontSize: 16
                                 }}>Total Price Calculators</Text>
-                            </View>
+                            </TouchableOpacity>
+                            <Modal
+                                animationType="fade"
+                                transparent={true}
+                                visible={isCalculatorModalVisible}
+                                onRequestClose={toggleCalculatorModal}
+                            >
+                                <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center', padding: 10 }}>
+                                    <ScrollView style={{
+                                        backgroundColor: 'white',
+                                        width: '100%',
+                                        height: '100%',
+                                        maxHeight: 900,
+                                        padding: 10,
+                                        borderRadius: 5,
+                                        shadowColor: 'black',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 3,
+                                        elevation: 5, // for Android shadow
+
+                                    }}>
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginBottom: 10,
+                                        }}>
+                                            <Text style={{
+                                                fontWeight: 'bold',
+                                                fontSize: 18,
+                                            }}>Caculator</Text>
+                                            <TouchableOpacity onPress={toggleCalculatorModal} style={{ alignSelf: 'flex-end', }}>
+                                                <Text style={{
+                                                    color: 'gray',
+                                                    fontSize: 18,
+                                                    fontWeight: '700',
+                                                }}>X</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={{ marginBottom: 10, padding: 5, zIndex: 8 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Country:</Text>
+                                            <DropDownSelectCountry selectedCountry={selectedCountry} handleSelectCountry={handleSelectCountry} countryData={countryData} />
+                                        </View>
+                                        <View style={{ marginBottom: 10, padding: 5, zIndex: 7 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Port:</Text>
+                                            <DropDownSelectPort selectedPort={selectedPort} handleSelectPort={handleSelectPort} ports={ports} />
+                                        </View>
+
+                                 
+                                    </ScrollView>
+
+
+
+
+
+                                </View>
+                            </Modal>
                         </View>
                     )}
 
@@ -4528,7 +4661,7 @@ const SearchCarDesignAlpha = () => {
                                     </View>
                                 </View>
 
-                            </View>
+                                niel    </View>
                         </Modal>
 
                     </View>
