@@ -81,6 +81,94 @@ const LoadingComponent = () => {
 
     );
 };
+
+
+const TimelineStatus = ({ currentStep }) => {
+    const stepValue = currentStep?.value
+    const styles = StyleSheet.create({
+        container: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingTop: 3,
+        },
+        itemContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+        dot: {
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            justifyContent: 'center',
+        },
+        image: {
+            width: 15,
+            height: 15,
+            alignSelf: 'center',
+        },
+        line: {
+            height: 3,
+            width: 20,
+        },
+    });
+
+    const statusData = [
+        { title: 'Negotiation', value: 1 },
+        { title: 'Issued Proforma Invoice', value: 2 },
+        { title: 'Order Item', value: 3 },
+        { title: 'Payment Confirmed', value: 4 },
+        { title: 'Shipping Schedule', value: 5 },
+        { title: 'Documents', value: 6 },
+        { title: 'Vehicle Received', value: 7 },
+    ];
+
+    const getImageSource = (value, isActive) => {
+        switch (value) {
+            case 1:
+                return isActive ? require('../assets/chat_step_1_on.png') : require('../assets/chat_step_1_off.png');
+            case 2:
+                return isActive ? require('../assets/chat_step_2_on.png') : require('../assets/chat_step_2_off.png');
+            case 3:
+                return isActive ? require('../assets/chat_step_3_on.png') : require('../assets/chat_step_3_off.png');
+            case 4:
+                return isActive ? require('../assets/chat_step_4_on.png') : require('../assets/chat_step_4_off.png');
+            case 5:
+                return isActive ? require('../assets/chat_step_5_on.png') : require('../assets/chat_step_5_off.png');
+            case 6:
+                return isActive ? require('../assets/chat_step_6_on.png') : require('../assets/chat_step_6_off.png');
+            case 7:
+                return isActive ? require('../assets/chat_step_7_on.png') : require('../assets/chat_step_7_off.png');
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <View style={styles.container}>
+            {statusData.map((item, index) => (
+                <View key={index} style={styles.itemContainer}>
+                    <View style={[
+                        styles.dot,
+                        { backgroundColor: stepValue < item.value ? '#C1C1C1' : '#abf7c7' }
+                    ]}>
+                        <Image
+                            source={getImageSource(item.value, stepValue >= item.value)}
+                            style={styles.image}
+                        />
+                    </View>
+                    {index < statusData.length - 1 && (
+                        <View style={[
+                            styles.line,
+                            { backgroundColor: stepValue < item.value ? '#C1C1C1' : '#abf7c7' }
+                        ]} />
+                    )}
+                </View>
+            ))}
+        </View>
+    );
+};
+
+
 const LoadingLeftComponent = () => {
     const styles = StyleSheet.create({
         loadingContainer: {
@@ -1816,7 +1904,7 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
                             )}
 
                             <View>
-                                <Image source={{ uri: imageUrl }} style={{ width: 90, height: 50, flex: 1, aspectRatio: 1, resizeMode: 'stretch', borderRadius: '100%' }} />
+                                <Image source={{ uri: imageUrl }} style={{ width: 50, height: 50, flex: 1, aspectRatio: 1, resizeMode: 'stretch', borderRadius: '100%' }} />
                             </View>
 
                             <View style={{ flex: 3, marginLeft: 5 }}>
@@ -1842,6 +1930,7 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
                             </View>
 
                         </View>
+                        <TimelineStatus currentStep={currentStep} />
                     </View>
 
                     <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: screenWidth <= 764 ? 10 : null }}>
@@ -3073,7 +3162,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
                 }
                 {
                     currentStep.value >= 4 && (
-                        <View style={{ justifyContent: 'flex-start', borderBottomWidth: 0.5, borderBottomColor: '#ccc' }}>
+                        <View style={{ justifyContent: 'flex-start' }}>
                             <View style={{ padding: 16 }}>
                                 <View>
                                     {chatField.deliveryAddressInformation ? (
@@ -7313,7 +7402,7 @@ const ProfileFormChatGroup = () => {
                                                 <View style={{ flexDirection: 'column', flex: 3, height: '100%', zIndex: -10 }}>
 
                                                     <View style={{ position: 'sticky' }}>
-                                                        <InformationData currentStep={currentStep} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} />
+                                                        <InformationData currentStep={chatField.stepIndicator} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} />
                                                     </View>
 
                                                     <ScrollView
@@ -7558,7 +7647,7 @@ const ProfileFormChatGroup = () => {
                                         <View style={{ flexDirection: 'column', flex: 3, height: '100%', zIndex: -10, minWidth: 300 }}>
 
                                             <View style={{ position: 'sticky' }}>
-                                                <InformationData currentStep={currentStep} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} activeChatId={activeChatId} />
+                                                <InformationData currentStep={chatField.stepIndicator} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} activeChatId={activeChatId} />
                                             </View>
 
                                             <ScrollView style={{ height: '100%', backgroundColor: '#E5EBFE' }}

@@ -20,12 +20,13 @@ import HomePage from './components/homepage/HomePage';
 import SearchCarDesignAlpha from './components/homepage/SearchCarDesignAlpha';
 import AboutUs from './components/homepage/AboutUs';
 import LocalIntroduction from './components/homepage/LocalIntroduction';
-import LocalInformation from './components/homepage/LocalInformation';
+import LocalInformation from './components/homepage/LocalInformationV2';
 import HowToBuy from './components/homepage/HowToBuy';
 import UploadCsv from './components/UploadCsv';
 import TestServer from './TestServerCodes/DatabaseServer';
 import AnimationSample from './components/homepage/AnimationSample';
 import FavoriteList from './components/homepage/FavoriteList';
+import TermsOfUse from './components/homepage/TermsOfUse';
 const widthSize = Dimensions.get('window').width
 const HEADER_HEIGHT = 160;
 const styles = StyleSheet.create({
@@ -137,6 +138,7 @@ const App = () => {
           <Route exact path="/AboutUs" element={<AboutUs />} />
           <Route path="/LocalIntroduction" element={<LocalIntroduction />} />
           <Route path="/LocalInformation" element={<LocalInformation />} />
+          <Route path="/TermsOfUse" element={<TermsOfUse />} />
           <Route path="/Favorite" element={<FavoriteList />} />
           <Route path="/HowToBuy" element={<HowToBuy />} />
           <Route exact path="/Sample" element={<ThreeContainers />} />

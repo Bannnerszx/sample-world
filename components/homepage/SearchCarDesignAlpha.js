@@ -20,6 +20,16 @@ import Carousel from 'react-native-reanimated-carousel';
 import { GestureHandlerRootView, enableLegacyWebImplementation } from "react-native-gesture-handler";
 import image from "../../assets/filename";
 const StickyHeader = () => {
+    const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenWidth(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const searchQueryWorldRef = useRef('');
@@ -47,7 +57,30 @@ const StickyHeader = () => {
                             </TouchableOpacity>
                         </View>
                     </> */}
+    const parentHeight = screenWidth >= 1440 ? 100 : 60; // maxHeight of parent view
+    const iconSize = parentHeight * 0.3; // Adjust this multiplier as needed
+    const fontSize = parentHeight * 0.2; // Adjust this multiplier as needed
+    const [modalVisible, setModalVisible] = useState(false);
+    const slideAnim = useRef(new AnimatedRN.Value(Dimensions.get('window').width)).current; // Initial position of the modal
 
+    const openModal = () => {
+        setModalVisible(true);
+        AnimatedRN.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const closeModal = () => {
+        AnimatedRN.timing(slideAnim, {
+            toValue: Dimensions.get('window').width,
+            duration: 200,
+            useNativeDriver: true,
+        }).start(() => {
+            setModalVisible(false);
+        });
+    };
     return (
         <AnimatedRN.View style={{
             borderBottomWidth: 1,
@@ -56,7 +89,6 @@ const StickyHeader = () => {
             top: 0,
             left: 0,
             right: 0,
-            height: 100,
             borderTopColor: 'blue',
             borderTopWidth: 2,
             backgroundColor: 'lightblue',
@@ -64,6 +96,7 @@ const StickyHeader = () => {
             backgroundColor: '#fff',
             zIndex: 1000,
             boxShadow: '0 2px 10px rgba(3, 3, 3, 0.3)',
+            maxHeight: parentHeight,
             transform: [
                 {
                     translateY: scrollY.interpolate({
@@ -75,11 +108,49 @@ const StickyHeader = () => {
             ]
         }}>
             <View style={{ flexDirection: 'row', flex: 1 }}>
+                {screenWidth <= 768 && (
+                    <>
+                        {user ? (
+                            <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
+                                <TouchableOpacity onPress={logout} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <Entypo name="log-out" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Log Out</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
+                                <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <Octicons name="sign-in" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Log In</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
+                )}
+                {screenWidth <= 768 && (
+                    <>
+                        {user ? (
+                            <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
+                                <TouchableOpacity style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <AntDesign name="heart" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Favorite</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
+                                <TouchableOpacity style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <AntDesign name="heart" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Favorite</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
+                )}
+
                 <TouchableOpacity
                     onPress={() => navigate('/')}
                     style={{ justifyContent: 'center', flex: 1 }}
                 >
-
                     <Image
                         source={{ uri: logo4 }}
                         style={{
@@ -88,76 +159,156 @@ const StickyHeader = () => {
                         }}
                         resizeMode='contain'
                     />
-
                 </TouchableOpacity>
-                <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flex: 3
-                }}>
-                    {/* <AntDesign name="search1" size={30} style={{ margin: 5, color: 'gray' }} />
-                    <TextInput
-                        placeholder='Search by make, model, or keyword'
-                        style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, flex: 3, fontSize: 20 }}
-                        textAlignVertical='center'
-                        placeholderTextColor={'gray'}
-                        defaultValue={searchQueryWorldRef.current}
-                        onChangeText={handleChangeQuery}
-                        onSubmitEditing={handleSearch}
-                    /> */}
-                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Used Car Stock</Text>
-                    <Text style={{ flex: 1, fontWeight: 'bold' }}>How to Buy</Text>
-                    <Text style={{ flex: 1, fontWeight: 'bold' }}>About Us</Text>
-                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Local Introduction</Text>
-                    <Text style={{ flex: 1, fontWeight: 'bold' }}>Contact Us</Text>
-                    <View style={{ flex: 1 }} />
-                    <View style={{ flex: 1 }} />
-                </View>
-                {user ? (
-
-
-                    < View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
-                        <View style={{ flex: 1 }} />
-                        <View style={{ flex: 1 }} />
-                        <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
-                            <AntDesign name="heart" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Favorite</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
-                            <FontAwesome name="user" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Profile</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
-                            <Entypo name="log-out" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Log Out</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
-                        <View style={{ flex: 1 }} />
-                        <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
-                            <AntDesign name="heart" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Favorite</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
-                            <MaterialCommunityIcons name="account-plus" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Sign Up</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
-                            <Octicons name="sign-in" size={25} color={'blue'} />
-                            <Text style={{ color: 'blue' }}>Log In</Text>
-                        </TouchableOpacity>
-                    </View>
-
-
+                {screenWidth <= 768 && (
+                    <>
+                        {user ? (
+                            <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
+                                <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <FontAwesome name="user" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Profile</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
+                                <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <MaterialCommunityIcons name="account-plus" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Sign Up</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
                 )}
+                {screenWidth <= 768 && (
+                    <>
+                        <View style={{ height: 'auto', paddingHorizontal: 10, backgroundColor: '#F2F5FE' }}>
+                            <TouchableOpacity
+                                style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}
+                                onPress={openModal}
+                            >
+                                <Ionicons name="menu" size={iconSize} color={'blue'} />
+                                <Text style={{ color: 'blue', fontSize: fontSize }}>Menu</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <Modal
+                            transparent={true}
+                            visible={modalVisible}
+                            onRequestClose={closeModal}
+                            style={{ zIndex: 99 }}
+                        >
+                            <View style={{
+                                flex: 1,
+                                justifyContent: 'flex-end',
+                            }}>
+                                <TouchableOpacity onPress={closeModal} style={{
+                                    ...StyleSheet.absoluteFillObject,
+                                    backgroundColor: 'rgba(0,0,0,0.5)',
+                                }} />
+                                <AnimatedRN.View
+                                    style={{
+                                        position: 'absolute',
+                                        right: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: screenWidth <= 544 ? screenWidth * 0.8 : screenWidth * 0.4,
+                                        transform: [{ translateX: slideAnim }],
+                                        backgroundColor: 'white',
+                                        padding: 20,
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: -5, height: 0 },
+                                        shadowOpacity: 0.25,
+                                        shadowRadius: 5,
+                                        elevation: 5,
+                                    }}
+                                >
+
+                                    <ScrollView style={{ flex: 1 }}>
+                                        <TouchableOpacity onPress={closeModal} style={{ alignSelf: 'flex-start' }}>
+                                            <Ionicons name="close" size={25} color={'blue'} />
+                                        </TouchableOpacity>
+                                        <View style={{
+                                            flex: 3,
+                                            paddingVertical: 10,
+                                        }}>
+                                            {['Used Car Stock', 'How to Buy', 'About Us', 'Local Introduction', 'Contact Us'].map((item, index) => (
+                                                <TouchableOpacity key={index} style={{
+                                                    paddingVertical: 15,
+                                                    paddingHorizontal: 10,
+                                                    marginBottom: 5,
+                                                }} onPress={() => alert(item)}>
+                                                    <Text style={{
+                                                        fontWeight: 'bold',
+                                                        fontSize: 18,
+                                                        textAlign: 'left',
+
+                                                    }}>{item}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </ScrollView>
+
+
+
+
+                                </AnimatedRN.View>
+                            </View>
+                        </Modal>
+                    </>
+                )}
+                {screenWidth > 768 && (
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flex: 3,
+                    }}>
+                        <Text style={{ flex: 1, fontWeight: 'bold', fontSize: fontSize, textAlign: 'center' }}>Used Car Stock</Text>
+                        <Text style={{ flex: 1, fontWeight: 'bold', fontSize: fontSize, textAlign: 'center' }}>How to Buy</Text>
+                        <Text style={{ flex: 1, fontWeight: 'bold', fontSize: fontSize, textAlign: 'center' }}>About Us</Text>
+                        <Text style={{ flex: 1, fontWeight: 'bold', fontSize: fontSize, textAlign: 'center' }}>Local Introduction</Text>
+                        <Text style={{ flex: 1, fontWeight: 'bold', fontSize: fontSize, textAlign: 'center' }}>Contact Us</Text>
+
+                    </View>
+                )}
+                {screenWidth > 768 && (
+                    <>
+                        {user ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+
+                                <TouchableOpacity onPress={() => navigate(`/Favorite`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <AntDesign name="heart" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Favorite</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <FontAwesome name="user" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Profile</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={logout} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <Entypo name="log-out" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Log Out</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', height: 'auto', flex: 1, padding: 5 }}>
+
+                                <TouchableOpacity style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <AntDesign name="heart" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Favorite</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigate(`/SignUp`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <MaterialCommunityIcons name="account-plus" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Sign Up</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigate(`/LoginForm`)} style={{ backgroundColor: '#F2F5FE', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                    <Octicons name="sign-in" size={iconSize} color={'blue'} />
+                                    <Text style={{ color: 'blue', fontSize: fontSize }}>Log In</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
+                )
+                }
             </View>
         </AnimatedRN.View>
     )
@@ -3304,6 +3455,21 @@ const SearchCarDesignAlpha = () => {
         return () => subscription.remove();
     }, []);
     //screenwidth
+
+
+    //screenheight
+    const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
+    useEffect(() => {
+        const handleDimensionsChange = ({ window }) => {
+            setScreenHeight(window.width);
+        };
+
+        const subscription = Dimensions.addEventListener('change', handleDimensionsChange);
+
+        return () => subscription.remove();
+    }, []);
+    //screenheight
+
     const InfoColumn = ({ label, value, flex }) => (
         <View style={{ alignItems: 'center', marginHorizontal: screenWidth < 468 ? 10 : 5, justifyContent: 'center', flex: flex, }}>
             <Text style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'center', }}>{value}</Text>
@@ -4257,15 +4423,14 @@ const SearchCarDesignAlpha = () => {
                                 <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center', padding: 10 }}>
                                     <ScrollView style={{
                                         backgroundColor: 'white',
-                                        width: '100%',
-                                        height: '100%',
-                                        maxHeight: 900,
-                                        padding: 10,
-                                        borderRadius: 5,
+                                        width: screenWidth * 0.9, // use 90% of screen width
+                                        maxHeight: screenHeight * 0.46, // use 80% of screen height
+                                        padding: 20,
+                                        borderRadius: 10,
                                         shadowColor: 'black',
                                         shadowOffset: { width: 0, height: 2 },
                                         shadowOpacity: 0.1,
-                                        shadowRadius: 3,
+                                        shadowRadius: 6,
                                         elevation: 5, // for Android shadow
 
                                     }}>
@@ -4296,8 +4461,34 @@ const SearchCarDesignAlpha = () => {
                                             <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 5 }}>Port:</Text>
                                             <DropDownSelectPort selectedPort={selectedPort} handleSelectPort={handleSelectPort} ports={ports} />
                                         </View>
-
-                                 
+                                        <View style={{ marginBottom: 10, padding: 5, zIndex: 6, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Inspection
+                                                isToggleDisabled={isToggleDisabled}
+                                                toggleAnim={toggleAnim}
+                                                handleToggle={handleToggle}
+                                                switchTranslate={switchTranslate}
+                                                switchColor={switchColor}
+                                                setToggle={setToggle}
+                                                toggle={toggle}
+                                                handleToggleInspection={handleToggleInspection}
+                                                selectedCountry={selectedCountry}
+                                            />
+                                            <Insurance />
+                                        </View>
+                                        <View style={{ marginBottom: 10, padding: 5, zIndex: 5 }}>
+                                            <TouchableOpacity
+                                                style={{
+                                                    justifyContent: 'center',
+                                                    borderRadius: 5,
+                                                    padding: 10,
+                                                    backgroundColor: 'blue',
+                                                    alignItems: 'center'
+                                                }}
+                                                onPress={() => { handleCalculate(); toggleCalculatorModal(); }}
+                                            >
+                                                <Text style={{ color: 'white', textAlign: 'center' }}>Calculate</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </ScrollView>
 
 
@@ -4562,16 +4753,16 @@ const SearchCarDesignAlpha = () => {
                             </View>
                         </View>
                         <View style={{ borderBottomWidth: 1, borderBottomColor: 'gray', padding: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10, zIndex: 10 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
-                                <Text>Sort by</Text>
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginBottom: -5, alignSelf: screenWidth >= 768 ? 'flex-start' : null }}>
+                                {screenWidth >= 768 && <Text>Sort by</Text>}
                                 <SortBy sortOptionsArray={sortOptionsArray} sortSelection={sortSelection} handleSortChange={handleSortChange} />
                             </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5 }}>
-                                <Text>View Price in</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5, marginRight: 10 }}>
+                                {screenWidth >= 768 && <Text>View Price in</Text>}
                                 <ViewPrice />
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: -5, zIndex: 5 }}>
-                                <Text>Per Page</Text>
+                                {screenWidth >= 768 && <Text>Per Page</Text>}
                                 <PerPage handleItemsPerPage={handleItemsPerPage} itemsPerPage={itemsPerPage} resetPagination={resetPagination} />
                             </View>
                         </View>
