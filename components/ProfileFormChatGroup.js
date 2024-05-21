@@ -163,7 +163,7 @@ const TimelineStatus = ({ currentStep }) => {
                         ]} />
                     )}
                 </View>
-            ))}
+            ))} 
         </View>
     );
 };
@@ -1477,6 +1477,7 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
         };
     }, [currentChatId]);
 
+
     const loadMoreMessages = () => {
         if (lastVisible) {
             const chatRef = collection(projectExtensionFirestore, 'chats', currentChatId, 'messages');
@@ -1904,33 +1905,40 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
                             )}
 
                             <View>
-                                <Image source={{ uri: imageUrl }} style={{ width: 50, height: 50, flex: 1, aspectRatio: 1, resizeMode: 'stretch', borderRadius: '100%' }} />
+                                <Image source={{ uri: imageUrl }} style={{ width: 60, height: 60, flex: 1, aspectRatio: 1, resizeMode: 'stretch', borderRadius: '100%' }} />
                             </View>
 
                             <View style={{ flex: 3, marginLeft: 5 }}>
-                                <Text style={{ fontSize: 16 }}>{carData.carName}</Text>
-                                <Text style={{ fontSize: 16, fontStyle: 'italic', color: '#aaa' }}>{carData.referenceNumber}</Text>
-                                <Text style={{ fontSize: 14 }}>{carData.modelCode} {carData.chassisNumber}</Text>
-                                <Text style={{ fontSize: 14 }}>{carData.mileage} km</Text>
-                                {/* <Text style={{ fontSize: 14 }}>{carData.transmission}</Text> */}
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'blue', }}>{carData.carName}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#999', marginBottom: 10, marginTop: 5 }}>{carData.referenceNumber}</Text>
+
+                                <TimelineStatus currentStep={currentStep} />
                             </View>
 
                             <View style={{ marginLeft: 10 }}>
+                                <Text style={{ fontSize: 12, color: '#999' }}>{carData.chassisNumber}</Text>
+                                <Text style={{ fontSize: 12, color: '#999' }}>{carData.modelCode}</Text>
+                                <Text style={{ fontSize: 12, color: '#999' }}>{carData.mileage} km</Text>
+                                <Text style={{ fontSize: 12, color: '#999' }}>{carData.fuel}</Text>
+                                <Text style={{ fontSize: 12, color: '#999' }}>{carData.transmission}</Text>
+                            </View>
+                            <View style={{ marginLeft: 10, alignItems: 'flex-start' }}>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Total Price: <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'green' }}>${carData.chassisNumber}</Text></Text>
 
-                                <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                    <Text style={{ width: 100, fontWeight: 'bold' }}>FOB:</Text>
-                                    <Text>US$<Text style={{ fontSize: 20, color: '#aaa', fontWeight: '700' }}>99,999</Text><Text style={{ fontSize: 11, color: '#aaa' }}>(￥999,999,999)</Text></Text>
-                                </View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Text style={{ width: 100, fontWeight: 'bold' }}>TOTAL PRICE:</Text>
-                                    <Text style={{ color: '#4CAF50', }}>US$<Text style={{ fontSize: 20, fontWeight: 'bold' }}>99,999</Text><Text style={{ fontSize: 11, color: '#aaa' }}>(￥999,999,999)</Text></Text>
-                                </View>
-
-
+                                <Text style={{ fontSize: 14, color: 'black', fontWeight: 'bold' }}>
+                                    {chatField.country} / {chatField.port}
+                                </Text>
+                                <Text style={{ fontSize: 14, color: 'green', fontWeight: 'bold' }}>
+                                    {[
+                                        chatField.inspection && chatField.inspection === true ? 'INSPECTION' : null,
+                                        chatField.insurance && chatField.insurance === true ? 'CIF' : 'C&F',
+                                        chatField.warranty && chatField.warranty === true ? 'WARRANTY' : null
+                                    ].filter(Boolean).join(' + ')}
+                                </Text>
                             </View>
 
                         </View>
-                        <TimelineStatus currentStep={currentStep} />
+
                     </View>
 
                     <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: screenWidth <= 764 ? 10 : null }}>
@@ -1944,7 +1952,6 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
                                 justifyContent: 'center',
                                 alignItems: 'center',
                                 padding: 10,
-
                             }}
                             onPress={() => requestToggleRight()}
                         >

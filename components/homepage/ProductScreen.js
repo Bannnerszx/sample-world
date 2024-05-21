@@ -1521,7 +1521,8 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
                 carName: carData?.carName,
                 imageUrl: allImageUrl[0],
                 referenceNumber: carData?.referenceNumber,
-                stockId: carData?.stockID
+                stockId: carData?.stockID, 
+                dateOfTransaction: formattedTime,
             }
             await updateDoc(accountTransaction, {
                 transactions: arrayUnion(newTransaction)

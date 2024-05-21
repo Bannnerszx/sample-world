@@ -1303,9 +1303,24 @@ const SearchByMakes = () => {
             item.name;
         return (
             <View style={styles.itemContainer}>
-                <View style={styles.logoContainer}>
+                <Pressable
+                    style={({ pressed, hovered }) => [
+                        {
+                            opacity: pressed ? 0.5 : 1,
+                            shadowColor: hovered ? '#000' : 'transparent',
+                            shadowOffset: hovered ? { width: 0, height: 2 } : { width: 0, height: 0 },
+                            shadowOpacity: hovered ? 0.25 : 0,
+                            shadowRadius: hovered ? 3.84 : 0,
+                            borderRadius: hovered ? 50 : 0,
+                            margin: 5,
+                            alignItems: 'center',
+                        },
+                        styles.logoContainer
+                    ]}
+                >
                     {item.logo}
-                </View>
+                </Pressable>
+
                 <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, []]}>
                     <Text style={{ marginRight: 5 }}>{truncatedName} </Text>
                     <Text style={{ textDecorationLine: 'underline', color: 'blue' }}>{item.price}</Text>
@@ -1678,9 +1693,21 @@ const SearchByTypes = () => {
     });
     const renderItem = ({ item }) => (
         <View style={styles.itemContainer}>
-            <View style={{ flex: 1 }}>
+            <Pressable
+                style={({ pressed, hovered }) => [
+                    {
+                        opacity: pressed ? 0.5 : 1,
+                        transform: hovered ? [{ scale: 1.5 }] : [{ scale: 1 }],
+                        margin: 5,
+                        alignItems: 'center',
+                        backgroundColor: 'transparent',
+                        transition: 'transform 0.2s ease-in-out',
+                        flex: 1 // Add smooth transition
+                    },
+                ]}
+            >
                 {item.logo}
-            </View>
+            </Pressable>
             <View style={{ flexDirection: 'row' }}>
                 <Text style={{ color: 'white' }}>{item.name} </Text>
                 <Text style={{ color: 'white' }}>{item.price}</Text>
@@ -1890,10 +1917,20 @@ const SearchByTrucks = () => {
                 <Image
                     source={{ uri: carSample }}
                 />
-                <View style={{ backgroundColor: 'transparent' }}>
-
+                <Pressable
+                    style={({ pressed, hovered }) => [
+                        {
+                            opacity: pressed ? 0.5 : 1,
+                            transform: hovered ? [{ scale: 1.5 }] : [{ scale: 1 }],
+                            margin: 5,
+                            alignItems: 'center',
+                            backgroundColor: 'transparent',
+                            transition: 'transform 0.2s ease-in-out', // Add smooth transition
+                        },
+                    ]}
+                >
                     {item.logo}
-                </View>
+                </Pressable>
                 <View style={{ flexDirection: 'row' }}>
                     <Text numberOfLines={1} ellipsizeMode="tail" style={{ marginRight: 5 }}>  {screenWidth < 1025 ? truncatedName : item.name} </Text>
                     <Text>{item.price}</Text>
@@ -3419,19 +3456,19 @@ const HomePage = () => {
 
 
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', padding: 10, zIndex: -19, marginVertical: 20 }}>
-                <Text style={{ fontWeight: 'bold' }}>By Makers</Text>
+                <Text style={{ fontWeight: 'bold', textAlign: 'center' }}>By Makers</Text>
 
                 <View style={{ height: '100%', width: 1, backgroundColor: 'black' }} />
 
-                <Text style={{ fontWeight: 'bold' }}>By Types</Text>
+                <Text style={{ fontWeight: 'bold', textAlign: 'center' }}>By Types</Text>
 
                 <View style={{ height: '100%', width: 1, backgroundColor: 'black' }} />
 
-                <Text style={{ fontWeight: 'bold' }}>By Trucks</Text>
+                <Text style={{ fontWeight: 'bold', textAlign: 'center' }}>By Trucks</Text>
 
                 <View style={{ height: '100%', width: 1, backgroundColor: 'black' }} />
 
-                <Text style={{ fontWeight: 'bold' }}>Testimonials</Text>
+                <Text style={{ fontWeight: 'bold', textAlign: 'center' }}>Testimonials</Text>
             </View>
             <View style={{}}>
                 <SearchByMakes />
