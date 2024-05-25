@@ -225,11 +225,21 @@ const ProfileFormTransaction = () => {
       flatListRef.current.scrollToEnd({ animated: true });
     }
   };
+  const formatDate = (dateString) => {
+    // Extract the date part from the string
+    const datePart = dateString.split(' at ')[0];
 
+    // Parse the date part into a Date object
+    const date = new Date(datePart);
+
+    // Format the date to "22 Aug 2024"
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options).replace(/\s/g, ' ');
+  };
   const renderItem = ({ item }) => (
     <View style={{
       flexDirection: 'row',
-      alignItems: 'center',
+
       padding: 16,
       borderWidth: 1,
       borderColor: '#ddd',
@@ -246,45 +256,100 @@ const ProfileFormTransaction = () => {
         marginRight: 16,
         borderRadius: 4,
       }} />
-      <View style={{ flex: 1, justifyContent: 'space-between', height: '100%' }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{
-            fontSize: 16,
-            fontWeight: 'bold',
-          }}>{item.carName}</Text>
+      <View style={{ justifyContent: 'space-between', flexDirection: 'column', flex: 1 }}>
+        <View style={{ alignSelf: 'flex-start' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: 'bold',
+            }}>{item.carName}</Text>
+          </View>
           <Text style={{
             fontSize: 12,
             color: '#888',
           }}>{item.stockId}</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ flex: 1, fontSize: 12, color: '#888' }}>DATE HERE</Text>
-          <TouchableOpacity style={{
-            backgroundColor: 'transparent',
-            padding: 8,
-            borderRadius: 4,
-            marginRight: 8,
-          }}>
-            <Text style={{
-              color: 'blue',
-              fontWeight: 'bold',
-            }}>Help</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{
-            backgroundColor: 'green',
-            padding: 8,
-            borderRadius: 4,
-          }}>
-            <Text style={{
-              color: 'white',
-              fontWeight: 'bold',
-            }}>See Details</Text>
-          </TouchableOpacity>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Ionicons name="time-outline" size={25} color={'#888'} />
+            <Text style={{ fontSize: 12, color: '#888', marginLeft: 5 }}>{formatDate(item.dateOfTransaction)}</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity style={{
+              backgroundColor: 'transparent',
+              padding: 8,
+              borderRadius: 4,
+              marginRight: 8,
+            }}>
+              <Text style={{
+                color: 'blue',
+                fontWeight: 'bold',
+              }}>Help</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{
+              backgroundColor: 'green',
+              padding: 8,
+              borderRadius: 4,
+            }}>
+              <Text style={{
+                color: 'white',
+                fontWeight: 'bold',
+              }}>See Details</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
-  );
 
+
+  );
+  const ListHeaderComponent = () => (
+    <View style={{ width: '90%', alignSelf: 'center', marginBottom: 10 }}>
+      <Text style={{
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 16,
+      }}>Transactions History</Text>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: '#ddd',
+          borderRadius: 8,
+          flex: 1,
+          marginRight: 8,
+          paddingLeft: 8,
+        }}>
+          <Ionicons name="search" size={20} color="#888" style={{ marginRight: 8, }} />
+          <TextInput
+            placeholder="Search Transactions"
+            style={{
+              flex: 1,
+              height: 40,
+            }}
+          />
+        </View>
+        <TouchableOpacity style={{
+          backgroundColor: '#000',
+          padding: 10,
+          borderRadius: 8,
+          marginRight: 8,
+        }}>
+          <Text style={{
+            color: '#fff',
+            fontWeight: 'bold',
+          }}>Search</Text>
+        </TouchableOpacity>
+
+      </View>
+    </View>
+  );
   //scrollable
   return (
 
@@ -292,7 +357,6 @@ const ProfileFormTransaction = () => {
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 3
       }}>
 
         {screenWidth < 993 ? (
@@ -443,12 +507,13 @@ const ProfileFormTransaction = () => {
               backgroundColor: '#fff',
               position: 'sticky',
               top: 0,
-              height: '100vh',
               shadowColor: 'rgba(3, 3, 3, 0.1)',
               shadowOffset: { width: 2, height: 0 },
               shadowOpacity: 1,
               shadowRadius: 2,
               elevation: 2,
+              height: '100%',
+              maxHeight: '100vh',
               transform: [
                 screenWidth > 719 ? { translateX: null } : {
                   translateX: sidebarAnimation.interpolate({
@@ -458,11 +523,10 @@ const ProfileFormTransaction = () => {
                 },
               ],
 
-              // Position the navigation bar at the top of the screen
             }}>
 
               {/*LET THIS BE THE LEFT NAV BAR*/}
-              <ScrollView style={{ flexDirection: 'column' }} contentContainerStyle={{ justifyContent: 'center' }}>
+              <ScrollView style={{ flexDirection: 'column', }} contentContainerStyle={{ justifyContent: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0, padding: 10 }}>
                   <FontAwesome name="user-circle-o" size={40} />
                   <Text style={{ marginLeft: 10, fontSize: 20, fontWeight: 'bold' }}>Marc Van Cabaguing</Text>
@@ -555,54 +619,21 @@ const ProfileFormTransaction = () => {
             </Animated.View>
           )}
 
-        <ScrollView style={{ padding: 10, height: '100vh' }}  >
-          <View style={{ alignItems: 'center', marginBottom: 20 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Transactions History</Text>
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
-            <TextInput
-              style={{
-                height: 40,
-                borderColor: '#ddd',
-                borderWidth: 1,
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                flex: 1,
-                marginRight: 10,
-              }}
-              placeholder="Search Transactions"
-            />
-            <TouchableOpacity style={{
-              backgroundColor: 'black',
-              padding: 10,
-              borderRadius: 8,
-              justifyContent: 'center',
-            }}>
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Search</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 20 }}>
-            <TouchableOpacity style={{
-              borderColor: '#ddd',
-              borderWidth: 1,
-              borderRadius: 8,
-              padding: 10,
-            }}>
-              <Text>All Products</Text>
-            </TouchableOpacity>
-          </View>
 
-          <FlatList
-            data={transactions}
-            renderItem={renderItem}
-            keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingTop: 16,
-            }}
-          />
 
-        </ScrollView>
+        <FlatList
+          data={transactions}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+          ListHeaderComponent={ListHeaderComponent}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            height: '100%',
+            maxHeight: '100vh'
+          }}
+        />
+
 
 
 

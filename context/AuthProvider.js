@@ -92,21 +92,21 @@ const AuthProvider = ({ children }) => {
     //year from outside
 
 
-    
-  const [productData, setProductData] = useState(() => {
-    const storedData = localStorage.getItem('productData');
-    return storedData ? JSON.parse(storedData) : [];
-  });
 
-  useEffect(() => {
-    localStorage.setItem('productData', JSON.stringify(productData));
-  }, [productData]);
+    const [productData, setProductData] = useState(() => {
+        const storedData = localStorage.getItem('productData');
+        return storedData ? JSON.parse(storedData) : [];
+    });
 
-  //get product
-  const setProducts = (data) => {
-    setProductData(data);
-  };
-  //
+    useEffect(() => {
+        localStorage.setItem('productData', JSON.stringify(productData));
+    }, [productData]);
+
+    //get product
+    const setProducts = (data) => {
+        setProductData(data);
+    };
+    //
 
 
     // Check if the user is already authenticated and set the state accordingly
@@ -128,7 +128,7 @@ const AuthProvider = ({ children }) => {
                     await AsyncStorage.removeItem('userSession');
                     console.log('User session removed');
                 }
-        
+
                 setUser(user);
                 setIsLoading(false);
             } catch (error) {
@@ -174,6 +174,13 @@ const AuthProvider = ({ children }) => {
             return null; // Return null when login fails
         }
     };
+
+
+
+    //check currency
+   
+    //check currency
+
 
     // Function to handle user logout
     const logout = async () => {

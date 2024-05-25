@@ -554,7 +554,8 @@ const SignUpForm = () => {
                 city: cityLabel,
                 textPhoneNumber: textPhoneNumber,
                 textStreet: street,
-                textZip: zip
+                textZip: zip,
+                selectedCurrencyExchange: "",
             });
             console.log('User profile created with ID:', email);
             setTextEmail(email); // Set userEmail state after email verification is sent

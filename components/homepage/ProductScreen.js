@@ -1345,7 +1345,38 @@ const GetDataSpecifications = () => {
 const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInputRef, isCheck, ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
     //MAKE MODAL
 
+    const addOrUpdatePaidStats = async () => {
+        try {
+            const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+            const datetime = response.data.datetime; // ISO 8601 format: YYYY-MM-DDTHH:mm:ss.ssssss±hh:mm
+            const year = datetime.slice(0, 4);
+            const month = datetime.slice(5, 7);
+            const day = datetime.slice(8, 10);
 
+            const docId = `${year}-${month}`; // YYYY-MM
+            const dayField = day; // 01-31
+            const docRef = doc(projectExtensionFirestore, 'OfferStats', docId);
+
+            try {
+                const newData = {
+                    carName: selectedChatData.carData.carName,
+                    customerEmail: selectedCustomerData.textEmail,
+                    imageUrl: carImageUrl,
+                    referenceNumber: selectedChatData.carData.stockID,
+                };
+
+                await setDoc(docRef, {
+                    [dayField]: arrayUnion(newData)
+                }, { merge: true });
+                console.log(`Data added/updated in document ${docId} for day ${dayField}`);
+            } catch (error) {
+                console.error("Error adding/updating data: ", error);
+            }
+
+        } catch (error) {
+
+        }
+    }
 
     const { login } = useContext(AuthContext);
     //SEND INQUIRY
@@ -1483,6 +1514,11 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
         const time = moment(datetime).format('HH:mm');
         const timeWithMinutesSeconds = moment(datetime).format('HH:mm:ss');
         const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+        const yearOffer = datetime.slice(0, 4);
+        const docId = `${yearOffer}-${month}`; // YYYY-MM
+        const dayOffer = datetime.slice(8, 10)
+        const dayField = dayOffer;
+
         //formatted time
         try {
             // const transactionRefExtension = doc(collection(projectExtensionFirestore, 'accounts', userEmailAddress, 'transactions'), productIdString);
@@ -1506,8 +1542,21 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
 
             // });
 
+            //ADD STATS HERE
 
-            // Fetch IP Address
+            const docRef = doc(projectExtensionFirestore, 'OfferStats', docId);
+            const newData = {
+                carName: carData?.carName,
+                customerEmail: userEmail,
+                imageUrl: allImageUrl[0],
+                referenceNumber: carData?.referenceNumber,
+                stockId: carData?.stockID,
+            };
+
+            await setDoc(docRef, {
+                [dayField]: arrayUnion(newData)
+            }, { merge: true });
+            //ADD STATS HERE
 
             const chatId = `chat_${carId}_${userEmail}`;
             //NEW DATE FEATURE
@@ -1521,7 +1570,7 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
                 carName: carData?.carName,
                 imageUrl: allImageUrl[0],
                 referenceNumber: carData?.referenceNumber,
-                stockId: carData?.stockID, 
+                stockId: carData?.stockID,
                 dateOfTransaction: formattedTime,
             }
             await updateDoc(accountTransaction, {
@@ -1534,7 +1583,7 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
                 text: textInput ? textInput : `You are now inquiring with this product.`,
                 timestamp: formattedTime,
                 ip: ip,
-                ipCountry: ipCountry
+                ipCountry: ipCountry,
             };
 
             // Set the message data in the new message document
@@ -1587,6 +1636,7 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
                 stepStatus: "Negotiation",
                 sideBarNotification: false,
             },
+            selectedCurrencyExchange: "",
             inspectionIsRequired: inspectionIsRequired,
             inspectionName: inspectionName,
             inspection: toggle,
