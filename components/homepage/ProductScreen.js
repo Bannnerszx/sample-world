@@ -30,7 +30,119 @@ import Carousel from "react-native-reanimated-carousel"
 import logo1 from '../../assets/RMJ Cover Photo for Facebook.jpg';
 import { Feather } from '@expo/vector-icons';
 
+const DropDownCurrency = ({ height, currentCurrencyGlobal, setCurrentCurrencyGlobal, selectedCurrency, setSelectedCurrency, userEmail }) => {
 
+
+    const [modalVisible, setModalVisible] = useState(false);
+
+    const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
+
+    const pressableRef = useRef(null);
+
+    const currencies = [
+        { label: 'US Dollar', value: 'USD', symbol: '$' },
+        { label: 'Euro', value: 'EUR', symbol: '€' },
+        { label: 'Australian Dollar', value: 'AUD', symbol: 'A$' },
+        { label: 'British Pound', value: 'GBP', symbol: '£' },
+        { label: 'Canadian Dollar', value: 'CAD', symbol: 'C$' },
+        { label: 'Japanese Yen', value: 'YEN', symbol: '¥' }
+    ];
+
+    const handlePress = () => {
+        pressableRef.current.measure((fx, fy, width, height, px, py) => {
+            setModalPosition({ top: py + height, left: px });
+            setModalVisible(true);
+        });
+    };
+
+    const handleCurrencySelect = async (currency) => {
+        setSelectedCurrency(currency.value);  // Assuming this sets state locally to reflect the UI change
+        setModalVisible(false);  // Assuming this controls the visibility of a modal
+
+        try {
+            const userDocRefAuth = doc(projectExtensionFirestore, 'accounts', userEmail);
+            // Update the document in Firestore with the selected currency value
+            await updateDoc(userDocRefAuth, {
+                selectedCurrencyExchange: currency.value  // Use the value from the selected currency
+            });
+        } catch (error) {
+            console.error("Failed to update currency:", error);  // Log the error if the update fails
+        }
+    };
+
+    return (
+        <Pressable
+            ref={pressableRef}
+            onPress={handlePress}
+            style={{
+                margin: 5,
+                padding: 3,
+                borderWidth: 1,
+                borderColor: '#eee',
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#fff',
+                flex: 2,
+                width: 70,
+            }}
+        >
+            <View style={{ flex: 1, justifyContent: 'flex-start', width: '100%' }}>
+                <Text style={{ fontWeight: '500' }}>{selectedCurrency ? selectedCurrency : currentCurrencyGlobal?.selectedCurrencyExchange}</Text>
+            </View>
+            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                <AntDesign
+                    name="down"
+                    size={15}
+                    color={'blue'}
+                    style={[
+                        { transitionDuration: '0.3s' },
+                        modalVisible && {
+                            transform: [{ rotate: '180deg' }],
+                        },
+                    ]}
+                />
+            </View>
+            {
+                modalVisible && (
+                    <Modal
+                        transparent={true}
+                        animationType="none"
+                        visible={modalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+                        <TouchableOpacity style={{ flex: 1 }} onPress={() => setModalVisible(false)}>
+                            <View style={[{
+                                position: 'absolute',
+                                backgroundColor: '#fff',
+                                padding: 5,
+                                margin: 5,
+                                width: '100%',
+                                maxWidth: 70
+                            }, { top: modalPosition.top * 1.05, left: modalPosition.left * 0.998, maxHeight: 190 }]}>
+                                <FlatList
+                                    data={currencies}
+                                    keyExtractor={(item) => item.value}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={{
+                                                padding: 5,
+                                                borderBottomWidth: 1,
+                                                borderBottomColor: '#eee',
+                                            }}
+                                            onPress={() => handleCurrencySelect(item)}
+                                        >
+                                            <Text>{item.value}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    </Modal>
+                )
+            }
+        </Pressable>
+    );
+};
 
 const StickyHeader = () => {
     const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
@@ -177,7 +289,7 @@ const StickyHeader = () => {
                     <>
                         {user ? (
                             <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
-                                <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                <TouchableOpacity onPress={() => navigate(`/ProfileFormChatGroup/chat_2023070269_marcvan14@gmail.com`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                                     <FontAwesome name="user" size={iconSize} color={'blue'} />
                                     <Text style={{ color: 'blue', fontSize: fontSize }}>Profile</Text>
                                 </TouchableOpacity>
@@ -293,7 +405,7 @@ const StickyHeader = () => {
                                     <AntDesign name="heart" size={iconSize} color={'blue'} />
                                     <Text style={{ color: 'blue', fontSize: fontSize }}>Favorite</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                <TouchableOpacity onPress={() => navigate(`/ProfileFormChatGroup/chat_2023070269_marcvan14@gmail.com`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                                     <FontAwesome name="user" size={iconSize} color={'blue'} />
                                     <Text style={{ color: 'blue', fontSize: fontSize }}>Profile</Text>
                                 </TouchableOpacity>
@@ -735,8 +847,10 @@ const Warranty = () => {
 const Calculate = ({ selectedPort, setProfitMap, totalPriceCalculation, setCalculatePrice }) => {
 
     const handleCalculate = () => {
-        const formattedTotalPrice = totalPriceCalculation ? parseInt(totalPriceCalculation).toLocaleString() : '000';
-        setCalculatePrice(formattedTotalPrice);
+        if (selectedPort) {
+            const formattedTotalPrice = parseInt(totalPriceCalculation);
+            setCalculatePrice(formattedTotalPrice);
+        }
     }
 
 
@@ -1342,7 +1456,7 @@ const GetDataSpecifications = () => {
 };
 
 
-const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInputRef, isCheck, ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
+const MakeAChat = ({ chatFieldCurrency, allImageUrl, setIsErrorPort, setIsError, insurance, textInputRef, isCheck, ip, ipCountry, freightOrigPrice, JapanPort, selectedCountry, selectedPort, profitMap, currency, carId, carName, userEmail, inspectionIsRequired, inspectionName, toggleInspection, toggleWarranty, toggleInsurance, portPrice, currentCurrency, toggle, setToggle }) => {
     //MAKE MODAL
 
     const addOrUpdatePaidStats = async () => {
@@ -1636,7 +1750,7 @@ const MakeAChat = ({ allImageUrl, setIsErrorPort, setIsError, insurance, textInp
                 stepStatus: "Negotiation",
                 sideBarNotification: false,
             },
-            selectedCurrencyExchange: "",
+            selectedCurrencyExchange: chatFieldCurrency,
             inspectionIsRequired: inspectionIsRequired,
             inspectionName: inspectionName,
             inspection: toggle,
@@ -3006,7 +3120,7 @@ const ProductDetailScreen = () => {
     const fobDollar = currentCurrency.jpyToUsd * parseFloat(carData.fobPrice);
     const formattedFobDollar = fobDollar ? parseInt(fobDollar).toLocaleString() : '000';
     const [calculatePrice, setCalculatePrice] = useState('');
-    const totalPriceCalculation = (parseFloat(carData.fobPrice) * currentCurrency.jpyToUsd) + (parseFloat(carData.dimensionCubicMeters) * parseFloat(profitMap));
+
     //DOLLAR CONVERSION
     const getFlexDirection = (screenWidth) => {
         if (screenWidth <= 523) {
@@ -3124,6 +3238,44 @@ const ProductDetailScreen = () => {
     const handleToggleInsurance = (item) => {
         setInsurance(item);
     };
+
+    useEffect(() => {
+        const fetchInsurance = async () => {
+            if (selectedCountry === '') {
+                setInsurance(false);
+                return;
+            }
+            
+
+            const countriesDocRef = doc(projectExtensionFirestore, 'CustomerCountryPort', 'CountriesDoc');
+
+            try {
+                const docSnap = await getDoc(countriesDocRef);
+                if (docSnap.exists()) {
+                    const selectedCountryData = docSnap.data()[selectedCountry];
+
+                    if (selectedCountryData) {
+                       
+                    } else {
+                        setInsurance(false);
+                        
+                    }
+                } else {
+                    console.log("CountriesDoc does not exist, setting toggle to false");
+                    setToggle(false);
+                    setIsToggleDisabled(false);
+                }
+            } catch (error) {
+                console.error("Error fetching document:", error);
+                setToggle(false);
+                setIsToggleDisabled(false);
+            }
+        };
+
+        fetchInsurance();
+    }, [selectedCountry]);
+
+
     //check insurance
 
     //get currency I HAVE ALREADY THIS ONE
@@ -3235,8 +3387,86 @@ const ProductDetailScreen = () => {
     const [isErrorPort, setIsErrorPort] = useState(false);
     //is check PRIVACY
 
+
+    //check currency
+    const [selectedCurrency, setSelectedCurrency] = useState('');
+    const [currentCurrencyGlobal, setCurrentCurrencyGlobal] = useState({});
+    const chatFieldCurrency = selectedCurrency ? selectedCurrency : currentCurrencyGlobal?.selectedCurrencyExchange
+    useEffect(() => {
+        if (userEmail) {
+
+            const fetchAccount = async () => {
+                try {
+                    const userDocRefAuth = doc(projectExtensionFirestore, 'accounts', userEmail);
+                    const docSnap = await getDoc(userDocRefAuth);
+                    if (docSnap.exists()) {
+                        let data = docSnap.data();
+
+                        // Check if selectedCurrencyExchange is undefined, null, or empty, then update
+                        if (!data.selectedCurrencyExchange) {
+                            // Update the document in Firestore to set selectedCurrencyExchange to "USD"
+                            await updateDoc(userDocRefAuth, {
+                                selectedCurrencyExchange: "USD"
+                            });
+                            data.selectedCurrencyExchange = "USD"; // Update local data for immediate UI update
+                        }
+
+                        setCurrentCurrencyGlobal({
+                            id: docSnap.id,
+                            ...data
+                        });
+                    } else {
+                        console.log('No such document!');
+                    }
+                } catch (error) {
+                    console.error('Error fetching account:', error);
+                }
+            };
+
+            fetchAccount();
+        }
+    }, [userEmail]);
+    const convertedCurrency = (yenValue) => {
+        const value = Number(yenValue);
+        const currency = selectedCurrency || currentCurrencyGlobal?.selectedCurrencyExchange || 'USD';
+        const rates = {
+            'EUR': currentCurrency.usdToEur,
+            'AUD': currentCurrency.usdToAud,
+            'GBP': currentCurrency.usdToGbp,
+            'CAD': currentCurrency.usdToCad,
+            'USD': 1  // Assume the fallback is USD
+        };
+        const conversionRate = rates[currency] || 1;
+        const convertedValue = Math.round(value * conversionRate).toLocaleString('en-US', { useGrouping: true });
+
+        const currencySymbols = {
+            'EUR': '€',
+            'AUD': 'A$',
+            'GBP': '£',
+            'CAD': 'C$',
+            'USD': 'US$'
+        };
+
+        return { symbol: currencySymbols[currency], value: convertedValue };
+    };
+
+    const fobBaseDollar = (carData.fobPrice) * currentCurrency.jpyToUsd;
+    const totalPriceCalculation = carData.fobPrice * currentCurrency.jpyToUsd + parseFloat(carData.dimensionCubicMeters) * parseFloat(profitMap);
+
+    const fobCurrencyTotal = convertedCurrency(calculatePrice);
+    console.log('CALCULATE PRICE', fobCurrencyTotal)
+    const fobCurrency = convertedCurrency(fobBaseDollar);
+
+    //check currency
+
     return (
         <View style={{ flex: 3 }}>
+            <View style={{ backgroundColor: 'blue', alignItems: 'flex-end' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: '600' }}>Currency: </Text>
+                    <DropDownCurrency currentCurrencyGlobal={currentCurrencyGlobal} setCurrentCurrencyGlobal={setCurrentCurrencyGlobal} selectedCurrency={selectedCurrency} setSelectedCurrency={setSelectedCurrency} userEmail={userEmail} />
+                </View>
+            </View>
             <StickyHeader />
 
 
@@ -3274,7 +3504,10 @@ const ProductDetailScreen = () => {
                         <View style={{ flexDirection: 'row', padding: 10, zIndex: 50, flex: 1, paddingHorizontal: 20 }}>
                             <View style={{ flex: 1, marginLeft: 5 }}>
 
-                                <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: '3em', fontWeight: '700' }}>{formattedFobDollar}</Text></Text>
+                                <Text style={{ fontWeight: '700' }}>
+                                    <Text style={{ fontSize: '1.2em' }}>{fobCurrency.symbol}</Text>
+                                    <Text style={{ fontSize: '3em', fontWeight: '700' }}>{fobCurrency.value}</Text>
+                                </Text>
                                 <Text style={{ color: '#a5a5a5' }}>Current FOB Price</Text>
 
 
@@ -3282,8 +3515,12 @@ const ProductDetailScreen = () => {
                             <View style={{ flex: 1, marginLeft: 5 }}>
 
 
-                                <Text style={{ fontWeight: '700' }}>US$ <Text style={{ fontSize: '3em', fontWeight: '700' }}>{calculatePrice ? calculatePrice : '000'}</Text></Text>
+                                <Text style={{ fontWeight: '700' }}>
+                                    <Text style={{ fontSize: '1.2em' }}>{fobCurrencyTotal.symbol}</Text>
+                                    <Text style={{ fontSize: '3em', fontWeight: '700' }}>{fobCurrencyTotal.value}</Text>
+                                </Text>
                                 <Text style={{ color: '#a5a5a5' }}>Total Estimated Price</Text>
+
                             </View>
                         </View>
 
@@ -3404,7 +3641,9 @@ const ProductDetailScreen = () => {
                                     profitMap={profitMap}
                                     inspectionIsRequired={inspectionIsRequired}
                                     inspectionName={inspectionName}
-                                    carId={carId} carName={carName} userEmail={userEmail} setToggle={setToggle} toggle={toggle} />
+                                    carId={carId} carName={carName} userEmail={userEmail} setToggle={setToggle} toggle={toggle}
+                                    chatFieldCurrency={chatFieldCurrency}
+                                />
                             </View>
                         </View>
                     </View>

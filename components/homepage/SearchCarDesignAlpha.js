@@ -20,10 +20,11 @@ import Carousel from 'react-native-reanimated-carousel';
 import { GestureHandlerRootView, enableLegacyWebImplementation } from "react-native-gesture-handler";
 import image from "../../assets/filename";
 
-const DropDownCurrency = ({ height }) => {
+
+const DropDownCurrency = ({ height, setSelectedCurrency, selectedCurrency, setCurrentCurrencyGlobal, currentCurrencyGlobal }) => {
     const { userEmail } = useContext(AuthContext);
 
-    const [currentCurrencyGlobal, setCurrentCurrencyGlobal] = useState({});
+
     useEffect(() => {
         if (!userEmail) {
             console.log('User email not available.');
@@ -63,7 +64,7 @@ const DropDownCurrency = ({ height }) => {
 
 
     const [modalVisible, setModalVisible] = useState(false);
-    const [selectedCurrency, setSelectedCurrency] = useState('');
+
     const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
     const pressableRef = useRef(null);
@@ -98,6 +99,9 @@ const DropDownCurrency = ({ height }) => {
             console.error("Failed to update currency:", error);  // Log the error if the update fails
         }
     };
+
+
+
 
     return (
         <Pressable
@@ -4126,10 +4130,11 @@ const SearchCarDesignAlpha = () => {
         };
 
     }, [currentPage, itemsPerPage, allItems, totalPrices]); // Respond to changes in currentPage or allItems
-
+    const [selectedCurrency, setSelectedCurrency] = useState('');
+    const [currentCurrencyGlobal, setCurrentCurrencyGlobal] = useState({});
     useEffect(() => {
         handleCalculate(); // Recalculate prices whenever displayItems changes
-    }, [displayItems]);
+    }, [displayItems, selectedCurrency, currentCurrencyGlobal]);
 
     const fetchPrevious = () => {
         if (currentPage > 0) {
@@ -4178,16 +4183,7 @@ const SearchCarDesignAlpha = () => {
         navigate(`/ProductScreen/${id}`);
     };
 
-    const [totalPrices, setTotalPrices] = useState([]);
-    console.log('Prices', totalPrices)
-    const handleCalculate = () => {
-        const newTotalPrices = displayItems.map(item => {
-            const totalPriceCalculation = (parseFloat(item.fobPrice) * currentCurrency.jpyToUsd) +
-                (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap));
-            return totalPriceCalculation ? parseInt(totalPriceCalculation).toLocaleString() : '000';
-        });
-        setTotalPrices(newTotalPrices);  // Update state with all calculated total prices
-    };
+
 
     const [favoriteModal, setFavoriteModal] = useState(false);
     const openModalFavorite = () => {
@@ -4220,16 +4216,64 @@ const SearchCarDesignAlpha = () => {
         }
     };
 
+    const convertedCurrency = (yenValue) => {
+        const value = Number(yenValue);
+        const currency = selectedCurrency || currentCurrencyGlobal?.selectedCurrencyExchange || 'USD'; // Default to USD if no currency is selected
+        const rates = {
+            'EUR': currentCurrency.usdToEur,
+            'AUD': currentCurrency.usdToAud,
+            'GBP': currentCurrency.usdToGbp,
+            'CAD': currentCurrency.usdToCad,
+            'USD': 1  // Assume the fallback is USD
+        };
+        const conversionRate = rates[currency];
+
+        // Check if conversion rate is undefined and set default values
+        if (conversionRate === undefined) {
+            return { symbol: '--', value: '000' }; // Default values when rate is not available
+        }
+
+        const convertedValue = Math.round(value * conversionRate).toLocaleString('en-US', { useGrouping: true });
+
+        const currencySymbols = {
+            'EUR': '€',
+            'AUD': 'A$',
+            'GBP': '£',
+            'CAD': 'C$',
+            'USD': 'US$'
+        };
+
+        // Use default symbol if currency is not found in the map
+        const symbol = currencySymbols[currency] || '--';
+
+        return { symbol: symbol, value: convertedValue };
+    };
+
+
+    const [totalPrices, setTotalPrices] = useState([]);
+    console.log('Prices', totalPrices)
+    const handleCalculate = () => {
+        const newTotalPrices = displayItems.map(item => {
+            const totalPriceCalculation = (parseFloat(item.fobPrice) * currentCurrency.jpyToUsd) +
+                (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap)) + 300 + 50;
+            return convertedCurrency(totalPriceCalculation); // This already returns an object { symbol, value }
+        });
+        setTotalPrices(newTotalPrices);
+    };
 
     const renderCarItems = useCallback(({ item, index }) => {
 
         const imageAspectRatio = 1.7
-        const fobDollar = parseFloat(currentCurrency.jpyToUsd) * parseFloat(item.fobPrice);
-        const formattedFobDollar = fobDollar ? parseInt(fobDollar).toLocaleString() : '000'; //FOB PRICE
-        const totalPriceCalculation = (parseFloat(item.fobPrice) * currentCurrency.jpyToUsd) + (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap));
-        const formattedTotalPrice = totalPriceCalculation ? parseInt(totalPriceCalculation).toLocaleString() : '000'; //TOTAL PRICE
-        const displayTotalPrice = totalPrices.length > index ? totalPrices?.[index] : '000';
+        const fobBaseDollar = (item.fobPrice) * currentCurrency.jpyToUsd;
+        console.log('FOB DOLLAR', fobBaseDollar)
+        const fobCurrency = convertedCurrency(fobBaseDollar);
 
+
+        const totalPriceCalculation = (fobBaseDollar) + (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap));
+        const fobTotalPriceCurrency = convertedCurrency(totalPriceCalculation);
+        const displayTotalPrice = totalPrices[index] && totalPrices[index].value ?
+            totalPrices[index] :
+            { symbol: fobCurrency.symbol, value: '000' };
         const carImages = allImageUrl[item?.id];
         const firstImageUri = carImages?.[0] || carSample; // Replace 'defaultImagePlaceholderUri' with an actual URI for a placeholder image
         return (
@@ -4277,10 +4321,10 @@ const SearchCarDesignAlpha = () => {
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 1 }}>
-                                    US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{formattedFobDollar}</Text>
+                                    {fobCurrency.symbol} <Text style={{ fontSize: 30, fontWeight: '700' }}>{fobCurrency.value}</Text>
                                 </Text>
-                                <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 2 }}>
-                                    US$ <Text style={{ fontSize: 30, fontWeight: '700' }}>{displayTotalPrice}</Text>
+                                <Text style={{ fontWeight: '700', fontSize: 16, marginVertical: 20, flex: 1 }}>
+                                    {displayTotalPrice.symbol} <Text style={{ fontSize: 30, fontWeight: '700' }}>{displayTotalPrice.value}</Text>
                                 </Text>
                             </View>
 
@@ -4344,7 +4388,7 @@ const SearchCarDesignAlpha = () => {
                 </View>
             </View>
         )
-    }, [currentCurrency, profitMap, screenWidth, allImageUrl, totalPrices])
+    }, [currentCurrency, profitMap, screenWidth, allImageUrl, totalPrices, selectedCurrency, currentCurrencyGlobal])
     //RENDER ITEMS FROM FLATLIST
     enableLegacyWebImplementation(true);
     const carouselRef = useRef(null);
@@ -4365,12 +4409,15 @@ const SearchCarDesignAlpha = () => {
     };
 
 
+
+
+
     return (
         <View style={{ flex: 3 }}>
             <View style={{ backgroundColor: 'blue', alignItems: 'flex-end' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Currency: </Text>
-                    <DropDownCurrency />
+                    <DropDownCurrency selectedCurrency={selectedCurrency} setSelectedCurrency={setSelectedCurrency} currentCurrencyGlobal={currentCurrencyGlobal} setCurrentCurrencyGlobal={setCurrentCurrencyGlobal} />
                 </View>
 
             </View>
@@ -4925,7 +4972,7 @@ const SearchCarDesignAlpha = () => {
                                 <PerPage handleItemsPerPage={handleItemsPerPage} itemsPerPage={itemsPerPage} resetPagination={resetPagination} />
                             </View>
                         </View>
-                        {isLoading && displayItems && allItems && currentCurrency ? (
+                        {isLoading && displayItems && allItems && currentCurrencyGlobal ? (
                             <View>
                                 {Array.from({ length: itemsPerPage }, (_, index) => (
                                     <LoadingComponent key={index} />

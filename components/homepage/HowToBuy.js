@@ -4,7 +4,7 @@ import logo4 from '../../assets/RMJ logo for flag transparent.png';
 import { Ionicons, AntDesign, FontAwesome, Foundation, Entypo, Octicons } from 'react-native-vector-icons';
 import { projectExtensionFirestore, projectExtensionStorage } from "../../firebaseConfig";
 import { FlatGrid } from "react-native-super-grid";
-import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt } from "firebase/firestore";
+import { where, collection, doc, getDocs, getDoc, query, onSnapshot, limit, startAfter, orderBy, startAt, updateDoc } from "firebase/firestore";
 import { listAll, ref, getDownloadURL } from "firebase/storage";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthProvider";
@@ -15,7 +15,158 @@ import { Center } from "native-base";
 import gifLogo from '../../assets/rename.gif'
 import Svg, { Mask, Path, G, Defs, Pattern, Use, Image, Rect, Text, Circle } from "react-native-svg";
 
+const DropDownCurrency = ({ height }) => {
+    const { userEmail } = useContext(AuthContext);
 
+    const [currentCurrencyGlobal, setCurrentCurrencyGlobal] = useState({});
+    useEffect(() => {
+        if (!userEmail) {
+            console.log('User email not available.');
+            return;
+        }
+
+        const fetchAccount = async () => {
+            try {
+                const userDocRefAuth = doc(projectExtensionFirestore, 'accounts', userEmail);
+                const docSnap = await getDoc(userDocRefAuth);
+                if (docSnap.exists()) {
+                    let data = docSnap.data();
+
+                    // Check if selectedCurrencyExchange is undefined, null, or empty, then update
+                    if (!data.selectedCurrencyExchange) {
+                        // Update the document in Firestore to set selectedCurrencyExchange to "USD"
+                        await updateDoc(userDocRefAuth, {
+                            selectedCurrencyExchange: "USD"
+                        });
+                        data.selectedCurrencyExchange = "USD"; // Update local data for immediate UI update
+                    }
+
+                    setCurrentCurrencyGlobal({
+                        id: docSnap.id,
+                        ...data
+                    });
+                } else {
+                    console.log('No such document!');
+                }
+            } catch (error) {
+                console.error('Error fetching account:', error);
+            }
+        };
+
+        fetchAccount();
+    }, [userEmail]);
+
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedCurrency, setSelectedCurrency] = useState('');
+    const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
+
+    const pressableRef = useRef(null);
+
+    const currencies = [
+        { label: 'US Dollar', value: 'USD', symbol: '$' },
+        { label: 'Euro', value: 'EUR', symbol: '€' },
+        { label: 'Australian Dollar', value: 'AUD', symbol: 'A$' },
+        { label: 'British Pound', value: 'GBP', symbol: '£' },
+        { label: 'Canadian Dollar', value: 'CAD', symbol: 'C$' },
+        { label: 'Japanese Yen', value: 'YEN', symbol: '¥' }
+    ];
+
+    const handlePress = () => {
+        pressableRef.current.measure((fx, fy, width, height, px, py) => {
+            setModalPosition({ top: py + height, left: px });
+            setModalVisible(true);
+        });
+    };
+
+    const handleCurrencySelect = async (currency) => {
+        setSelectedCurrency(currency.value);  // Assuming this sets state locally to reflect the UI change
+        setModalVisible(false);  // Assuming this controls the visibility of a modal
+
+        try {
+            const userDocRefAuth = doc(projectExtensionFirestore, 'accounts', userEmail);
+            // Update the document in Firestore with the selected currency value
+            await updateDoc(userDocRefAuth, {
+                selectedCurrencyExchange: currency.value  // Use the value from the selected currency
+            });
+        } catch (error) {
+            console.error("Failed to update currency:", error);  // Log the error if the update fails
+        }
+    };
+
+    return (
+        <Pressable
+            ref={pressableRef}
+            onPress={handlePress}
+            style={{
+                margin: 5,
+                padding: 3,
+                borderWidth: 1,
+                borderColor: '#eee',
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#fff',
+                flex: 2,
+                width: 70,
+            }}
+        >
+            <View style={{ flex: 1, justifyContent: 'flex-start', width: '100%' }}>
+                <TextRN style={{ fontWeight: '500' }}>{selectedCurrency ? selectedCurrency : currentCurrencyGlobal?.selectedCurrencyExchange}</TextRN>
+            </View>
+            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                <AntDesign
+                    name="down"
+                    size={15}
+                    color={'blue'}
+                    style={[
+                        { transitionDuration: '0.3s' },
+                        modalVisible && {
+                            transform: [{ rotate: '180deg' }],
+                        },
+                    ]}
+                />
+            </View>
+            {
+                modalVisible && (
+                    <Modal
+                        transparent={true}
+                        animationType="none"
+                        visible={modalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+                        <TouchableOpacity style={{ flex: 1 }} onPress={() => setModalVisible(false)}>
+                            <View style={[{
+                                position: 'absolute',
+                                backgroundColor: '#fff',
+                                padding: 5,
+                                margin: 5,
+                                width: '100%',
+                                maxWidth: 70
+                            }, { top: modalPosition.top * 1.05, left: modalPosition.left * 0.998, maxHeight: 190 }]}>
+                                <FlatList
+                                    data={currencies}
+                                    keyExtractor={(item) => item.value}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={{
+                                                padding: 5,
+                                                borderBottomWidth: 1,
+                                                borderBottomColor: '#eee',
+                                            }}
+                                            onPress={() => handleCurrencySelect(item)}
+                                        >
+                                            <TextRN>{item.value}</TextRN>
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    </Modal>
+                )
+            }
+        </Pressable>
+    );
+};
 const StickyHeader = () => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -851,6 +1002,13 @@ const StickyFooter = () => {
 const HowToBuy = () => {
     return (
         <View style={{ flex: 3 }}>
+            <View style={{ backgroundColor: 'blue', alignItems: 'flex-end' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TextRN style={{ color: '#fff', fontWeight: '600' }}>Currency: </TextRN>
+                    <DropDownCurrency />
+                </View>
+
+            </View>
             <StickyHeader />
             <View style={{}}>
 

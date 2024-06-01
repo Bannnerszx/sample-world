@@ -356,7 +356,7 @@ const StickyHeader = () => {
                     <>
                         {user ? (
                             <View style={{ height: 'auto', margin: 5, paddingHorizontal: 10 }}>
-                                <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                <TouchableOpacity onPress={() => navigate(`/ProfileFormChatGroup/chat_2023070269_marcvan14@gmail.com`)} style={{ height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                                     <FontAwesome name="user" size={iconSize} color={'blue'} />
                                     <Text style={{ color: 'blue', fontSize: fontSize }}>Profile</Text>
                                 </TouchableOpacity>
@@ -472,7 +472,7 @@ const StickyHeader = () => {
                                     <AntDesign name="heart" size={iconSize} color={'blue'} />
                                     <Text style={{ color: 'blue', fontSize: fontSize }}>Favorite</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => navigate(`/ProfileFormTransaction`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
+                                <TouchableOpacity onPress={() => navigate(`/ProfileFormChatGroup/chat_2023070269_marcvan14@gmail.com`)} style={{ backgroundColor: '#E5EBFD', height: '100%', justifyContent: 'center', alignItems: 'center', flex: 1, borderRadius: 5 }}>
                                     <FontAwesome name="user" size={iconSize} color={'blue'} />
                                     <Text style={{ color: 'blue', fontSize: fontSize }}>Profile</Text>
                                 </TouchableOpacity>
