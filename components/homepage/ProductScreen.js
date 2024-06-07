@@ -1601,9 +1601,6 @@ const MakeAChat = ({ chatFieldCurrency, allImageUrl, setIsErrorPort, setIsError,
             console.error('PLEASE CHECK THE PRIVACY')
             return;
         }
-
-
-
         const productIdString = carId;
         console.log('CAR ID: ', productIdString);
         // Check if the product is already in the user's transactions

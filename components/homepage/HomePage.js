@@ -202,7 +202,7 @@ const DropDownCurrency = ({ height }) => {
                     </Modal>
                 )
             }
-        </Pressable >
+        </Pressable>
     );
 };
 const StickyHeader = () => {

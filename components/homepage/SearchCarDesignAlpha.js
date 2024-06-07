@@ -4253,11 +4253,16 @@ const SearchCarDesignAlpha = () => {
     const [totalPrices, setTotalPrices] = useState([]);
     console.log('Prices', totalPrices)
     const handleCalculate = () => {
+        if (!selectedPort) {
+            return; 
+        }
+
         const newTotalPrices = displayItems.map(item => {
             const totalPriceCalculation = (parseFloat(item.fobPrice) * currentCurrency.jpyToUsd) +
                 (parseFloat(item.dimensionCubicMeters) * parseFloat(profitMap)) + 300 + 50;
             return convertedCurrency(totalPriceCalculation); // This already returns an object { symbol, value }
         });
+
         setTotalPrices(newTotalPrices);
     };
 
@@ -4273,7 +4278,7 @@ const SearchCarDesignAlpha = () => {
         const fobTotalPriceCurrency = convertedCurrency(totalPriceCalculation);
         const displayTotalPrice = totalPrices[index] && totalPrices[index].value ?
             totalPrices[index] :
-            { symbol: fobCurrency.symbol, value: '000' };
+            { symbol: fobCurrency.symbol, value: `000` };
         const carImages = allImageUrl[item?.id];
         const firstImageUri = carImages?.[0] || carSample; // Replace 'defaultImagePlaceholderUri' with an actual URI for a placeholder image
         return (

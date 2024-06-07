@@ -163,7 +163,7 @@ const TimelineStatus = ({ currentStep }) => {
                         ]} />
                     )}
                 </View>
-            ))} 
+            ))}
         </View>
     );
 };
@@ -1935,6 +1935,7 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
                                         chatField.warranty && chatField.warranty === true ? 'WARRANTY' : null
                                     ].filter(Boolean).join(' + ')}
                                 </Text>
+                                <RequestProformaInvoice activeChatId={chatId} />
                             </View>
 
                         </View>
@@ -5422,7 +5423,21 @@ const ProfileOptions = () => {
     const navigate = useNavigate();
     const [showProfileOptions, setShowProfileOptions] = useState(false);
 
+    //country and city
+    const [countries, setCountries] = useState([]);
+    useEffect(() => {
+        try {
+            const countriesData = Country.getAllCountries().map((country) => ({
+                value: country.isoCode,
+                label: country.name
+            }));
 
+            setCountries(countriesData);
+        } catch (error) {
+            console.error('Error Fetching countries:', error)
+        }
+    }, []);
+    //country and city
 
     return (
         <View>
@@ -5458,7 +5473,673 @@ const ProfileOptions = () => {
         </View>
     );
 };
+const RequestProformaInvoice = ({ activeChatId }) => {
+    const { userEmail } = useContext(AuthContext);
 
+    const styles = StyleSheet.create({
+        input: {
+            height: 40,
+            borderColor: 'gray',
+            borderWidth: 1,
+            marginTop: 5,
+            marginBottom: 15,
+            padding: 10,
+            borderRadius: 5
+        }
+    });
+    const [showData, setShowData] = useState({});
+    const [selectedCountry, setSelectedCountry] = useState({ value: '', label: 'Select Country' });
+    const [userData, setUserData] = useState(null);
+    const [isChecked, setIsChecked] = useState(false);
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const userDocRef = doc(projectExtensionFirestore, 'accounts', userEmail);
+            try {
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUserData(userDoc.data());
+                } else {
+                    console.log('No user with that Email')
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error)
+            }
+        };
+        if (isChecked) {
+            setShowData({
+                fullName: `${userData?.textFirst} ${userData?.textLast}`,
+                country: selectedCountry.value ? selectedCountry?.label : userData?.country,
+                city: userData?.city,
+                address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}`,
+                email: userData?.textEmail,
+                telephones: userData?.textPhoneNumber
+            });
+        }
+        if (userEmail) {
+            fetchUserData();
+        }
+    }, [userEmail, isChecked, selectedCountry])
+    //fetch customer information
+
+    //fetch countries
+    const [countryData, setCountryData] = useState([]);
+    const [countryModal, setCountryModal] = useState(false);
+
+
+    const renderCountries = ({ item }) => (
+        <Pressable style={{
+            padding: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+        }}
+            onPress={() => { setSelectedCountry(item); toggleCountryModal(); }}
+        >
+            <Text style={{
+                fontSize: 16,
+                color: '#333'
+            }}>{item.label}</Text>
+        </Pressable>
+    );
+
+    const toggleCountryModal = () => {
+        setCountryModal(!countryModal)
+    }
+    useEffect(() => {
+        try {
+            const countriesData = Country.getAllCountries().map((country) => ({
+                value: country.isoCode,
+                label: country.name
+            }));
+            const defaultOption = { value: '', label: 'Select Country' };
+            setCountryData([defaultOption, ...countriesData]);
+        } catch (error) {
+            console.error('Error Fetching countries:', error)
+        }
+    }, []);
+
+    //fetch countries
+
+    //fetch cities
+    const [cityData, setCityData] = useState([]);
+    const [cityModal, setCityModal] = useState(false);
+    const toggleCityModal = () => {
+        setCountryModal(!countryModal)
+    };
+    console.log('CITIES', cityData)
+    useEffect(() => {
+        if (selectedCountry.value) {
+            const countryCities = City.getCitiesOfCountry(selectedCountry);
+            const citiesData = countryCities.map((city) => ({
+                label: city.name
+            }));
+            console.log('All cities inside', citiesData);
+            setCityData(citiesData);
+        }
+
+    }, [selectedCountry]);
+    //fetch cities
+
+
+
+    //variables ref
+
+    const fullNameRef = useRef(null);
+    const countryRef = useRef(null);
+    const cityRef = useRef(null);
+    const addressRef = useRef(null);
+    const emailRef = useRef(null);
+    const [telephoneInputs, setTelephoneInputs] = useState([0]); // Array of input indices
+    const telephoneRefs = useRef({}); // Object to store refs
+
+    const addTelephoneInput = () => {
+        const newInputId = Object.keys(telephoneRefs.current).length;
+        // Directly mutate the ref object to add a new input reference placeholder
+        telephoneRefs.current[newInputId] = null;
+        // Force update to render the new input
+        setTelephoneInputs(prev => [...prev, newInputId]);
+    };
+    const handleSubmit = async () => {
+        console.log("Refs at submission:", telephoneRefs.current);
+        const telephones = telephoneInputs.map(inputId =>
+            telephoneRefs.current[inputId] ? telephoneRefs.current[inputId].value : 'Ref not set'
+        );
+        console.log("Telephone values:", telephones);
+        let formData
+
+        if (isChecked === true) {
+            formData = {
+                fullName: `${userData?.textFirst} ${userData?.textLast}` || fullNameRef.current ? fullNameRef.current.value : '', // Adds a space between the first and last name
+                country: selectedCountry?.label || userData?.country,
+                city: userData?.city,
+                address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}` || addressRef.current ? addressRef.current.value : '', // Adds spaces and commas as needed
+                email: userData?.textEmail || emailRef.current ? emailRef.current.value : '',
+                telephones
+            };
+
+        } else {
+            formData = {
+                fullName: fullNameRef.current ? fullNameRef.current.value : '',
+                country: selectedCountry ? selectedCountry?.label : '',
+                city: cityRef.current ? cityRef.current.value : '',
+                address: addressRef.current ? addressRef.current.value : '',
+                email: emailRef.current ? emailRef.current.value : '',
+                telephones
+            };
+        }
+
+        console.log("Form Data:", formData);
+
+
+        try {
+            const orderRef = doc(projectExtensionFirestore, 'chats', activeChatId);
+
+            await updateDoc(orderRef, {
+                requestInvoice: {
+                    consignee: formData,
+                    notifyParty: formData
+                }
+            })
+        } catch (error) {
+            console.error('Error updating Proforma Invoice:', error);
+        }
+
+    };
+    //variables ref
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const handlePress = () => {
+        setModalVisible(true)
+    };
+    const [isCheck, setIsCheck] = useState(false);
+    const checkButton = (option) => {
+        setIsCheck(option);
+
+    }
+    const setOrderInvoice = async () => {
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const { datetime } = response.data;
+        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+        const randomNumber = Math.floor(10000 + Math.random() * 90000);
+        const bookingListCollectionRef = collection(projectExtensionFirestore, 'BookingList');
+
+        const customerInfo = {
+            fullName: fullName || fullNameDB,
+            country: selectedCountryLabel || countryDB,
+            city: selectedCity || cityDB,
+            address: address || addressDB,
+            telNumber: telNumber || telNumberDB,
+            email: userEmailInput || userEmailInputDB,
+        };
+
+
+        const infoCustomerInput = {
+            fullName: fullNameNotifyInput,
+            country: selectedCountryNotifyLabel,
+            city: selectedCityNotify,
+            address: addressNotify,
+            telNumber: telNumberNotify,
+            email: emailNotify,
+        };
+
+        try {
+            const orderRef = doc(projectExtensionFirestore, 'chats', chatId);
+            const invoiceRef = doc(projectExtensionFirestore, 'IssuedInvoice', chatField?.invoiceNumber);
+            const vehicleRef = doc(projectExtensionFirestore, 'VehicleProducts', carData?.stockID);
+            const newBookingListDocRef = doc(bookingListCollectionRef, chatId);
+            // const fieldUpdate = collection(projectExtensionFirestore, 'chats');
+            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', chatId, 'messages'));
+            const messageData = {
+                sender: userEmail, // Sender's email
+                text: "I agree with all the condition and place the order.",
+                timestamp: formattedTime,
+                orderInvoiceIssue: true,
+                setPaymentNotification: true,
+                ip: ip,
+                ipCountry: ipCountry
+            };
+            await updateDoc(invoiceRef, {
+                orderPlaced: true,
+
+            });
+            await updateDoc(vehicleRef, {
+                reservedTo: userEmail,
+                stockStatus: 'Reserved'
+            })
+
+            await updateDoc(orderRef, {
+                orderInvoice: {
+                    proformaIssue: true,
+                    customerInfo,
+                    notifyParty: isCheckedNotify ? customerInfo : infoCustomerInput,
+                    dateIssued: formattedTime, // Add formatted date
+                },
+                lastMessage: 'I agree with all the condition and place the order.',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+            await setDoc(newMessageDocExtension, messageData);
+            // await setDoc(fieldUpdate, chatId, {
+            //     DocumentsUpload: {
+            //         ExportCertificate: '',
+            //         ShippingInstructions: '',
+            //         BillOfLading: '',
+            //         InspectionSheet: '',
+            //         DHLTrackingNumber: '',
+            //         InvoiceNumber: randomNumber.toString()
+            //     },
+
+            // });
+            await setDoc(newBookingListDocRef, {
+                DocumentsUpload: {
+                    ExportCertificate: '',
+                    ShippingInstructions: '',
+                    BillOfLading: '',
+                    InspectionSheet: '',
+                    DHLTrackingNumber: '',
+                    InvoiceNumber: randomNumber.toString()
+                },
+                lastMessage: 'I agree with all the condition and place the order.',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+        } catch (error) {
+            console.error('Error updating Proforma Invoice:', error);
+        }
+    };
+
+    return (
+        <Pressable
+            style={({ pressed, hovered }) => [
+
+                {
+                    backgroundColor: hovered ? '#0F7534' : '#16A34A',
+                    opacity: pressed ? 0.5 : 1,
+                    borderRadius: 5,
+                    width: 200,
+                    marginTop: 5,
+                    padding: 5
+                }
+            ]}
+            onPress={handlePress}
+        >
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                flex: 1,
+
+            }}>
+                <Text style={{ color: 'white', fontWeight: '700' }}>Request Proforma Invoice</Text>
+            </View>
+
+            {
+                modalVisible && (
+                    <Modal
+                        transparent={true}
+                        animationType='fade'
+                        visible={modalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+
+                        <View style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            position: 'relative',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)'// Ensure this is positioned relatively to contain absolute children
+                        }}>
+
+                            <TouchableOpacity
+                                style={{
+                                    position: 'absolute', // Position absolutely to cover the entire container
+                                    width: '100%',
+                                    height: '100%',
+                                    backgroundColor: 'transparent' // Ensure it's transparent to see below views
+                                }}
+                                onPress={() => setModalVisible(false)}
+                            />
+                            <View
+                                style={{
+                                    backgroundColor: '#fff',
+                                    padding: 10,
+                                    width: '100%',
+                                    maxWidth: 600,
+                                    borderRadius: 10,
+                                    shadowOpacity: 0.25,
+                                    shadowRadius: 3.84,
+                                    elevation: 5,
+                                    height: '100%',
+                                    maxHeight: 850,
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <View style={{
+                                    justifyContent: 'center',
+                                    borderBottomColor: 'blue',
+                                    borderBottomWidth: 2,
+                                    marginBottom: 20,
+                                    marginHorizontal: 10
+                                }}>
+                                    <Text style={{ color: 'blue', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Proforma Invoice</Text>
+                                </View>
+                                <ScrollView style={{ width: '100%' }}>
+                                    <View style={{ marginBottom: 10 }}>
+                                        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Customer Information</Text>
+                                        <TouchableOpacity onPress={() => { setIsChecked(prevState => !prevState); setSelectedCountry({ value: '' }) }} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                                            <MaterialIcons
+                                                name={isChecked ? 'check-box' : 'check-box-outline-blank'}
+                                                size={20}
+                                                color="black"
+                                            />
+                                            <Text>Set as customer's information <Text style={{ color: 'red' }}>*</Text></Text>
+                                        </TouchableOpacity>
+                                        {isChecked ? (<>
+                                            <View style={{ marginBottom: 5 }}>
+                                                <Text>Full Name</Text>
+                                                <TextInput
+                                                    key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                    ref={fullNameRef}
+                                                    style={styles.input}
+                                                    placeholder="Enter full name"
+                                                    defaultValue={isChecked ? showData?.fullName : ''}
+                                                />
+                                            </View>
+
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
+
+                                                <View style={{
+                                                    flex: 1
+                                                }}>
+                                                    <Pressable
+                                                        onPress={toggleCountryModal}
+                                                        style={{
+                                                            padding: 10,
+                                                            backgroundColor: '#fff',
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            borderColor: '#d5d5d5',
+                                                            borderWidth: 1,
+                                                            borderRadius: 3
+                                                        }}
+                                                    >
+                                                        <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                            <Text>{isChecked ? showData?.country : 'Select Country'}</Text>
+                                                        </View>
+                                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                            <TouchableOpacity>
+                                                                <AntDesign name="close" size={15} color="blue" />
+                                                            </TouchableOpacity>
+                                                            <AntDesign
+                                                                name="down"
+                                                                size={15}
+                                                                style={[
+                                                                    { transitionDuration: '0.3s' },
+                                                                    countryModal && {
+                                                                        transform: [{ rotate: '180deg' }],
+                                                                    },
+                                                                ]}
+                                                                color="blue"
+                                                            />
+                                                        </View>
+                                                    </Pressable>
+                                                    {countryModal && (
+
+
+                                                        <View style={{
+                                                            position: 'absolute',
+                                                            top: 40, // Adjust according to the height of the Pressable
+                                                            left: 0,
+                                                            right: 0,
+                                                            backgroundColor: 'white',
+                                                            borderColor: '#ddd',
+                                                            borderWidth: 2,
+                                                            maxHeight: 200,
+
+                                                            zIndex: 10
+                                                        }}>
+                                                            <FlatList
+                                                                data={countryData}
+                                                                renderItem={renderCountries}
+                                                                keyExtractor={(item) => item.label}
+                                                            />
+
+                                                        </View>
+
+
+
+                                                    )}
+
+                                                </View>
+                                                {/* <View style={{ flex: 1 }}>
+                                                    <Text>City</Text>
+                                                    <TextInput
+                                                        value={showData.city}
+                                                        style={styles.input} placeholder="Enter city" />
+                                                </View> */}
+                                            </View>
+
+                                            <View style={{ marginBottom: 5 }}>
+                                                <Text>Address</Text>
+                                                <TextInput
+                                                    key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                    ref={addressRef}
+                                                    style={styles.input}
+                                                    placeholder="Enter Address"
+                                                    defaultValue={isChecked ? showData?.address : ''}
+                                                />
+
+                                            </View>
+                                            {telephoneInputs.map((inputId, index) => (
+                                                <View key={inputId} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+                                                    <TextInput
+                                                        key={isChecked ? 'controlled' : 'uncontrolled' + inputId}  // Append inputId to ensure uniqueness
+                                                        style={styles.input}
+                                                        placeholder={`Telephone Number ${index + 1}`}
+                                                        ref={el => {
+                                                            telephoneRefs.current[inputId] = el;
+                                                            if (el && !isChecked) {
+                                                                el.setNativeProps({ text: '' });
+                                                            }
+                                                        }}
+                                                        defaultValue={isChecked ? showData?.telephones : ''}
+                                                    />
+                                                </View>
+                                            ))}
+                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+
+                                            <View style={{ marginBottom: 5 }}>
+                                                <Text>E-mail</Text>
+                                                <TextInput
+                                                    key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                    ref={emailRef}
+                                                    style={styles.input}
+                                                    placeholder="Enter Address"
+                                                    defaultValue={isChecked ? showData?.email : ''}
+                                                />
+
+                                            </View>
+                                        </>) : (<>
+                                            <View style={{ marginBottom: 5 }}>
+                                                <Text>Full Name</Text>
+                                                <TextInput
+                                                    ref={fullNameRef}
+                                                    style={styles.input}
+                                                    placeholder="Enter full name"
+                                                />
+                                            </View>
+
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
+
+                                                <View style={{
+                                                    flex: 1
+                                                }}>
+                                                    <Pressable
+                                                        onPress={toggleCountryModal}
+                                                        style={{
+                                                            padding: 10,
+                                                            backgroundColor: '#fff',
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            borderColor: '#d5d5d5',
+                                                            borderWidth: 1,
+                                                            borderRadius: 3
+                                                        }}
+                                                    >
+                                                        <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                            <Text>{selectedCountry?.value ? selectedCountry?.label : 'Select Country'}</Text>
+                                                        </View>
+                                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                            <TouchableOpacity>
+                                                                <AntDesign name="close" size={15} color="blue" />
+                                                            </TouchableOpacity>
+                                                            <AntDesign
+                                                                name="down"
+                                                                size={15}
+                                                                style={[
+                                                                    { transitionDuration: '0.3s' },
+                                                                    countryModal && {
+                                                                        transform: [{ rotate: '180deg' }],
+                                                                    },
+                                                                ]}
+                                                                color="blue"
+                                                            />
+                                                        </View>
+                                                    </Pressable>
+                                                    {countryModal && (
+
+
+                                                        <View style={{
+                                                            position: 'absolute',
+                                                            top: 40, // Adjust according to the height of the Pressable
+                                                            left: 0,
+                                                            right: 0,
+                                                            backgroundColor: 'white',
+                                                            borderColor: '#ddd',
+                                                            borderWidth: 2,
+                                                            maxHeight: 200,
+
+                                                            zIndex: 10
+                                                        }}>
+                                                            <FlatList
+                                                                data={countryData}
+                                                                renderItem={renderCountries}
+                                                                keyExtractor={(item) => item.label}
+                                                            />
+
+                                                        </View>
+
+
+
+                                                    )}
+
+                                                </View>
+                                                {/* <View style={{ flex: 1 }}>
+                                                    <Text>City</Text>
+                                                    <TextInput style={styles.input} placeholder="Enter city" />
+                                                </View> */}
+                                            </View>
+
+                                            <View style={{ marginBottom: 5 }}>
+                                                <Text>Address</Text>
+                                                <TextInput
+                                                    ref={addressRef}
+                                                    style={styles.input}
+                                                    placeholder="Enter address"
+                                                />
+                                            </View>
+                                            {telephoneInputs.map((inputId, index) => (
+                                                <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+                                                    <TextInput
+                                                        style={styles.input}
+                                                        placeholder={`Telephone Number ${index + 1}`}
+                                                        ref={el => {
+                                                            if (el && !telephoneRefs.current[inputId]) {
+                                                                console.log("Assigning ref for input", inputId);
+                                                                telephoneRefs.current[inputId] = el;
+                                                            }
+                                                        }}
+                                                    />
+                                                </View>
+                                            ))}
+
+                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+                                            <View style={{ marginBottom: 5 }}>
+                                                <Text>E-mail</Text>
+                                                <TextInput
+                                                    ref={emailRef}
+                                                    style={styles.input} placeholder="Enter email" />
+                                            </View>
+                                        </>)}
+
+                                    </View>
+
+                                    <View style={{ marginBottom: 10 }}>
+                                        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Notify Party</Text>
+
+                                        <View style={{ marginBottom: 5 }}>
+                                            <Text>Full Name</Text>
+                                            <TextInput style={styles.input} placeholder="Enter full name" />
+                                        </View>
+
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <View style={{ flex: 1, marginRight: 10 }}>
+                                                <Text>Country</Text>
+                                                <TextInput style={styles.input} placeholder="Enter country" />
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text>City</Text>
+                                                <TextInput style={styles.input} placeholder="Enter city" />
+                                            </View>
+                                        </View>
+
+                                        <View style={{ marginBottom: 5 }}>
+                                            <Text>Address</Text>
+                                            <TextInput style={styles.input} placeholder="Enter address" />
+                                        </View>
+                                        <View style={{ marginBottom: 5 }}>
+                                            <Text>Tel. Number</Text>
+                                            <TextInput style={styles.input} placeholder="Enter telephone number" />
+                                        </View>
+                                        <View style={{ marginBottom: 5 }}>
+                                            <Text>E-mail</Text>
+                                            <TextInput style={styles.input} placeholder="Enter email" />
+                                        </View>
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                                        {isCheck ? (
+                                            <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
+                                        ) : (
+                                            <Feather name='square' size={20} onPress={() => checkButton(true)} />
+                                        )}
+                                        <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
+                                    </View>
+
+                                    <View style={{ marginTop: 20, flexDirection: 'row', paddingHorizontal: 20 }}>
+                                        <TouchableOpacity style={{ backgroundColor: 'white', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, borderColor: 'black', borderWidth: 2 }}>
+                                            <Text style={{ color: 'black', fontWeight: '600', fontSize: 16 }}>Cancel</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity style={{ backgroundColor: '#7b9cff', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, marginLeft: '5%' }}
+                                            onPress={handleSubmit}
+                                        >
+                                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Finish</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </ScrollView>
+                            </View>
+                        </View>
+                    </Modal>
+
+                )
+            }
+        </Pressable>
+    )
+}
 const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField, carData }) => {
     console.log('finde me car data', chatField?.invoiceNumber)
     const { userEmail } = useContext(AuthContext);
