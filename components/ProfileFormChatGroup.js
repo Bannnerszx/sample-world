@@ -5563,12 +5563,12 @@ const RequestProformaInvoice = ({ activeChatId }) => {
     const [cityData, setCityData] = useState([]);
     const [cityModal, setCityModal] = useState(false);
     const toggleCityModal = () => {
-        setCountryModal(!countryModal)
+        setCityModal(!cityModal)
     };
     console.log('CITIES', cityData)
     useEffect(() => {
         if (selectedCountry.value) {
-            const countryCities = City.getCitiesOfCountry(selectedCountry);
+            const countryCities = City.getCitiesOfCountry(selectedCountry.value);
             const citiesData = countryCities.map((city) => ({
                 label: city.name
             }));
@@ -5577,6 +5577,21 @@ const RequestProformaInvoice = ({ activeChatId }) => {
         }
 
     }, [selectedCountry]);
+    const [selectedCity, setSelectedCity] = useState('');
+    const renderCities = ({ item }) => (
+        <Pressable style={{
+            padding: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+        }}
+            onPress={() => { setSelectedCity(item); toggleCityModal(); }}
+        >
+            <Text style={{
+                fontSize: 16,
+                color: '#333'
+            }}>{item.label}</Text>
+        </Pressable>
+    );
     //fetch cities
 
 
@@ -5849,7 +5864,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                 />
                                             </View>
 
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10, }}>
 
                                                 <View style={{
                                                     flex: 1
@@ -5914,12 +5929,70 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                     )}
 
                                                 </View>
-                                                {/* <View style={{ flex: 1 }}>
-                                                    <Text>City</Text>
-                                                    <TextInput
-                                                        value={showData.city}
-                                                        style={styles.input} placeholder="Enter city" />
-                                                </View> */}
+
+                                                <View style={{
+                                                    flex: 1, marginLeft: 10
+                                                }}>
+                                                    <Pressable
+                                                        onPress={toggleCityModal}
+                                                        style={{
+                                                            padding: 10,
+                                                            backgroundColor: '#fff',
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            borderColor: '#d5d5d5',
+                                                            borderWidth: 1,
+                                                            borderRadius: 3
+                                                        }}
+                                                    >
+                                                        <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                            <Text>{isChecked ? showData?.city : 'Select City'}</Text>
+                                                        </View>
+                                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                            <TouchableOpacity>
+                                                                <AntDesign name="close" size={15} color="blue" />
+                                                            </TouchableOpacity>
+                                                            <AntDesign
+                                                                name="down"
+                                                                size={15}
+                                                                style={[
+                                                                    { transitionDuration: '0.3s' },
+                                                                    cityModal && {
+                                                                        transform: [{ rotate: '180deg' }],
+                                                                    },
+                                                                ]}
+                                                                color="blue"
+                                                            />
+                                                        </View>
+                                                    </Pressable>
+                                                    {cityModal && (
+
+
+                                                        <View style={{
+                                                            position: 'absolute',
+                                                            top: 40, // Adjust according to the height of the Pressable
+                                                            left: 0,
+                                                            right: 0,
+                                                            backgroundColor: 'white',
+                                                            borderColor: '#ddd',
+                                                            borderWidth: 2,
+                                                            maxHeight: 200,
+
+                                                            zIndex: 10
+                                                        }}>
+                                                            <FlatList
+                                                                data={cityData}
+                                                                renderItem={renderCities}
+                                                                keyExtractor={(item) => item.label}
+                                                            />
+
+                                                        </View>
+
+
+
+                                                    )}
+
+                                                </View>
                                             </View>
 
                                             <View style={{ marginBottom: 5 }}>
@@ -6037,10 +6110,71 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                     )}
 
                                                 </View>
-                                                {/* <View style={{ flex: 1 }}>
-                                                    <Text>City</Text>
-                                                    <TextInput style={styles.input} placeholder="Enter city" />
-                                                </View> */}
+
+
+                                                <View style={{
+                                                    flex: 1, marginLeft: 10
+                                                }}>
+                                                    <Pressable
+                                                        onPress={toggleCityModal}
+                                                        style={{
+                                                            padding: 10,
+                                                            backgroundColor: '#fff',
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            borderColor: '#d5d5d5',
+                                                            borderWidth: 1,
+                                                            borderRadius: 3
+                                                        }}
+                                                    >
+                                                        <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                            <Text>{selectedCity ? selectedCity.label : 'Select City'}</Text>
+                                                        </View>
+                                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                            <TouchableOpacity>
+                                                                <AntDesign name="close" size={15} color="blue" />
+                                                            </TouchableOpacity>
+                                                            <AntDesign
+                                                                name="down"
+                                                                size={15}
+                                                                style={[
+                                                                    { transitionDuration: '0.3s' },
+                                                                    cityModal && {
+                                                                        transform: [{ rotate: '180deg' }],
+                                                                    },
+                                                                ]}
+                                                                color="blue"
+                                                            />
+                                                        </View>
+                                                    </Pressable>
+                                                    {cityModal && (
+
+
+                                                        <View style={{
+                                                            position: 'absolute',
+                                                            top: 40, // Adjust according to the height of the Pressable
+                                                            left: 0,
+                                                            right: 0,
+                                                            backgroundColor: 'white',
+                                                            borderColor: '#ddd',
+                                                            borderWidth: 2,
+                                                            maxHeight: 200,
+
+                                                            zIndex: 10
+                                                        }}>
+                                                            <FlatList
+                                                                data={cityData}
+                                                                renderItem={renderCities}
+                                                                keyExtractor={(item) => item.label}
+                                                            />
+
+                                                        </View>
+
+
+
+                                                    )}
+
+                                                </View>
                                             </View>
 
                                             <View style={{ marginBottom: 5 }}>
