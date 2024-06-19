@@ -200,6 +200,7 @@ const SignUpForm = () => {
     const [showPass, setShowPass] = useState(false);
     const [cities, setCities] = useState([]);
     const [selectedCountry, setSelectedCountry] = useState(null);
+    const [selectedCountryCode, setSelectedCountryCode] = useState('')
     const [selectedCity, setSelectedCity] = useState(null);
     const [countryError, setCountryError] = useState(false);
     const [cityError, setCityError] = useState(false)
@@ -278,7 +279,7 @@ const SignUpForm = () => {
     const handleCountryChange = (selectedOption) => {
         setSelectedCountry(selectedOption);
         setCountryError(false);
-
+        //COME BACK HERE TO GET COUNTRY VALUE KEYWORD: COUNTRY VALUE
     };
 
     const handleCityChange = (selectedOption) => {

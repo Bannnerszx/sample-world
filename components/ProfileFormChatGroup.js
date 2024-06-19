@@ -1,9 +1,10 @@
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity, Linking, ScrollView, Animated, Modal, Pressable, TextInput, FlatList, Image, ActivityIndicator, Platform, Button } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, Linking, ScrollView, Animated, Modal, Pressable, TextInput, FlatList, Image, ActivityIndicator, Platform, Button, TouchableWithoutFeedback } from 'react-native';
 import React, { useEffect, useState, useRef, useContext, useCallback } from 'react';
 import { FontAwesome, FontAwesome5, Entypo, MaterialCommunityIcons, Ionicons, AntDesign, Fontisto, MaterialIcons, Feather } from 'react-native-vector-icons';
 import { getFirestore, collection, where, query, onSnapshot, doc, getDoc, setDoc, serverTimestamp, orderBy, getDocs, updateDoc, limit, startAfter } from 'firebase/firestore';
 import { auth, db, addDoc, fetchSignInMethodsForEmail, app, firebaseConfig, projectExtensionFirestore, projectExtensionStorage } from '../firebaseConfig';
 import { AuthContext } from '../context/AuthProvider';
+import { Button as NativeBaseButton, NativeBaseProvider, Alert, Input, Icon, Pressable as NativeBasePressable, extendTheme, Spinner, PresenceTransition, Modal as NativeBaseModal } from 'native-base';
 import { useParams } from 'react-router-dom';
 import { getStorage, listAll, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { BrowserRouter, Route, useNavigate, Link, useHistory } from 'react-router-dom';
@@ -17,6 +18,15 @@ import ViewOrderInvoice from './ViewOrderInvoice';
 import * as DocumentPicker from 'expo-document-picker';
 import Hyperlink from 'react-native-hyperlink';
 import SplashScreen from './SplashScreen';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import QRCode from 'react-native-qrcode-svg';
+import { captureRef } from 'react-native-view-shot';
+
+
+let formattedIssuingDate;
+let formattedDueDate;
+const mobileViewBreakpoint = 768;
 const LoadingComponent = () => {
     const styles = StyleSheet.create({
         searchBarSkeleton: {
@@ -82,6 +92,2472 @@ const LoadingComponent = () => {
     );
 };
 
+
+const PreviewInvoice = ({ activeChatId, selectedChatData, invoiceData }) => {
+
+    // npm install html2canvas jspdf
+    // import jsPDF from 'jspdf';
+    // import html2canvas from 'html2canvas';
+
+
+    const [previewInvoiceVisible, setPreviewInvoiceVisible] = useState(false);
+
+
+    const [isPreviewHovered, setIsPreviewHovered] = useState(false);
+    const screenWidth = Dimensions.get('window').width;
+    const invoiceRef = useRef(null);
+    const qrCodeRef = useRef(null);
+    const [invoiceImageUri, setInvoiceImageUri] = useState('');
+    const hoverPreviewIn = () => setIsPreviewHovered(true);
+    const hoverPreviewOut = () => setIsPreviewHovered(false);
+    const [firstCaptureUri, setFirstCaptureUri] = useState('');
+    const [capturedImageUri, setCapturedImageUri] = useState('');
+    // const [vehicleImageUri, setVehicleImageUri] = useState(globalImageUrl);
+    const [featuresTrueCount, setFeaturesTrueCount] = useState(0);
+    const [rerenderState, setRerenderState] = useState(0);
+    const [imagePreviewKey, setImagePreviewKey] = useState(0);
+    const handlePreviewInvoiceModalOpen = () => {
+        setPreviewInvoiceVisible(!previewInvoiceVisible);
+    };
+
+    const handlePreviewInvoiceModalClose = () => {
+        setPreviewInvoiceVisible(!previewInvoiceVisible);
+        setCapturedImageUri('');
+    }
+
+    function countTrueValuesInCarData(invoiceData) {
+        let count = 0;
+
+        // Check if carData exists in invoiceData
+        if (invoiceData?.carData) {
+            // List of fields to check within carData
+            const fields = ['interior', 'exterior', 'safetySystem', 'comfort', 'sellingPoints'];
+
+            fields.forEach(field => {
+                if (invoiceData?.carData[field]) {
+                    // Count true values in each field of carData
+                    count += Object.values(invoiceData?.carData[field]).filter(value => value === true).length;
+                }
+            });
+        }
+
+        return count;
+    }
+
+    useEffect(() => {
+
+        if (previewInvoiceVisible) {
+            setRerenderState(rerenderState + 1);
+        }
+    }, [previewInvoiceVisible])
+
+
+    useEffect(() => {
+        let generatedImageUri = '';
+        const captureImageAsync = async () => {
+            try {
+                if (invoiceRef.current) {
+                    // Adjust the scale to control the captured image resolution
+                    const scale = 0.85; // Experiment with different scale values
+                    const width = 2480 * scale;
+                    const height = 3508 * scale;
+
+
+                    const imageUri = await captureRef(invoiceRef, {
+                        format: 'jpg',
+                        quality: 1, // Adjust quality if needed
+                        result: 'base64',
+                        width: width,
+                        height: height,
+                    });
+
+                    const trueCount = countTrueValuesInCarData(invoiceData);
+                    setFeaturesTrueCount(trueCount);
+                    generatedImageUri = `data:image/jpeg;base64,${imageUri}`
+                    setCapturedImageUri(`data:image/jpeg;base64,${imageUri}`);
+
+                    // console.log(`data:image/jpeg;base64,${imageUri}`);
+                }
+            } catch (error) {
+                console.error("Error capturing view:", error);
+            }
+        };
+
+
+        captureImageAsync();
+
+
+    }, [invoiceRef.current, invoiceData]);
+
+    useEffect(() => {
+        setCapturedImageUri(capturedImageUri);
+    }, [capturedImageUri]);
+
+    const captureImage = async () => {
+        try {
+            // Adjust the scale to control the captured image resolution
+            const scale = 0.9; // Experiment with different scale values
+            const width = 2480 * scale;
+            const height = 3508 * scale;
+
+            const imageUri = await captureRef(invoiceRef, {
+                format: 'jpg',
+                quality: 1, // Adjust quality if needed
+                result: 'base64',
+                width: width,
+                height: height,
+            });
+            return `data:image/jpeg;base64,${imageUri}`;
+        } catch (error) {
+            console.error("Error capturing view:", error);
+        }
+    };
+
+    const createPDF = async () => {
+        const element = invoiceRef.current;
+        if (element) {
+            // Reduce the scale slightly for smaller file size
+            const scale = 1; // Fine-tune this value for balance
+
+            const canvas = await html2canvas(element, {
+                scale: scale,
+            });
+
+            // Experiment with JPEG quality for a balance between quality and file size
+            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+            // A4 size dimensions in mm
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Adjust PDF compression settings
+            const options = {
+                imageCompression: 'JPEG',
+                imageQuality: 1, // Fine-tune this value as well
+            };
+
+            const imgProps = pdf.getImageProperties(imageData);
+            const pdfWidthFit = pdfWidth;
+            const pdfHeightFit = (imgProps.height * pdfWidthFit) / imgProps.width;
+
+            pdf.addImage(imageData, 'JPEG', 0, 0, pdfWidthFit, pdfHeightFit, undefined, 'FAST', 0, options);
+
+            // Filename logic
+            selectedChatData.stepIndicator.value < 3 ?
+                pdf.save(`Proforma Invoice (${invoiceData?.carData.carName} [${invoiceData?.carData.referenceNumber}]) (A4 Paper Size).pdf`) :
+                pdf.save(`Invoice No. ${invoiceData?.id} (A4 Paper Size).pdf`);
+        } else {
+            console.error("No element to capture");
+        }
+    };
+
+
+    const handleCaptureAndCreatePDF = async () => {
+        const capturedImageUri = await captureImage();
+        if (capturedImageUri) {
+            await createPDF(capturedImageUri);
+        }
+    };
+
+
+    if (invoiceData) {
+        const issuingDateString = invoiceData?.bankInformations?.issuingDate;
+        const dueDateString = invoiceData?.bankInformations?.dueDate;
+        const issuingDateObject = new Date(issuingDateString);
+        const dueDateObject = new Date(dueDateString);
+
+
+        const options = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        };
+
+        formattedIssuingDate = issuingDateObject?.toLocaleDateString(undefined, options);
+        formattedDueDate = dueDateObject?.toLocaleDateString(undefined, options);
+
+    }
+
+    const originalWidth = 794;
+    const originalHeight = 1123;
+
+
+    const originalSmallWidth = 794;
+    const originalSmallHeight = 1123;
+
+    const newWidth = 2480;
+    const newHeight = 3508;
+
+    const smallWidth = 377;
+    const smallHeight = 541;
+
+    const smallWidthScaleFactor = smallWidth / originalSmallWidth;
+    const smallHeightScaleFactor = smallHeight / originalSmallHeight;
+
+    const widthScaleFactor = newWidth / originalWidth;
+    const heightScaleFactor = newHeight / originalHeight;
+
+    const openImage = () => {
+        if (Platform.OS === 'web') {
+            const imageWindow = window.open();
+            imageWindow.document.write(`
+                <style>
+                    body {
+                        margin: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        overflow: hidden;
+                    }
+                    img {
+                        width: 595px;
+                        height: 842px;
+                        object-fit: contain;
+                        transition: transform 0.25s ease;
+                        cursor: zoom-in; /* Set cursor to magnifying glass */
+                    }
+                    .zoomed {
+                        transform: scale(3);
+                        transform-origin: center;
+                        cursor: zoom-out; /* Change cursor to indicate zooming out */
+                    }
+                </style>
+                <img id="zoomableImage" src="${capturedImageUri}" alt="Base64 Image" draggable="false" />
+                <script>
+                    const image = document.getElementById('zoomableImage');
+    
+                    image.addEventListener('mousedown', function(e) {
+                        const rect = this.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+    
+                        // Set the transform origin to the mouse position
+                        this.style.transformOrigin = \`\${x}px \${y}px\`;
+                        this.classList.add('zoomed');
+                    });
+    
+                    document.addEventListener('mouseup', function() {
+                        image.classList.remove('zoomed');
+                    });
+                </script>
+            `);
+        } else {
+            console.log('This feature is only available in a web environment');
+        }
+    };
+
+
+    const s2ab = (s) => {
+        const buf = new ArrayBuffer(s.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+        return buf;
+    };
+
+    const modifyAndDownloadExcel = (file, dataToInsert) => {
+        // Read the file using SheetJS
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const workbook = XLSX.read(e.target.result, { type: 'binary' });
+
+            // Assuming the data is for the first sheet
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // Insert your data into the sheet
+            // Example: Inserting data starting from the second row, in columns A, B, and C
+            dataToInsert.forEach((row, index) => {
+                const rowIndex = index + 2; // Adjust based on where you want to start inserting data
+                ['A', 'B', 'C'].forEach((col, colIndex) => {
+                    const cellRef = `${col}${rowIndex}`;
+                    XLSX.utils.sheet_add_aoa(sheet, [[row[colIndex]]], { origin: cellRef });
+                });
+            });
+
+            // Write the modified workbook to a binary string
+            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'binary' });
+
+            // Convert the binary string to a Blob and trigger a download
+            const blob = new Blob([s2ab(wbOut)], { type: 'application/octet-stream' });
+            saveAs(blob, `Invoice No.${selectedChatData.invoiceNumber} Excel.xlsx`);
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    const [m3, setM3] = useState('');
+
+    const freightCalculation = ((selectedChatData.m3 ? selectedChatData.m3 :
+        (selectedChatData.carData && selectedChatData.carData.dimensionCubicMeters ?
+            selectedChatData.carData.dimensionCubicMeters : 0)) *
+        Number(selectedChatData.freightPrice));
+
+    const totalPriceCalculation = (selectedChatData.fobPrice ? selectedChatData.fobPrice :
+        (selectedChatData.carData && selectedChatData.carData.fobPrice ?
+            selectedChatData.carData.fobPrice : 0) *
+        (selectedChatData.jpyToUsd ? selectedChatData.jpyToUsd :
+            (selectedChatData.currency && selectedChatData.currency.jpyToUsd ?
+                selectedChatData.currency.jpyToUsd : 0))) + freightCalculation;
+
+    const convertedCurrency = (baseValue) => {
+        // Ensure baseValue is a valid number
+        const baseValueNumber = Number(baseValue);
+
+        if (isNaN(baseValueNumber)) {
+            return 'Invalid base value';
+        }
+
+        const numberFormatOptions = {
+            useGrouping: true,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        };
+
+        if (invoiceData.selectedCurrencyExchange == 'None' || !invoiceData.selectedCurrencyExchange || invoiceData.selectedCurrencyExchange == 'USD') {
+            return `$${Math.round(baseValueNumber).toLocaleString('en-US', numberFormatOptions)}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'JPY') {
+            const jpyValue = baseValueNumber * Number(selectedChatData.currency.usdToJpy);
+            return `¥${Math.round(jpyValue).toLocaleString('en-US', numberFormatOptions)}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'EURO') {
+            const euroValue = baseValueNumber * Number(selectedChatData.currency.usdToEur);
+            return `€${Math.round(euroValue).toLocaleString('en-US', numberFormatOptions)}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'AUD') {
+            const audValue = baseValueNumber * Number(selectedChatData.currency.usdToAud);
+            return `A$${Math.round(audValue).toLocaleString('en-US', numberFormatOptions)}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'GBP') {
+            const gbpValue = baseValueNumber * Number(selectedChatData.currency.usdToGbp);
+            return `£${Math.round(gbpValue).toLocaleString('en-US', numberFormatOptions)}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'CAD') {
+            const cadValue = baseValueNumber * Number(selectedChatData.currency.usdToCad);
+            return `C$${Math.round(cadValue).toLocaleString('en-US', numberFormatOptions)}`;
+        }
+
+        // Add a default return value if none of the conditions are met
+        return `$${Math.round(baseValueNumber).toLocaleString('en-US', numberFormatOptions)}`;
+    };
+
+    const totalPriceCalculated = () => {
+
+        const totalAdditionalPrice = invoiceData.paymentDetails.additionalPrice.reduce((total, price) => {
+            const converted = Number(price); // Convert each price using your currency conversion function
+            const numericPart = price.replace(/[^0-9.]/g, ''); // Remove non-numeric characters, assuming decimal numbers
+            return total + parseFloat(numericPart); // Add the numeric value to the total
+        }, 0);
+
+        const totalUsd = ((Number(invoiceData.paymentDetails.fobPrice)
+            + Number(invoiceData.paymentDetails.freightPrice)
+            + (invoiceData.paymentDetails.inspectionIsChecked
+                ? (Number(invoiceData.paymentDetails.inspectionPrice))
+                : 0)
+            + (invoiceData.paymentDetails.incoterms == 'CIF'
+                ? Number(invoiceData.paymentDetails.insurancePrice)
+                : 0)
+            + totalAdditionalPrice))
+            // * Number(invoiceData.currency.jpyToEur)
+            ;
+
+        const totalJpy = ((Number(invoiceData.paymentDetails.fobPrice)
+            + Number(invoiceData.paymentDetails.freightPrice)
+            + (invoiceData.paymentDetails.inspectionIsChecked
+                ? (Number(invoiceData.paymentDetails.inspectionPrice))
+                : 0)
+            + (invoiceData.paymentDetails.incoterms == 'CIF'
+                ? Number(invoiceData.paymentDetails.insurancePrice)
+                : 0)
+            + totalAdditionalPrice)
+            * Number(invoiceData.currency.usdToJpy));
+
+        const totalEur = ((Number(invoiceData.paymentDetails.fobPrice)
+            + Number(invoiceData.paymentDetails.freightPrice)
+            + (invoiceData.paymentDetails.inspectionIsChecked
+                ? (Number(invoiceData.paymentDetails.inspectionPrice))
+                : 0)
+            + (invoiceData.paymentDetails.incoterms == 'CIF'
+                ? Number(invoiceData.paymentDetails.insurancePrice)
+                : 0)
+            + totalAdditionalPrice)
+            * Number(invoiceData.currency.usdToEur));
+
+
+        // const totalEur = Number(invoiceData.paymentDetails.fobPrice) * Number(invoiceData.currency.usdToEur)
+        //     + (valueCurrency * Number(invoiceData.currency.usdToEur))
+        //     + Number(invoiceData.paymentDetails.freightPrice) * Number(invoiceData.currency.usdToEur)
+        //     + (valueCurrency * Number(invoiceData.currency.usdToEur))
+        //     + (invoiceData.paymentDetails.inspectionIsChecked
+        //         ? (Number(invoiceData.paymentDetails.inspectionPrice) * Number(invoiceData.currency.usdToEur)
+        //             + (valueCurrency * Number(invoiceData.currency.usdToEur)))
+        //         : 0)
+        //     + totalAdditionalPrice;
+
+        const totalAud = ((Number(invoiceData.paymentDetails.fobPrice)
+            + Number(invoiceData.paymentDetails.freightPrice)
+            + (invoiceData.paymentDetails.inspectionIsChecked
+                ? (Number(invoiceData.paymentDetails.inspectionPrice))
+                : 0)
+            + (invoiceData.paymentDetails.incoterms == 'CIF'
+                ? Number(invoiceData.paymentDetails.insurancePrice)
+                : 0)
+            + totalAdditionalPrice)
+            * Number(invoiceData.currency.usdToAud))
+
+        const totalGbp = ((Number(invoiceData.paymentDetails.fobPrice)
+            + Number(invoiceData.paymentDetails.freightPrice)
+            + (invoiceData.paymentDetails.inspectionIsChecked
+                ? (Number(invoiceData.paymentDetails.inspectionPrice))
+                : 0)
+            + (invoiceData.paymentDetails.incoterms == 'CIF'
+                ? Number(invoiceData.paymentDetails.insurancePrice)
+                : 0)
+            + totalAdditionalPrice)
+            * Number(invoiceData.currency.usdToGbp))
+
+        const totalCad = ((Number(invoiceData.paymentDetails.fobPrice)
+            + Number(invoiceData.paymentDetails.freightPrice)
+            + (invoiceData.paymentDetails.inspectionIsChecked
+                ? (Number(invoiceData.paymentDetails.inspectionPrice))
+                : 0)
+            + (invoiceData.paymentDetails.incoterms == 'CIF'
+                ? Number(invoiceData.paymentDetails.insurancePrice)
+                : 0)
+            + totalAdditionalPrice)
+            * Number(invoiceData.currency.usdToCad))
+
+        if (invoiceData.selectedCurrencyExchange == 'None' || !invoiceData.selectedCurrencyExchange || invoiceData.selectedCurrencyExchange == 'USD') {
+            return `$${Math.round(totalUsd).toLocaleString('en-US', { useGrouping: true })}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'JPY') {
+            return `¥${Math.round(totalJpy).toLocaleString('en-US', { useGrouping: true })}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'EURO') {
+            return `€${Math.round(totalEur).toLocaleString('en-US', { useGrouping: true })}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'AUD') {
+            return `A$${Math.round(totalAud).toLocaleString('en-US', { useGrouping: true })}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'GBP') {
+            return `£${Math.round(totalGbp).toLocaleString('en-US', { useGrouping: true })}`;
+        }
+        if (invoiceData.selectedCurrencyExchange == 'CAD') {
+            return `C$${Math.round(totalCad).toLocaleString('en-US', { useGrouping: true })}`;
+        }
+    }
+
+    const PreviewInvoiceForMobile = () => {
+
+        return (
+            <NativeBaseProvider>
+                <View
+                    style={{
+                        width: smallWidth,
+                        height: smallHeight,
+                        backgroundColor: 'white',
+                        zIndex: 1
+                    }}>
+
+                    <View
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            zIndex: 999,
+                        }}
+                    />
+
+                    <View style={{ position: 'absolute', left: 38 * smallWidthScaleFactor, top: 38 * smallHeightScaleFactor }}>
+                        {/* <Image
+                        source={require('../../assets/RMJ logo for invoice.png')}
+                        style={{
+                            width: 95 * smallWidthScaleFactor,
+                            height: 85 * smallHeightScaleFactor,
+                            resizeMode: 'stretch',
+                        }}
+                    /> */}
+                    </View>
+
+                    <View style={{ position: 'absolute', alignSelf: 'center', top: 80 * smallHeightScaleFactor }}>
+                        {/* Title */}
+                        {selectedChatData.stepIndicator.value < 3 ?
+                            <Text style={{ fontWeight: 700, fontSize: 25 * smallWidthScaleFactor }}>{`PROFORMA INVOICE`}</Text> :
+                            <Text style={{ fontWeight: 700, fontSize: 25 * smallWidthScaleFactor }}>{`INVOICE`}</Text>
+                        }
+                    </View>
+
+                    <View style={{ position: 'absolute', right: 38 * smallWidthScaleFactor, top: 38 * smallHeightScaleFactor }}>
+                        {/* QR CODE */}
+                        {selectedChatData.stepIndicator.value < 3 ?
+                            null :
+                            <QRCode
+                                value={invoiceData?.cryptoNumber}
+                                size={80 * smallWidthScaleFactor}
+                                color="black"
+                                backgroundColor="white"
+                            />
+                        }
+                    </View>
+
+                    <View style={{ position: 'absolute', right: 121 * smallWidthScaleFactor, top: 34 * smallHeightScaleFactor }}>
+                        {/* Invoice Number */}
+                        {selectedChatData.stepIndicator.value < 3 ?
+                            null :
+                            <Text style={{ fontWeight: 750, fontSize: 14 * smallWidthScaleFactor }}>{`Invoice No. RMJ-${invoiceData?.id}`}</Text>
+                        }
+                    </View>
+
+                    {selectedChatData.stepIndicator.value < 3 ?
+                        <View style={{ position: 'absolute', right: 38 * smallWidthScaleFactor, top: 34 * smallHeightScaleFactor, }}>
+                            {/* Issuing Date */}
+                            <View style={{ flexDirection: 'row', alignSelf: 'flex-end', }}>
+                                <Text style={{ fontWeight: 750, fontSize: 14 * smallWidthScaleFactor }}>{`Issuing Date: `}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor }}>{`${formattedIssuingDate}`}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignSelf: 'flex-end', }}>
+                                <Text style={{ fontWeight: 750, fontSize: 14 * smallWidthScaleFactor, color: '#F00A0A', }}>{`Valid Until: `}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor }}>{`${formattedDueDate}`}</Text>
+                            </View>
+
+                        </View>
+                        :
+                        <View style={{ position: 'absolute', right: 121 * smallWidthScaleFactor, top: 49 * smallHeightScaleFactor, flexDirection: 'row' }}>
+                            {/* Issuing Date */}
+                            <Text style={{ fontWeight: 750, fontSize: 14 * smallWidthScaleFactor }}>{`Issuing Date: `}</Text>
+                            <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor }}>{`${formattedIssuingDate}`}</Text>
+                        </View>
+                    }
+
+                    <View style={{
+                        position: 'absolute',
+                        left: 40 * smallWidthScaleFactor,
+                        top: 134 * smallHeightScaleFactor,
+                        width: 280 * smallWidthScaleFactor,
+                    }}>
+                        {/* Shipper */}
+                        <Text style={{
+                            fontWeight: 750,
+                            fontSize: 16 * smallWidthScaleFactor,
+                            borderBottomWidth: 3 * smallWidthScaleFactor, // Adjust the thickness of the underline
+                            width: 'fit-content', // Make the underline cover the text width
+                            marginBottom: 5 * smallHeightScaleFactor, // Add some space between text and underline
+                        }}>
+                            {`Shipper`}
+                        </Text>
+                        <Text style={{ fontWeight: 750, fontSize: 14 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`Real Motor Japan (YANAGISAWA HD CO.,LTD)`}</Text>
+                        <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`26-2 Takara Tsutsumi-cho Toyota City, Aichi Prefecture, Japan, 473-0932`}</Text>
+                        <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`FAX: +81565850606`}</Text>
+
+                        <Text style={{ fontWeight: 700, fontSize: 14 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`Shipped From:`}</Text>
+                        <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.departurePort}, ${invoiceData?.departureCountry}`}</Text>
+
+                        <Text style={{ fontWeight: 700, fontSize: 14 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`Shipped To:`}</Text>
+                        <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.discharge.port}, ${invoiceData?.discharge.country}`}</Text>
+                        {invoiceData?.placeOfDelivery && invoiceData?.placeOfDelivery !== '' ?
+                            <>
+                                <Text style={{ fontWeight: 700, fontSize: 14 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`Place of Delivery:`}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor, lineHeight: 12 * smallHeightScaleFactor }}>{`${invoiceData?.placeOfDelivery}`}</Text>
+                            </>
+                            : null}
+                        {invoiceData?.cfs && invoiceData?.cfs !== '' ?
+                            <>
+                                <Text style={{ fontWeight: 700, fontSize: 14 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`CFS:`}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 14 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.cfs}`}</Text>
+                            </>
+                            : null}
+
+                        <View style={{ flex: 1, flexDirection: 'row', width: 715 * smallWidthScaleFactor, }}>
+
+                            <View style={{
+                                flex: 1, width: 280 * smallWidthScaleFactor,
+                            }}>
+                                {/* Buyer Information */}
+                                <Text style={{
+                                    fontWeight: 750,
+                                    fontSize: 18 * smallWidthScaleFactor,
+                                    borderBottomWidth: 3 * smallHeightScaleFactor, // Adjust the thickness of the underline
+                                    borderBottomColor: '#0A78BE',
+                                    width: 'fit-content', // Make the underline cover the text width
+                                    marginBottom: 5 * smallHeightScaleFactor, // Add some space between text and underline
+                                    color: '#0A78BE',
+                                    marginTop: 45 * smallHeightScaleFactor,
+
+                                }}>
+                                    {`Buyer Information`}
+                                </Text>
+                                <Text style={{ fontWeight: 750, fontSize: 16 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.consignee.name}`}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.consignee.address}`}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.consignee.email}`}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.consignee.contactNumber}`}</Text>
+                                <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`FAX: ${invoiceData?.consignee.fax == '' ? 'N/A' : invoiceData?.consignee.fax}`}</Text>
+
+                            </View>
+
+                            <View style={{ flex: 1, paddingLeft: 20 * smallWidthScaleFactor, width: 280 * smallWidthScaleFactor, }}>
+                                {/* Notify Party */}
+                                <Text style={{
+                                    fontWeight: 750,
+                                    fontSize: 18 * smallWidthScaleFactor,
+                                    borderBottomWidth: 3 * smallHeightScaleFactor, // Adjust the thickness of the underline
+                                    borderBottomColor: '#FF0000',
+                                    width: 'fit-content', // Make the underline cover the text width
+                                    marginBottom: 5 * smallHeightScaleFactor, // Add some space between text and underline
+                                    color: '#FF0000',
+                                    marginTop: 45 * smallHeightScaleFactor,
+                                }}>
+                                    {`Notify Party`}
+                                </Text>
+                                {invoiceData?.notifyParty.sameAsConsignee == true ? (
+                                    <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, }}>{`Same as consignee / buyer`}</Text>) :
+                                    (<>
+                                        <Text style={{ fontWeight: 750, fontSize: 16 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.notifyParty.name}`}</Text>
+                                        <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.notifyParty.address}`}</Text>
+                                        <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.notifyParty.email}`}</Text>
+                                        <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.notifyParty.contactNumber}`}</Text>
+                                        <Text style={{ fontWeight: 400, fontSize: 16 * smallWidthScaleFactor, marginTop: 6 * smallHeightScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`FAX: ${invoiceData?.notifyParty.fax == '' ? 'N/A' : invoiceData?.notifyParty.fax}`}</Text>
+                                    </>)}
+                            </View>
+
+                        </View>
+
+
+                    </View>
+                    {selectedChatData.stepIndicator.value < 3 ?
+
+                        <View style={{ position: 'absolute', right: 38 * smallWidthScaleFactor, top: 130 * smallHeightScaleFactor, borderWidth: 3 * smallWidthScaleFactor, width: 430 * smallWidthScaleFactor, borderColor: '#FF5C00', height: 194 * smallHeightScaleFactor, }}>
+                            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', }}>
+                                <Entypo size={50 * smallWidthScaleFactor} name='warning' color={'#FF0000'} style={{ marginLeft: 15 * smallWidthScaleFactor, }} />
+                                <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, color: '#FF0000', marginLeft: 20 * smallWidthScaleFactor, }}>{`Bank Information will be provided after placing an order.`}</Text>
+                            </View>
+                        </View>
+                        :
+                        <View style={{ position: 'absolute', right: 38 * smallWidthScaleFactor, top: 130 * smallHeightScaleFactor, borderWidth: 3 * smallWidthScaleFactor, width: 430 * smallWidthScaleFactor, borderColor: '#1ABA3D', }}>
+
+                            <View style={{ flex: 1, alignItems: 'center', }}>
+                                <Text style={{ fontWeight: 750, fontSize: 14 * smallWidthScaleFactor, color: '#114B33', }}>{`Bank Information`}</Text>
+                            </View>
+
+                            <View style={{ flex: 1, flexDirection: 'row', marginHorizontal: 5 * smallWidthScaleFactor, marginBottom: 5 * smallHeightScaleFactor, }}>
+                                <View style={{ flex: 1, marginRight: 50 * smallWidthScaleFactor, }}>
+                                    <Text style={{
+                                        fontWeight: 750,
+                                        fontSize: 14 * smallWidthScaleFactor,
+                                        borderBottomWidth: 3 * smallHeightScaleFactor, // Adjust the thickness of the underline
+                                        width: 'fit-content', // Make the underline cover the text width
+                                        marginBottom: 2 * smallHeightScaleFactor, // Add some space between text and underline
+                                    }}>
+                                        {`Bank Account`}
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor, marginTop: 3 * smallHeightScaleFactor, }}>{`Bank Name: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.bankName}`}</Text>
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor, marginTop: 3 * smallHeightScaleFactor, }}>{`Branch Name: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.branchName}`}</Text>
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor, marginTop: 3 * smallHeightScaleFactor, }}>{`SWIFTCODE: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.swiftCode}`}</Text>
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor, marginTop: 3 * smallHeightScaleFactor, }}>{`Address: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.address}`}</Text>
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor, marginTop: 3 * smallHeightScaleFactor, }}>{`Name of Account Holder: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.accountHolder}`}</Text>
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor, marginTop: 3 * smallHeightScaleFactor, }}>{`Account Number: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.accountNumberValue}`}</Text>
+                                    </Text>
+                                </View>
+
+                                <View style={{ flex: 1 }}>
+
+                                    <Text style={{
+                                        fontWeight: 750,
+                                        fontSize: 14 * smallWidthScaleFactor,
+                                        borderBottomWidth: 3 * smallWidthScaleFactor, // Adjust the thickness of the underline
+                                        width: 'fit-content', // Make the underline cover the text width
+                                        marginBottom: 2 * smallHeightScaleFactor, // Add some space between text and underline
+                                    }}>
+                                        {`Payment Terms`}
+                                    </Text>
+
+                                    <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`Terms: `}
+                                        <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, lineHeight: 14 * smallHeightScaleFactor }}>{`${invoiceData?.bankInformations.paymentTerms}`}</Text>
+                                    </Text>
+
+                                    <View style={{ paddingTop: 30 * smallHeightScaleFactor, }}>
+
+                                        <Text style={{
+                                            fontWeight: 750,
+                                            fontSize: 14 * smallWidthScaleFactor,
+                                            borderBottomWidth: 3 * smallWidthScaleFactor, // Adjust the thickness of the underline
+                                            width: 'fit-content', // Make the underline cover the text width
+                                            marginBottom: 2 * smallHeightScaleFactor, // Add some space between text and underline
+                                            color: '#F00A0A',
+                                            borderBottomColor: '#F00A0A',
+                                        }}>
+                                            {`Payment Due`}
+                                        </Text>
+
+                                        <Text style={{ fontWeight: 750, fontSize: 12 * smallWidthScaleFactor, color: '#F00A0A', lineHeight: 14 * smallWidthScaleFactor }}>{`Due Date: `}
+                                            <Text style={{ fontWeight: 400, fontSize: 12 * smallWidthScaleFactor, color: 'black', lineHeight: 14 * smallWidthScaleFactor }}>{`${formattedDueDate}`}</Text>
+                                        </Text>
+
+                                    </View>
+
+                                </View>
+
+                            </View>
+
+                        </View>}
+
+
+
+                    <View style={{
+                        position: 'absolute',
+                        left: 38 * smallWidthScaleFactor,
+                        top: (invoiceData?.placeOfDelivery && invoiceData?.cfs) || (invoiceData?.placeOfDelivery !== '' && invoiceData?.cfs !== '') ? 577 * smallHeightScaleFactor : 537 * smallHeightScaleFactor,
+                        width: 718 * smallWidthScaleFactor,
+                        borderWidth: 1 * smallWidthScaleFactor,
+                        borderColor: '#C2E2F4',
+                        alignSelf: 'center',
+                    }}>
+                        <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                            <View style={{ flex: 2, justifyContent: 'center', }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 'bold',
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                        color: '#008AC6',
+                                    }}>
+                                    {`Description`}
+                                </Text>
+
+                            </View>
+
+                            <View style={{ flex: 2, justifyContent: 'center', }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 'bold',
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                        color: '#008AC6',
+                                    }}>
+                                    {`Notes`}
+                                </Text>
+                            </View>
+
+                            <View style={{ flex: 1, justifyContent: 'center', }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 'bold',
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                        color: '#008AC6',
+                                    }}>
+                                    {`Quantity`}
+                                </Text>
+                            </View>
+
+                            <View style={{ flex: 2, justifyContent: 'center', }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 'bold',
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                        color: '#008AC6',
+                                    }}>
+                                    {`Amount`}
+                                </Text>
+                            </View>
+
+                        </View>
+
+                        <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 5,
+                            }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        marginLeft: 2 * smallWidthScaleFactor,
+                                    }}>
+                                    {`FOB`}
+                                </Text>
+                            </View>
+
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                            }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                    }}>
+                                    {`${convertedCurrency(Number(invoiceData?.paymentDetails.fobPrice))}`}
+                                </Text>
+                            </View>
+
+                        </View>
+
+                        <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 5,
+                            }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        marginLeft: 2 * smallWidthScaleFactor,
+                                    }}>
+                                    {`Freight`}
+                                </Text>
+                            </View>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                            }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                    }}>
+                                    {`${convertedCurrency(Number(invoiceData?.paymentDetails.freightPrice))}`}
+                                </Text>
+                            </View>
+
+                        </View>
+
+                        <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 5,
+                                flexDirection: 'row',
+                            }}>
+                                {invoiceData?.paymentDetails.inspectionIsChecked && (invoiceData?.paymentDetails.incoterms == "C&F" || invoiceData?.paymentDetails.incoterms == "FOB") && <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        marginLeft: 2 * smallWidthScaleFactor,
+                                    }}>
+                                    {invoiceData?.paymentDetails.inspectionIsChecked ? `Inspection [${invoiceData?.paymentDetails.inspectionName}]` : ' '}
+                                </Text>}
+
+                                {invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                    <>
+                                        <Text
+                                            style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * smallWidthScaleFactor,
+                                                lineHeight: 14 * smallWidthScaleFactor,
+                                                marginBottom: 3 * smallHeightScaleFactor,
+                                                marginLeft: 2 * smallWidthScaleFactor,
+                                            }}>
+                                            {invoiceData?.paymentDetails.inspectionIsChecked ? `Inspection [${invoiceData?.paymentDetails.inspectionName}]` : ' '}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * smallWidthScaleFactor,
+                                                lineHeight: 14 * smallWidthScaleFactor,
+                                                marginBottom: 3 * smallHeightScaleFactor,
+                                                marginLeft: 2 * smallWidthScaleFactor,
+                                            }}>
+                                            {invoiceData?.paymentDetails.incoterms == "CIF" ? ` + Insurance` : ' '}
+                                        </Text>
+                                    </>
+                                }
+
+                                {!invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                    <Text
+                                        style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            marginLeft: 2 * smallWidthScaleFactor,
+                                        }}>
+                                        {invoiceData?.paymentDetails.incoterms == "CIF" ? `Insurance` : ' '}
+                                    </Text>
+                                }
+
+                                {!invoiceData?.paymentDetails.inspectionIsChecked && (invoiceData?.paymentDetails.incoterms == "C&F" || invoiceData?.paymentDetails.incoterms == "FOB") &&
+                                    <Text
+                                        style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                        }}>
+                                        {' '}
+                                    </Text>
+                                }
+
+
+                            </View>
+
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                            }}>
+
+                                {invoiceData?.paymentDetails.inspectionIsChecked && (invoiceData?.paymentDetails.incoterms == "C&F" || invoiceData?.paymentDetails.incoterms == "FOB") && <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                    }}>
+                                    {invoiceData?.paymentDetails.inspectionIsChecked ? `${convertedCurrency(Number(invoiceData?.paymentDetails.inspectionPrice).toLocaleString('en-US', { useGrouping: true })).split('.')[0]}` : ' '}
+                                </Text>}
+
+                                {invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                    <Text
+                                        style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                        {invoiceData?.paymentDetails.inspectionIsChecked ? `${convertedCurrency(Number(invoiceData?.paymentDetails.inspectionPrice).toLocaleString('en-US', { useGrouping: true })).split('.')[0]}` : ' '}
+                                        <Text
+                                            style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * smallWidthScaleFactor,
+                                                lineHeight: 14 * smallWidthScaleFactor,
+                                                marginBottom: 3 * smallHeightScaleFactor,
+                                            }}>
+                                            {invoiceData?.paymentDetails.incoterms === "CIF" ? ` + ${convertedCurrency(Number(invoiceData?.paymentDetails.insurancePrice).toLocaleString('en-US', { useGrouping: true })).split('.')[0]}` : ' '}
+                                        </Text>
+                                    </Text>
+
+                                }
+
+                                {!invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                    <Text
+                                        style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+
+                                        }}>
+                                        {invoiceData?.paymentDetails.incoterms == "CIF" ? `${convertedCurrency(Number(invoiceData?.paymentDetails.insurancePrice).toLocaleString('en-US', { useGrouping: true })).split('.')[0]}` : ' '}
+                                    </Text>
+                                }
+
+                            </View>
+
+
+                        </View>
+
+                        <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 5,
+                                flexDirection: 'row',
+                            }}>
+                                {invoiceData?.paymentDetails.additionalName && (invoiceData?.paymentDetails.additionalName).length > 0 && <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        marginLeft: 2 * smallWidthScaleFactor,
+                                    }}>
+                                    {invoiceData?.paymentDetails.additionalName && (invoiceData?.paymentDetails.additionalName).length > 0 ? `${invoiceData?.paymentDetails.additionalName.join(' + ')}` : ' '}
+                                </Text>}
+
+
+                            </View>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                            }}>
+                                <Text
+                                    style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                    }}>
+                                    {invoiceData?.paymentDetails.additionalPrice && invoiceData?.paymentDetails.additionalPrice.length > 0
+                                        ? invoiceData?.paymentDetails.additionalPrice.map(price => {
+                                            const converted = convertedCurrency(Number(price));
+                                            return converted;
+                                        }).join(' + ')
+                                        : ' '}
+                                </Text>
+                            </View>
+
+                        </View>
+
+                        <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                                flexDirection: 'row',
+                                paddingVertical: 2 * smallHeightScaleFactor,
+
+                            }}>
+                                {invoiceData?.carData && invoiceData?.carData.carName ? (
+                                    <Text style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                        marginLeft: 2 * smallWidthScaleFactor,
+                                    }}>
+                                        {"Used Vehicle\n"}
+                                        <Text style={{
+                                            fontWeight: 700,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${invoiceData?.carData.carName}\n`}
+                                        </Text>
+                                        <Text style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${invoiceData?.carData.chassisNumber}\n`}
+                                        </Text>
+                                        <Text style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${invoiceData?.carData.exteriorColor}\n`}
+                                        </Text>
+                                        <Text style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${Number(invoiceData?.carData.engineDisplacement).toLocaleString('en-US')} cc\n`}
+                                        </Text>
+                                        <Text style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${Number(invoiceData?.carData.mileage).toLocaleString('en-US')} km\n`}
+                                        </Text>
+                                        <Text style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${invoiceData?.carData.fuel}\n`}
+                                        </Text>
+                                        <Text style={{
+                                            fontWeight: 400,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            alignSelf: 'center',
+                                        }}>
+                                            {`${invoiceData?.carData.transmission}\n`}
+                                        </Text>
+                                    </Text>
+
+                                ) : (
+                                    <Text>{' '}</Text>
+                                )}
+
+
+                            </View>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                            }}>
+                                {invoiceData?.paymentDetails && invoiceData?.paymentDetails.incoterms && invoiceData?.discharge.port && invoiceData?.discharge ? (
+                                    <Text style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                    }}>
+                                        {`${invoiceData?.paymentDetails.incoterms} ${invoiceData?.discharge.port}`}
+                                    </Text>
+                                ) : (
+                                    <Text>{' '}</Text>
+                                )}
+                            </View>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                            }}>
+                                {invoiceData?.carData && invoiceData?.carData.carName ? (
+                                    <Text style={{
+                                        fontWeight: 400,
+                                        fontSize: 12 * smallWidthScaleFactor,
+                                        lineHeight: 14 * smallWidthScaleFactor,
+                                        marginBottom: 3 * smallHeightScaleFactor,
+                                        alignSelf: 'center',
+                                    }}>
+                                        {'1'}
+                                    </Text>
+                                ) : (
+                                    <Text>{' '}</Text>
+                                )}
+
+
+                            </View>
+
+                            <View style={{
+                                borderTopWidth: 1 * smallWidthScaleFactor,
+                                borderColor: '#C2E2F4',
+                                flex: 2,
+                                justifyContent: 'center',
+                                flexDirection: 'row',
+                            }}>
+                                {invoiceData?.paymentDetails && invoiceData?.paymentDetails.totalAmount ? (
+                                    <>
+                                        <Text style={{
+                                            fontWeight: 700,
+                                            fontSize: 12 * smallWidthScaleFactor,
+                                            lineHeight: 14 * smallWidthScaleFactor,
+                                            marginBottom: 3 * smallHeightScaleFactor,
+                                            color: '#008AC6',
+                                            marginRight: 10 * smallWidthScaleFactor,
+                                            top: 51 * smallHeightScaleFactor,
+                                            left: 50 * smallWidthScaleFactor,
+                                            position: 'absolute',
+                                        }}>
+                                            {"Total"}
+                                            <Text style={{
+                                                fontWeight: 700,
+                                                fontSize: 12 * smallWidthScaleFactor,
+                                                lineHeight: 14 * smallWidthScaleFactor,
+                                                marginBottom: 3 * smallHeightScaleFactor,
+                                                alignSelf: 'center',
+                                                color: '#00720B',
+                                                marginLeft: 5 * smallWidthScaleFactor,
+                                            }}>
+                                                {`${totalPriceCalculated()}`}
+                                            </Text>
+                                        </Text>
+
+                                    </>
+                                ) : (
+                                    <Text>{' '}</Text>
+                                )}
+                            </View>
+
+                        </View>
+
+                    </View>
+
+                    <View style={{ position: 'absolute', left: 38 * smallWidthScaleFactor, top: 825 * smallHeightScaleFactor, width: 350 * smallWidthScaleFactor, }}>
+                        <Text style={{
+                            fontWeight: 700,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'Payment Information:'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'The customer is responsible for the bank charges incurred when the T/T (Telegraphic Transfer) is paid.'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                            marginBottom: 5 * smallHeightScaleFactor,
+                        }}>
+                            {'No warranty service is provided on used vehicles.'}
+                        </Text>
+
+                        <Text style={{
+                            fontWeight: 700,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'Conditions for order cancellation:'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'(1) Order Cancellation Penalty: If the order is cancelled after payment, a penalty of USD 220 will apply.'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                            marginBottom: 5 * smallHeightScaleFactor,
+
+                        }}>
+                            {'(2) Non-refund: Payment for vehicles purchased through pre-delivery inspection is non-refundable.'}
+                        </Text>
+
+                        <Text style={{
+                            fontWeight: 700,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'Intermediary Banking Information:'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'Bank Name: SUMITOMO MITSUI BANKING CORPORATION (NEW YORK BRANCH).'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+
+                        }}>
+                            {'Swift code: SMBCUS33'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                        }}>
+                            {'Address: 277 Park Avenue'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+
+                        }}>
+                            {'City: New York, NY'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+
+                        }}>
+                            {'Postal Code: 10172'}
+                        </Text>
+                        <Text style={{
+                            fontWeight: 400,
+                            fontSize: 12 * smallWidthScaleFactor,
+                            lineHeight: 14 * smallHeightScaleFactor,
+                            marginBottom: 5 * smallHeightScaleFactor,
+
+                        }}>
+                            {'Country: United States'}
+                        </Text>
+                    </View>
+
+                    {selectedChatData.stepIndicator.value < 3 ? null :
+                        <View style={{ position: 'absolute', right: 39 * smallWidthScaleFactor, top: 835 * smallHeightScaleFactor, width: 300 * smallWidthScaleFactor, }}>
+                            <View style={{
+                                width: 300 * smallWidthScaleFactor,
+                                alignItems: 'center',
+                                paddingBottom: 80 * smallHeightScaleFactor, // Adjust this value to control space between image and line
+                            }}>
+                                {/* <NativeImage
+                                source={require('../../assets/RMJ Invoice Signature with Hanko.png')}
+                                style={{
+                                    width: 276 * smallWidthScaleFactor,
+                                    height: 81 * smallHeightScaleFactor,
+                                    resizeMode: 'contain',
+                                    alignSelf: 'center',
+                                    marginBottom: 0, // Minimize margin to keep the line close
+                                }}
+                            /> */}
+                                <View style={{
+                                    borderBottomWidth: 1 * smallHeightScaleFactor,
+                                    borderColor: 'black', // Change the color as needed
+                                    width: '100%', // Line width as per your requirement
+                                }} />
+                                <Text italic style={{
+                                    fontWeight: 700,
+                                    fontSize: 16 * smallWidthScaleFactor,
+                                }}>
+                                    {'Real Motor Japan'}
+                                </Text>
+                            </View>
+
+                            <View style={{
+                                width: 300 * smallWidthScaleFactor,
+                                alignItems: 'center',
+                                paddingBottom: 5 * smallHeightScaleFactor, // Adjust this value to control space between image and line
+                            }}>
+
+                                <View style={{
+                                    borderBottomWidth: 1 * smallHeightScaleFactor,
+                                    borderColor: 'black', // Change the color as needed
+                                    width: '100%', // Line width as per your requirement
+                                }} />
+                                <Text italic style={{
+                                    fontWeight: 700,
+                                    fontSize: 16 * smallWidthScaleFactor,
+                                }}>
+                                    {'Your Signature'}
+                                </Text>
+                            </View>
+                        </View>}
+
+
+                </View>
+            </NativeBaseProvider>
+        )
+    }
+
+
+
+    return (
+        <NativeBaseProvider>
+            <> {invoiceData && Object.keys(invoiceData)?.length > 0 &&
+
+                <> <Pressable
+                    onPress={handlePreviewInvoiceModalOpen}
+                    focusable={false}
+                    variant='ghost'
+                    onHoverIn={hoverPreviewIn}
+                    onHoverOut={hoverPreviewOut}
+                    style={{
+                        marginTop: 3,
+                        paddingVertical: 3,
+                        paddingHorizontal: 5,
+                        flexDirection: 'row', // Align items in a row
+                        alignItems: 'center', // Center items vertically
+                        justifyContent: 'center',
+                        borderRadius: 5,
+                        backgroundColor: isPreviewHovered ? '#0772ad' : '#0A8DD5',
+                    }}>
+
+                    {selectedChatData.invoiceNumber && selectedChatData.stepIndicator.value > 2 ?
+                        <Text style={{ fontWeight: 700, color: 'white', }}>
+                            {`Preview Invoice No. ${selectedChatData.invoiceNumber}`}
+                        </Text>
+                        :
+                        <Text style={{ fontWeight: 700, color: 'white', }}>
+                            {`Preview Invoice`}
+                        </Text>}
+                </Pressable>
+
+                    <NativeBaseModal
+                        isOpen={previewInvoiceVisible}
+                        onClose={() => {
+                            handlePreviewInvoiceModalClose();
+                        }}
+                        size={'full'}
+                        useRNModal
+                    >
+                        <View style={{ flexDirection: 'row', margin: 2, }}>
+                            <Pressable onPress={() => {
+                                capturedImageUri ? handleCaptureAndCreatePDF() : null;
+                            }}
+                                style={{ justifyContent: 'center', flexDirection: 'row', padding: 5, borderRadius: 5, marginRight: 5, backgroundColor: '#16A34A', }}>
+                                <MaterialCommunityIcons size={20} name='download' color='white' />
+                                <Text style={{ color: 'white', }}>Download as PDF</Text>
+                            </Pressable>
+
+                            {selectedChatData.isCancelled && selectedChatData.stepIndicator.value < 3 ?
+                                null :
+                                <Pressable
+                                    onPress={() => {
+                                        dispatch(setCustomInvoiceVisible(true))
+                                        dispatch(setPreviewInvoiceVisible(false))
+                                    }}
+                                    focusable={false}
+                                    variant='ghost'
+                                    style={{
+                                        justifyContent: 'center',
+                                        flexDirection: 'row',
+                                        padding: 5,
+                                        borderRadius: 5,
+                                        backgroundColor: '#0A8DD5',
+                                    }}>
+                                    <MaterialCommunityIcons size={20} name='file-document-edit' color='white' />
+                                    <Text style={{ fontWeight: 400, color: 'white', }}>
+                                        {`Generate Custom Invoice`}
+                                    </Text>
+                                </Pressable>
+
+                            }
+
+                            <Pressable
+                                onPress={() => {
+                                    capturedImageUri ? openImage() : null;
+                                }}
+                                style={{ position: 'absolute', top: -2, right: -285, flexDirection: 'row', padding: 5, borderRadius: 5, backgroundColor: '#0A8DD5', }}>
+                                <Entypo size={20} name='images' color='white' />
+                                <Text style={{ color: 'white', }}>View Image</Text>
+                            </Pressable>
+
+                        </View>
+                        <NativeBaseModal.CloseButton />
+                        {previewInvoiceVisible &&
+                            <ScrollView
+                                style={{ maxHeight: screenWidth < 960 ? 520 : 720, maxWidth: screenWidth < 960 ? '90%' : 900 }}
+                            >
+                                <View style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    bottom: 0,
+                                    right: 0,
+                                    left: 0,
+                                    backgroundColor: 'white',
+                                    zIndex: 999,
+                                    flex: 1,
+                                    alignItems: 'center', // Center horizontally
+                                }}>
+                                    {capturedImageUri ? (
+                                        (screenWidth < mobileViewBreakpoint ? <PreviewInvoiceForMobile /> :
+                                            <Image
+                                                key={imagePreviewKey}
+                                                source={{ uri: capturedImageUri.toString() }}
+                                                style={{
+                                                    marginTop: 5,
+                                                    width: screenWidth < mobileViewBreakpoint ? 377 : 595,
+                                                    height: screenWidth < mobileViewBreakpoint ? 541 : 842,
+                                                    resizeMode: 'stretch',
+                                                    borderWidth: 1,
+                                                    borderColor: '#DADDE1',
+                                                }}
+                                            />
+                                        )
+                                    ) : (
+                                        <Spinner size={'lg'} color={'#0A9FDC'} style={{ alignSelf: 'center', paddingTop: 80 * heightScaleFactor, }} />
+                                    )}
+                                </View>
+
+                                {/* Main content with invoice details */}
+                                {
+
+                                    <View ref={invoiceRef}
+                                        style={{
+                                            width: newWidth,
+                                            height: newHeight,
+                                            backgroundColor: 'white',
+                                            zIndex: 1
+                                        }}>
+
+                                        <View style={{ position: 'absolute', left: 38 * widthScaleFactor, top: 38 * heightScaleFactor }}>
+                                            {/* <NativeImage
+                                            source={require('../../assets/RMJ logo for invoice.png')}
+                                            style={{
+                                                width: 95 * widthScaleFactor,
+                                                height: 85 * heightScaleFactor,
+                                                resizeMode: 'stretch',
+                                            }}
+                                        /> */}
+                                        </View>
+
+                                        <View style={{ position: 'absolute', alignSelf: 'center', top: 80 * heightScaleFactor }}>
+                                            {/* Title */}
+                                            {selectedChatData.stepIndicator.value < 3 ?
+                                                <Text style={{ fontWeight: 700, fontSize: 25 * widthScaleFactor }}>{`PROFORMA INVOICE`}</Text> :
+                                                <Text style={{ fontWeight: 700, fontSize: 25 * widthScaleFactor }}>{`INVOICE`}</Text>
+                                            }
+                                        </View>
+
+                                        <View style={{ position: 'absolute', right: 38 * widthScaleFactor, top: 38 * heightScaleFactor }}>
+                                            {/* QR CODE */}
+                                            {selectedChatData.stepIndicator.value < 3 ?
+                                                null :
+                                                <View
+                                                    ref={qrCodeRef}
+                                                >
+                                                    <QRCode
+                                                        value={invoiceData?.cryptoNumber}
+                                                        size={80 * widthScaleFactor}
+                                                        color="black"
+                                                        backgroundColor="white"
+                                                    />
+                                                </View>
+
+                                            }
+                                        </View>
+
+                                        <View style={{ position: 'absolute', right: 121 * widthScaleFactor, top: 34 * heightScaleFactor }}>
+                                            {/* Invoice Number */}
+                                            {selectedChatData.stepIndicator.value < 3 ?
+                                                null :
+                                                <Text style={{ fontWeight: 750, fontSize: 14 * widthScaleFactor }}>{`Invoice No. RMJ-${invoiceData?.id}`}</Text>
+                                            }
+                                        </View>
+
+                                        {selectedChatData.stepIndicator.value < 3 ?
+                                            <View style={{ position: 'absolute', right: 38 * widthScaleFactor, top: 34 * heightScaleFactor, }}>
+                                                {/* Issuing Date */}
+                                                <View style={{ flexDirection: 'row', alignSelf: 'flex-end', }}>
+                                                    <Text style={{ fontWeight: 750, fontSize: 14 * widthScaleFactor }}>{`Issuing Date: `}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor }}>{`${formattedIssuingDate}`}</Text>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', alignSelf: 'flex-end', }}>
+                                                    <Text style={{ fontWeight: 750, fontSize: 14 * widthScaleFactor, color: '#F00A0A', }}>{`Valid Until: `}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor }}>{`${formattedDueDate}`}</Text>
+                                                </View>
+
+                                            </View>
+                                            :
+                                            <View style={{ position: 'absolute', right: 121 * widthScaleFactor, top: 49 * heightScaleFactor, flexDirection: 'row' }}>
+                                                {/* Issuing Date */}
+                                                <Text style={{ fontWeight: 750, fontSize: 14 * widthScaleFactor }}>{`Issuing Date: `}</Text>
+                                                <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor }}>{`${formattedIssuingDate}`}</Text>
+                                            </View>
+                                        }
+
+                                        <View style={{
+                                            position: 'absolute',
+                                            left: 40 * widthScaleFactor,
+                                            top: 134 * heightScaleFactor,
+                                            width: 280 * widthScaleFactor,
+                                        }}>
+                                            {/* Shipper */}
+                                            <Text style={{
+                                                fontWeight: 750,
+                                                fontSize: 16 * widthScaleFactor,
+                                                borderBottomWidth: 3, // Adjust the thickness of the underline
+                                                width: 'fit-content', // Make the underline cover the text width
+                                                marginBottom: 5, // Add some space between text and underline
+                                            }}>
+                                                {`Shipper`}
+                                            </Text>
+                                            <Text style={{ fontWeight: 750, fontSize: 14 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`Real Motor Japan (YANAGISAWA HD CO.,LTD)`}</Text>
+                                            <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`26-2 Takara Tsutsumi-cho Toyota City, Aichi Prefecture, Japan, 473-0932`}</Text>
+                                            <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`FAX: +81565850606`}</Text>
+
+                                            <Text style={{ fontWeight: 700, fontSize: 14 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`Shipped From:`}</Text>
+                                            <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.departurePort}, ${invoiceData?.departureCountry}`}</Text>
+
+                                            <Text style={{ fontWeight: 700, fontSize: 14 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`Shipped To:`}</Text>
+                                            <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.discharge.port}, ${invoiceData?.discharge.country}`}</Text>
+                                            {invoiceData?.placeOfDelivery && invoiceData?.placeOfDelivery !== '' ?
+                                                <>
+                                                    <Text style={{ fontWeight: 700, fontSize: 14 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`Place of Delivery:`}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.placeOfDelivery}`}</Text>
+                                                </>
+                                                : null}
+                                            {invoiceData?.cfs && invoiceData?.cfs !== '' ?
+                                                <>
+                                                    <Text style={{ fontWeight: 700, fontSize: 14 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`CFS:`}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 14 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.cfs}`}</Text>
+                                                </>
+                                                : null}
+
+                                            <View style={{ flex: 1, flexDirection: 'row', width: 715 * widthScaleFactor, }}>
+
+                                                <View style={{
+                                                    flex: 1, width: 280 * widthScaleFactor,
+                                                }}>
+                                                    {/* Buyer Information */}
+                                                    <Text style={{
+                                                        fontWeight: 750,
+                                                        fontSize: 18 * widthScaleFactor,
+                                                        borderBottomWidth: 3, // Adjust the thickness of the underline
+                                                        borderBottomColor: '#0A78BE',
+                                                        width: 'fit-content', // Make the underline cover the text width
+                                                        marginBottom: 5, // Add some space between text and underline
+                                                        color: '#0A78BE',
+                                                        marginTop: 25 * heightScaleFactor,
+
+                                                    }}>
+                                                        {`Buyer Information`}
+                                                    </Text>
+                                                    <Text style={{ fontWeight: 750, fontSize: 16 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.consignee.name}`}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.consignee.address}`}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.consignee.email}`}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.consignee.contactNumber}`}</Text>
+                                                    <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`FAX: ${invoiceData?.consignee.fax == '' ? 'N/A' : invoiceData?.consignee.fax}`}</Text>
+
+                                                </View>
+
+                                                <View style={{ flex: 1, paddingLeft: 20 * widthScaleFactor, width: 280 * widthScaleFactor, }}>
+                                                    {/* Notify Party */}
+                                                    <Text style={{
+                                                        fontWeight: 750,
+                                                        fontSize: 18 * widthScaleFactor,
+                                                        borderBottomWidth: 3, // Adjust the thickness of the underline
+                                                        borderBottomColor: '#FF0000',
+                                                        width: 'fit-content', // Make the underline cover the text width
+                                                        marginBottom: 5, // Add some space between text and underline
+                                                        color: '#FF0000',
+                                                        marginTop: 25 * heightScaleFactor,
+                                                    }}>
+                                                        {`Notify Party`}
+                                                    </Text>
+                                                    {invoiceData?.notifyParty.sameAsConsignee == true ? (
+                                                        <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, }}>{`Same as consignee / buyer`}</Text>) :
+                                                        (<>
+                                                            <Text style={{ fontWeight: 750, fontSize: 16 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.notifyParty.name}`}</Text>
+                                                            <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.notifyParty.address}`}</Text>
+                                                            <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.notifyParty.email}`}</Text>
+                                                            <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.notifyParty.contactNumber}`}</Text>
+                                                            <Text style={{ fontWeight: 400, fontSize: 16 * widthScaleFactor, marginTop: 20, lineHeight: 14 * widthScaleFactor }}>{`FAX: ${invoiceData?.notifyParty.fax == '' ? 'N/A' : invoiceData?.notifyParty.fax}`}</Text>
+                                                        </>)}
+                                                </View>
+
+                                            </View>
+
+
+                                        </View>
+                                        {selectedChatData.stepIndicator.value < 3 ?
+
+                                            <View style={{ position: 'absolute', right: 38 * widthScaleFactor, top: 130 * heightScaleFactor, borderWidth: 3, width: 430 * widthScaleFactor, borderColor: '#FF5C00', height: 194 * heightScaleFactor, }}>
+                                                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', }}>
+                                                    <Entypo size={50 * widthScaleFactor} name='warning' color={'#FF0000'} />
+                                                    <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, color: '#FF0000', marginLeft: 20 * widthScaleFactor, }}>{`Bank Information will be provided after placing an order.`}</Text>
+                                                </View>
+                                            </View>
+                                            :
+                                            <View style={{ position: 'absolute', right: 38 * widthScaleFactor, top: 130 * heightScaleFactor, borderWidth: 3, width: 430 * widthScaleFactor, borderColor: '#1ABA3D', }}>
+
+                                                <View style={{ flex: 1, alignItems: 'center', }}>
+                                                    <Text style={{ fontWeight: 750, fontSize: 14 * widthScaleFactor, color: '#114B33', }}>{`Bank Information`}</Text>
+                                                </View>
+
+                                                <View style={{ flex: 1, flexDirection: 'row', marginHorizontal: 5 * widthScaleFactor, marginBottom: 5 * heightScaleFactor, }}>
+                                                    <View style={{ flex: 1, marginRight: 50 * widthScaleFactor, }}>
+                                                        <Text style={{
+                                                            fontWeight: 750,
+                                                            fontSize: 14 * widthScaleFactor,
+                                                            borderBottomWidth: 3, // Adjust the thickness of the underline
+                                                            width: 'fit-content', // Make the underline cover the text width
+                                                            marginBottom: 2, // Add some space between text and underline
+                                                        }}>
+                                                            {`Bank Account`}
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor, marginTop: 3 * heightScaleFactor, }}>{`Bank Name: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.bankName}`}</Text>
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor, marginTop: 3 * heightScaleFactor, }}>{`Branch Name: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.branchName}`}</Text>
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor, marginTop: 3 * heightScaleFactor, }}>{`SWIFTCODE: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.swiftCode}`}</Text>
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor, marginTop: 3 * heightScaleFactor, }}>{`Address: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.address}`}</Text>
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor, marginTop: 3 * heightScaleFactor, }}>{`Name of Account Holder: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.accountHolder}`}</Text>
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor, marginTop: 3 * heightScaleFactor, }}>{`Account Number: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.bankAccount.accountNumberValue}`}</Text>
+                                                        </Text>
+                                                    </View>
+
+                                                    <View style={{ flex: 1 }}>
+
+                                                        <Text style={{
+                                                            fontWeight: 750,
+                                                            fontSize: 14 * widthScaleFactor,
+                                                            borderBottomWidth: 3, // Adjust the thickness of the underline
+                                                            width: 'fit-content', // Make the underline cover the text width
+                                                            marginBottom: 2, // Add some space between text and underline
+                                                        }}>
+                                                            {`Payment Terms`}
+                                                        </Text>
+
+                                                        <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`Terms: `}
+                                                            <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, lineHeight: 14 * widthScaleFactor }}>{`${invoiceData?.bankInformations.paymentTerms}`}</Text>
+                                                        </Text>
+
+                                                        <View style={{ paddingTop: 30 * heightScaleFactor, }}>
+
+                                                            <Text style={{
+                                                                fontWeight: 750,
+                                                                fontSize: 14 * widthScaleFactor,
+                                                                borderBottomWidth: 3, // Adjust the thickness of the underline
+                                                                width: 'fit-content', // Make the underline cover the text width
+                                                                marginBottom: 2, // Add some space between text and underline
+                                                                color: '#F00A0A',
+                                                                borderBottomColor: '#F00A0A',
+                                                            }}>
+                                                                {`Payment Due`}
+                                                            </Text>
+
+                                                            <Text style={{ fontWeight: 750, fontSize: 12 * widthScaleFactor, color: '#F00A0A', lineHeight: 14 * widthScaleFactor }}>{`Due Date: `}
+                                                                <Text style={{ fontWeight: 400, fontSize: 12 * widthScaleFactor, color: 'black', lineHeight: 14 * widthScaleFactor }}>{`${formattedDueDate}`}</Text>
+                                                            </Text>
+
+                                                        </View>
+
+                                                    </View>
+
+                                                </View>
+
+                                            </View>}
+
+
+                                        <View style={{
+                                            position: 'absolute',
+                                            left: 38 * widthScaleFactor,
+                                            top: (invoiceData?.placeOfDelivery && invoiceData?.cfs) || (invoiceData?.placeOfDelivery !== '' && invoiceData?.cfs !== '') ? 577 * heightScaleFactor : 537 * heightScaleFactor,
+                                            width: 718 * widthScaleFactor,
+                                            borderWidth: 1 * widthScaleFactor,
+                                            borderColor: '#C2E2F4',
+                                            alignSelf: 'center',
+                                        }}>
+                                            <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                                                <View style={{ flex: 2, justifyContent: 'center', }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 'bold',
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                            color: '#008AC6',
+                                                        }}>
+                                                        {`Description`}
+                                                    </Text>
+
+                                                </View>
+
+                                                <View style={{ flex: 2, justifyContent: 'center', }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 'bold',
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                            color: '#008AC6',
+                                                        }}>
+                                                        {`Notes`}
+                                                    </Text>
+                                                </View>
+
+                                                <View style={{ flex: 1, justifyContent: 'center', }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 'bold',
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                            color: '#008AC6',
+                                                        }}>
+                                                        {`Quantity`}
+                                                    </Text>
+                                                </View>
+
+                                                <View style={{ flex: 2, justifyContent: 'center', }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 'bold',
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                            color: '#008AC6',
+                                                        }}>
+                                                        {`Amount`}
+                                                    </Text>
+                                                </View>
+
+                                            </View>
+
+                                            <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 5,
+                                                }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            marginLeft: 2 * widthScaleFactor,
+                                                        }}>
+                                                        {`FOB`}
+                                                    </Text>
+                                                </View>
+
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                        }}>
+                                                        {`${convertedCurrency(Number(invoiceData?.paymentDetails.fobPrice))}`}
+                                                    </Text>
+                                                </View>
+
+                                            </View>
+
+                                            <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 5,
+                                                }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            marginLeft: 2 * widthScaleFactor,
+                                                        }}>
+                                                        {`Freight`}
+                                                    </Text>
+                                                </View>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                        }}>
+                                                        {`${convertedCurrency(Number(invoiceData?.paymentDetails.freightPrice))}`}
+                                                    </Text>
+                                                </View>
+
+                                            </View>
+
+                                            <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 5,
+                                                    flexDirection: 'row',
+                                                }}>
+                                                    {invoiceData?.paymentDetails.inspectionIsChecked && (invoiceData?.paymentDetails.incoterms == "C&F" || invoiceData?.paymentDetails.incoterms == "FOB") && <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            marginLeft: 2 * widthScaleFactor,
+                                                        }}>
+                                                        {invoiceData?.paymentDetails.inspectionIsChecked ? `Inspection [${invoiceData?.paymentDetails.inspectionName}]` : ' '}
+                                                    </Text>}
+
+                                                    {invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                                        <>
+                                                            <Text
+                                                                style={{
+                                                                    fontWeight: 400,
+                                                                    fontSize: 12 * widthScaleFactor,
+                                                                    lineHeight: 14 * widthScaleFactor,
+                                                                    marginBottom: 3 * heightScaleFactor,
+                                                                    marginLeft: 2 * widthScaleFactor,
+                                                                }}>
+                                                                {invoiceData?.paymentDetails.inspectionIsChecked ? `Inspection [${invoiceData?.paymentDetails.inspectionName}]` : ' '}
+                                                            </Text>
+                                                            <Text
+                                                                style={{
+                                                                    fontWeight: 400,
+                                                                    fontSize: 12 * widthScaleFactor,
+                                                                    lineHeight: 14 * widthScaleFactor,
+                                                                    marginBottom: 3 * heightScaleFactor,
+                                                                    marginLeft: 2 * widthScaleFactor,
+                                                                }}>
+                                                                {invoiceData?.paymentDetails.incoterms == "CIF" ? ` + Insurance` : ' '}
+                                                            </Text>
+                                                        </>
+                                                    }
+
+                                                    {!invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                                        <Text
+                                                            style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                marginLeft: 2 * widthScaleFactor,
+                                                            }}>
+                                                            {invoiceData?.paymentDetails.incoterms == "CIF" ? `Insurance` : ' '}
+                                                        </Text>
+                                                    }
+
+                                                    {!invoiceData?.paymentDetails.inspectionIsChecked && (invoiceData?.paymentDetails.incoterms == "C&F" || invoiceData?.paymentDetails.incoterms == "FOB") &&
+                                                        <Text
+                                                            style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                            }}>
+                                                            {' '}
+                                                        </Text>
+                                                    }
+
+
+                                                </View>
+
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                }}>
+
+                                                    {invoiceData?.paymentDetails.inspectionIsChecked && (invoiceData?.paymentDetails.incoterms == "C&F" || invoiceData?.paymentDetails.incoterms == "FOB") && <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                        }}>
+                                                        {invoiceData?.paymentDetails.inspectionIsChecked ? `${convertedCurrency(Number(invoiceData?.paymentDetails.inspectionPrice))}` : ' '}
+                                                    </Text>}
+
+                                                    {invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                                        <Text
+                                                            style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                            {invoiceData?.paymentDetails.inspectionIsChecked ? `${convertedCurrency(Number(invoiceData?.paymentDetails.inspectionPrice))}` : ' '}
+                                                            <Text
+                                                                style={{
+                                                                    fontWeight: 400,
+                                                                    fontSize: 12 * widthScaleFactor,
+                                                                    lineHeight: 14 * widthScaleFactor,
+                                                                    marginBottom: 3 * heightScaleFactor,
+                                                                }}>
+                                                                {invoiceData?.paymentDetails.incoterms === "CIF" ? ` + ${convertedCurrency(Number(invoiceData?.paymentDetails.insurancePrice))}` : ' '}
+                                                            </Text>
+                                                        </Text>
+
+                                                    }
+
+                                                    {!invoiceData?.paymentDetails.inspectionIsChecked && invoiceData?.paymentDetails.incoterms == "CIF" &&
+                                                        <Text
+                                                            style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+
+                                                            }}>
+                                                            {invoiceData?.paymentDetails.incoterms == "CIF" ? `${convertedCurrency(Number(invoiceData?.paymentDetails.insurancePrice))}` : ' '}
+                                                        </Text>
+                                                    }
+
+                                                </View>
+
+
+                                            </View>
+
+                                            <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 5,
+                                                    flexDirection: 'row',
+                                                }}>
+                                                    {invoiceData?.paymentDetails.additionalName && (invoiceData?.paymentDetails.additionalName).length > 0 && <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            marginLeft: 2 * widthScaleFactor,
+                                                        }}>
+                                                        {invoiceData?.paymentDetails.additionalName && (invoiceData?.paymentDetails.additionalName).length > 0 ? `${invoiceData?.paymentDetails.additionalName.join(' + ')}` : ' '}
+                                                    </Text>}
+
+
+                                                </View>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                }}>
+                                                    <Text
+                                                        style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                        }}>
+                                                        {invoiceData?.paymentDetails.additionalPrice && invoiceData?.paymentDetails.additionalPrice.length > 0
+                                                            ? invoiceData?.paymentDetails.additionalPrice.map(price => {
+                                                                const converted = convertedCurrency(Number(price));
+                                                                return converted;
+                                                            }).join(' + ')
+                                                            : ' '}
+                                                    </Text>
+                                                </View>
+
+                                            </View>
+
+                                            <View style={{ flex: 1, flexDirection: 'row', }}>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                    flexDirection: 'row',
+                                                    paddingVertical: 2 * heightScaleFactor,
+
+                                                }}>
+                                                    {invoiceData?.carData && invoiceData?.carData.carName ? (
+                                                        <Text style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                            marginLeft: 2 * widthScaleFactor,
+                                                        }}>
+                                                            {"Used Vehicle\n"}
+                                                            <Text style={{
+                                                                fontWeight: 700,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${invoiceData?.carData.carName}\n`}
+                                                            </Text>
+                                                            <Text style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${invoiceData?.carData.chassisNumber}\n`}
+                                                            </Text>
+                                                            <Text style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${invoiceData?.carData.exteriorColor}\n`}
+                                                            </Text>
+                                                            <Text style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${Number(invoiceData?.carData.engineDisplacement).toLocaleString('en-US')} cc\n`}
+                                                            </Text>
+                                                            <Text style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${Number(invoiceData?.carData.mileage).toLocaleString('en-US')} km\n`}
+                                                            </Text>
+                                                            <Text style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${invoiceData?.carData.fuel}\n`}
+                                                            </Text>
+                                                            <Text style={{
+                                                                fontWeight: 400,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                alignSelf: 'center',
+                                                            }}>
+                                                                {`${invoiceData?.carData.transmission}\n`}
+                                                            </Text>
+                                                        </Text>
+
+                                                    ) : (
+                                                        <Text>{' '}</Text>
+                                                    )}
+
+
+                                                </View>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'center',
+                                                }}>
+                                                    {invoiceData?.paymentDetails && invoiceData?.paymentDetails.incoterms && invoiceData?.discharge.port && invoiceData?.discharge ? (
+                                                        <Text style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                        }}>
+                                                            {`${invoiceData?.paymentDetails.incoterms} ${invoiceData?.discharge.port}`}
+                                                        </Text>
+                                                    ) : (
+                                                        <Text>{' '}</Text>
+                                                    )}
+                                                </View>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'center',
+                                                }}>
+                                                    {invoiceData?.carData && invoiceData?.carData.carName ? (
+                                                        <Text style={{
+                                                            fontWeight: 400,
+                                                            fontSize: 12 * widthScaleFactor,
+                                                            lineHeight: 14 * widthScaleFactor,
+                                                            marginBottom: 3 * heightScaleFactor,
+                                                            alignSelf: 'center',
+                                                        }}>
+                                                            {'1'}
+                                                        </Text>
+                                                    ) : (
+                                                        <Text>{' '}</Text>
+                                                    )}
+
+
+                                                </View>
+
+                                                <View style={{
+                                                    borderTopWidth: 1 * widthScaleFactor,
+                                                    borderColor: '#C2E2F4',
+                                                    flex: 2,
+                                                    justifyContent: 'center',
+                                                    flexDirection: 'row',
+                                                }}>
+                                                    {invoiceData?.paymentDetails && invoiceData?.paymentDetails.totalAmount ? (
+                                                        <>
+                                                            <Text style={{
+                                                                fontWeight: 700,
+                                                                fontSize: 12 * widthScaleFactor,
+                                                                lineHeight: 14 * widthScaleFactor,
+                                                                marginBottom: 3 * heightScaleFactor,
+                                                                color: '#008AC6',
+                                                                marginRight: 10 * widthScaleFactor,
+                                                                top: 51 * heightScaleFactor,
+                                                                left: 50 * widthScaleFactor,
+                                                                position: 'absolute',
+                                                            }}>
+                                                                {"Total"}
+                                                                <Text style={{
+                                                                    fontWeight: 700,
+                                                                    fontSize: 12 * widthScaleFactor,
+                                                                    lineHeight: 14 * widthScaleFactor,
+                                                                    marginBottom: 3 * heightScaleFactor,
+                                                                    alignSelf: 'center',
+                                                                    color: '#00720B',
+                                                                    marginLeft: 5 * widthScaleFactor,
+                                                                }}>
+                                                                    {`${totalPriceCalculated()}`}
+                                                                </Text>
+                                                            </Text>
+
+                                                        </>
+                                                    ) : (
+                                                        <Text>{' '}</Text>
+                                                    )}
+                                                </View>
+
+                                            </View>
+
+                                        </View>
+
+                                        <View style={{ position: 'absolute', left: 38 * widthScaleFactor, top: 825 * heightScaleFactor, width: 350 * widthScaleFactor, }}>
+                                            <Text style={{
+                                                fontWeight: 700,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'Payment Information:'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'The customer is responsible for the bank charges incurred when the T/T (Telegraphic Transfer) is paid.'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                                marginBottom: 5 * heightScaleFactor,
+                                            }}>
+                                                {'No warranty service is provided on used vehicles.'}
+                                            </Text>
+
+                                            <Text style={{
+                                                fontWeight: 700,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'Conditions for order cancellation:'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'(1) Order Cancellation Penalty: If the order is cancelled after payment, a penalty of USD 220 will apply.'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                                marginBottom: 5 * heightScaleFactor,
+
+                                            }}>
+                                                {'(2) Non-refund: Payment for vehicles purchased through pre-delivery inspection is non-refundable.'}
+                                            </Text>
+
+                                            <Text style={{
+                                                fontWeight: 700,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'Intermediary Banking Information:'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'Bank Name: SUMITOMO MITSUI BANKING CORPORATION (NEW YORK BRANCH).'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+
+                                            }}>
+                                                {'Swift code: SMBCUS33'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                            }}>
+                                                {'Address: 277 Park Avenue'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+
+                                            }}>
+                                                {'City: New York, NY'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+
+                                            }}>
+                                                {'Postal Code: 10172'}
+                                            </Text>
+                                            <Text style={{
+                                                fontWeight: 400,
+                                                fontSize: 12 * widthScaleFactor,
+                                                lineHeight: 14 * heightScaleFactor,
+                                                marginBottom: 5 * heightScaleFactor,
+
+                                            }}>
+                                                {'Country: United States'}
+                                            </Text>
+                                        </View>
+
+                                        {selectedChatData.stepIndicator.value < 3 ? null :
+                                            <View style={{ position: 'absolute', right: 39 * widthScaleFactor, top: 835 * heightScaleFactor, width: 300 * widthScaleFactor, }}>
+                                                <View style={{
+                                                    width: 300 * widthScaleFactor,
+                                                    alignItems: 'center',
+                                                    paddingBottom: 80 * heightScaleFactor, // Adjust this value to control space between image and line
+                                                }}>
+                                                    {/* <NativeImage
+                                                        source={require('../../assets/RMJ Invoice Signature with Hanko.png')}
+                                                        style={{
+                                                            width: 276 * widthScaleFactor,
+                                                            height: 81 * heightScaleFactor,
+                                                            resizeMode: 'contain',
+                                                            alignSelf: 'center',
+                                                            marginBottom: 0, // Minimize margin to keep the line close
+                                                        }}
+                                                    /> */}
+                                                    <View style={{
+                                                        borderBottomWidth: 1 * heightScaleFactor,
+                                                        borderColor: 'black', // Change the color as needed
+                                                        width: '100%', // Line width as per your requirement
+                                                    }} />
+                                                    <Text italic style={{
+                                                        fontWeight: 700,
+                                                        fontSize: 16 * widthScaleFactor,
+                                                    }}>
+                                                        {'Real Motor Japan'}
+                                                    </Text>
+                                                </View>
+
+                                                <View style={{
+                                                    width: 300 * widthScaleFactor,
+                                                    alignItems: 'center',
+                                                    paddingBottom: 5 * heightScaleFactor, // Adjust this value to control space between image and line
+                                                }}>
+
+                                                    <View style={{
+                                                        borderBottomWidth: 1 * heightScaleFactor,
+                                                        borderColor: 'black', // Change the color as needed
+                                                        width: '100%', // Line width as per your requirement
+                                                    }} />
+                                                    <Text italic style={{
+                                                        fontWeight: 700,
+                                                        fontSize: 16 * widthScaleFactor,
+                                                    }}>
+                                                        {'Your Signature'}
+                                                    </Text>
+                                                </View>
+                                            </View>}
+
+
+                                    </View>
+                                }
+
+
+                            </ScrollView>
+
+                        }
+
+                    </NativeBaseModal>
+                </>
+            }
+            </>
+        </NativeBaseProvider>
+    );
+
+}
 
 const TimelineStatus = ({ currentStep }) => {
     const stepValue = currentStep?.value
@@ -167,7 +2643,1047 @@ const TimelineStatus = ({ currentStep }) => {
         </View>
     );
 };
+const DocDelAdd = ({ selectedChatId, userEmail }) => {
+    const activeChatId = selectedChatId;
+    console.log('active chat id', activeChatId)
+    let formData
 
+    const styles = StyleSheet.create({
+        input: {
+            height: 40,
+            borderColor: 'gray',
+            borderWidth: 1,
+            marginTop: 5,
+            marginBottom: 10,
+            padding: 10,
+            borderRadius: 5
+        }
+    });
+    const [showData, setShowData] = useState({});
+    const [selectedCountry, setSelectedCountry] = useState({ value: '', label: 'Select Country' });
+    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedCountryNotify, setSelectedCountryNotify] = useState({ value: '', label: 'Select Country' });
+    const [selectedCityNotify, setSelectedCityNotify] = useState('');
+    const [userData, setUserData] = useState(null);
+    const [isChecked, setIsChecked] = useState(false);
+    const [isCheckedNotify, setIsCheckedNotify] = useState(false);
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const userDocRef = doc(projectExtensionFirestore, 'accounts', userEmail);
+            try {
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUserData(userDoc.data());
+                } else {
+                    console.log('No user with that Email')
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error)
+            }
+        };
+        if (isChecked) {
+            setShowData({
+                fullName: `${userData?.textFirst} ${userData?.textLast}`,
+                country: selectedCountry.value ? selectedCountry?.label : userData?.country,
+                city: selectedCity ? selectedCity?.label : userData?.city,
+                address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}`,
+                email: userData?.textEmail,
+                telephones: userData?.textPhoneNumber
+            });
+        }
+        if (userEmail) {
+            fetchUserData();
+        }
+    }, [userEmail, isChecked, selectedCountry, selectedCity])
+    //fetch customer information
+
+
+    const handleOutsidePress = () => {
+        if (countryModal) setCountryModal(false);
+        if (cityModal) setCityModal(false);
+
+    };
+
+    //fetch countries
+    const [countryData, setCountryData] = useState([]);
+    const [countryModal, setCountryModal] = useState(false);
+    const [countryModalNotify, setCountryModalNotify] = useState(false);
+
+    const handleCountrySelect = (item) => {
+        if (countryModal === true) {
+            setSelectedCountry(item);
+            toggleCountryModal();
+
+        }
+    };
+
+    const renderCountries = ({ item }) => (
+        <Pressable style={{
+            padding: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+            zIndex: 10
+        }}
+            onPress={() => handleCountrySelect(item)}
+        >
+
+            <Text style={{
+                fontSize: 16,
+                color: '#333'
+            }}>{item.label}</Text>
+        </Pressable>
+    );
+
+    const toggleCountryModal = () => {
+        setCountryModal(!countryModal)
+    }
+    const toggleCountryModalNotify = () => {
+        setCountryModalNotify(!countryModalNotify)
+    }
+    useEffect(() => {
+        try {
+            const countriesData = Country.getAllCountries().map((country) => ({
+                value: country.isoCode,
+                label: country.name
+            }));
+            const defaultOption = { value: '', label: 'Select Country' };
+            setCountryData([defaultOption, ...countriesData]);
+        } catch (error) {
+            console.error('Error Fetching countries:', error)
+        }
+    }, []);
+
+    //fetch countries
+
+    //fetch cities
+    const [cityData, setCityData] = useState([]);
+    const [cityModal, setCityModal] = useState(false);
+    const [cityModalNotify, setCityModalNotify] = useState(false);
+    const toggleCityModal = () => {
+        setCityModal(!cityModal)
+    };
+    const toggleCityModalNotify = () => {
+        setCityModalNotify(!cityModalNotify)
+    };
+    const handleCitySelect = (item) => {
+        if (cityModal === true) {
+            setSelectedCity(item);
+            toggleCityModal();
+
+        } else {
+            return;
+        }
+    };
+    useEffect(() => {
+        if (selectedCountry.value) {
+            const countryCities = City.getCitiesOfCountry(selectedCountry?.value);
+            const citiesData = countryCities.map((city) => ({
+                label: city.name
+            }));
+
+            setCityData(citiesData);
+        } else {
+            return;
+        }
+
+    }, [selectedCountry, selectedCountryNotify]);
+
+    const renderCities = ({ item }) => (
+        <Pressable style={{
+            padding: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+        }}
+            onPress={() => handleCitySelect(item)}
+        >
+            <Text style={{
+                fontSize: 16,
+                color: '#333'
+            }}>{item.label}</Text>
+        </Pressable>
+    );
+    //fetch cities
+
+
+
+    //variables ref
+
+    const fullNameRef = useRef(null);
+    const addressRef = useRef(null);
+    const emailRef = useRef(null);
+    const [telephoneInputs, setTelephoneInputs] = useState([0]); // Array of input indices
+    const telephoneRefs = useRef({ 0: '' }); // Initialize the first input with an empty string
+    const addTelephoneInput = () => {
+        // Check if there are already 3 inputs
+        if (telephoneInputs.length >= 3) {
+            alert('Max Telephone numbers.');
+            return; // Stop the function if the limit is reached
+        }
+        const newInputId = Object.keys(telephoneRefs.current).length;
+        // Initialize new input reference with an empty string instead of null
+        telephoneRefs.current[newInputId] = '';
+        setTelephoneInputs(prev => [...prev, newInputId]);
+    };
+    const faxRef = useRef(null);
+
+    const [ip, setIp] = useState('');
+    const [ipCountry, setIpCountry] = useState('');
+
+    // useEffect to fetch IP and Country
+    useEffect(() => {
+        async function fetchIpAndCountry() {
+            try {
+                // Fetch the IP address
+                const ipResponse = await axios.get('https://api.ipify.org?format=json');
+                const fetchedIp = ipResponse.data.ip;
+                setIp(fetchedIp);
+
+                // Fetch IP Country
+                if (fetchedIp) {
+                    const countryResponse = await axios.get(`https://ipapi.co/${fetchedIp}/json/`);
+                    const fetchedIpCountry = countryResponse.data.country_name;
+                    setIpCountry(fetchedIpCountry);
+                }
+            } catch (error) {
+                console.error("Error fetching IP information:", error);
+            }
+        }
+
+        fetchIpAndCountry();
+    }, []);
+    //fetch ip address
+
+    const handleSubmit = async () => {
+
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const { datetime } = response.data;
+
+        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+
+        console.log("Refs at submission:", telephoneRefs.current);
+        const telephones = telephoneInputs.map(inputId =>
+            telephoneRefs.current[inputId] ? telephoneRefs.current[inputId].value : 'Ref not set'
+        );
+
+        console.log("Telephone values:", telephones);
+
+
+        if (isChecked) {
+
+            formData = {
+                fullName: `${userData?.textFirst} ${userData?.textLast}` || (fullNameRef.current ? fullNameRef.current.value : ''),
+                country: selectedCountry?.label || userData?.country,
+                city: selectedCity?.label || userData?.city,
+                address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}` || (addressRef.current ? addressRef.current.value : ''),
+                fax: faxRef.current ? faxRef.current.value : '',
+                email: userData?.textEmail || (emailRef.current ? emailRef.current.value : ''),
+                telephones: telephones
+            };
+        } else {
+            // If isCheckedNotify is true but isChecked is false, use form inputs directly
+            formData = {
+                fullName: fullNameRef.current ? fullNameRef.current.value : '',
+                country: selectedCountry ? selectedCountry.label : '',
+                city: selectedCity ? selectedCity.label : '',
+                address: addressRef.current ? addressRef.current.value : '',
+                fax: faxRef.current ? faxRef.current.value : '',
+                email: emailRef.current ? emailRef.current.value : '',
+                telephones: telephones
+            };
+        }
+
+        const messageText = `🌟 DOCUMENT DELIVERY ADDRESS 🌟
+
+Hello! 👋
+
+I would like to provide you with the details necessary for the delivery of my order. Please see the information below and let me know if everything is in order for the upcoming shipment.
+
+🔍 Delivery Details:
+
+- Full Name: ${formData?.fullName}
+- Country: ${formData?.country}
+- City: ${formData?.city}
+- Address: ${formData?.address}
+- Fax Number: ${formData?.fax}
+- Email: ${formData?.email}
+- Telephones: ${formData.telephones ? formData.telephones.join(', ') : 'No telephones provided'}
+
+Please confirm the receipt of this information and update me with any further steps required from my side.
+
+Thank you for your assistance and looking forward to a smooth delivery process! 😊
+
+Kind regards,
+${formData?.fullName}`
+
+
+        console.log("formData", formData);
+        console.log("telephones", formData.telephones);
+        console.log("message", messageText);
+        try {
+            const orderRef = doc(projectExtensionFirestore, 'chats', activeChatId);
+            const accountRef = doc(projectExtensionFirestore, 'accounts', userEmail);
+            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', activeChatId, 'messages'));
+            const messageData = {
+                sender: userEmail, // Sender's email
+                text: messageText,
+                timestamp: formattedTime,
+                messageType: 'DocDelAdded',
+                ip: ip,
+                ipCountry: ipCountry
+            };
+
+            await setDoc(newMessageDocExtension, messageData, { merge: true });
+            await updateDoc(orderRef, {
+                docDelAdd: {
+                    deliveryInfo: {
+                        formData,
+                        sameAsBuyer: isChecked
+                    }
+                },
+
+            });
+            await updateDoc(accountRef, {
+                deliveryInfo: {
+                    formData
+                }
+            })
+            const fieldUpdate = collection(projectExtensionFirestore, 'chats');
+
+            await updateDoc(doc(fieldUpdate, activeChatId), {
+                lastMessage: messageText,
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+            setModalVisible(false)
+        } catch (error) {
+            console.error('Error updating Proforma Invoice:', error);
+        }
+    };
+    //variables ref
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const handlePress = () => {
+        setModalVisible(true);
+        handleOutsidePress();
+    };
+    const [isCheck, setIsCheck] = useState(false);
+    const checkButton = (option) => {
+        setIsCheck(option);
+
+    }
+    const setOrderInvoice = async () => {
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const { datetime } = response.data;
+        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+        const randomNumber = Math.floor(10000 + Math.random() * 90000);
+        const bookingListCollectionRef = collection(projectExtensionFirestore, 'BookingList');
+
+        const customerInfo = {
+            fullName: fullName || fullNameDB,
+            country: selectedCountryLabel || countryDB,
+            city: selectedCity || cityDB,
+            address: address || addressDB,
+            telNumber: telNumber || telNumberDB,
+            email: userEmailInput || userEmailInputDB,
+        };
+
+
+        const infoCustomerInput = {
+            fullName: fullNameNotifyInput,
+            country: selectedCountryNotifyLabel,
+            city: selectedCityNotify,
+            address: addressNotify,
+            telNumber: telNumberNotify,
+            email: emailNotify,
+        };
+
+        try {
+            const orderRef = doc(projectExtensionFirestore, 'chats', chatId);
+            const invoiceRef = doc(projectExtensionFirestore, 'IssuedInvoice', chatField?.invoiceNumber);
+            const vehicleRef = doc(projectExtensionFirestore, 'VehicleProducts', carData?.stockID);
+            const newBookingListDocRef = doc(bookingListCollectionRef, chatId);
+            // const fieldUpdate = collection(projectExtensionFirestore, 'chats');
+            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', chatId, 'messages'));
+            const messageData = {
+                sender: userEmail, // Sender's email
+                text: "I agree with all the condition and place the order.",
+                timestamp: formattedTime,
+                orderInvoiceIssue: true,
+                setPaymentNotification: true,
+                ip: ip,
+                ipCountry: ipCountry
+            };
+            await updateDoc(invoiceRef, {
+                orderPlaced: true,
+
+            });
+            await updateDoc(vehicleRef, {
+                reservedTo: userEmail,
+                stockStatus: 'Reserved'
+            })
+
+            await updateDoc(orderRef, {
+                orderInvoice: {
+                    proformaIssue: true,
+                    customerInfo,
+                    notifyParty: isCheckedNotify ? customerInfo : infoCustomerInput,
+                    dateIssued: formattedTime, // Add formatted date
+                },
+                lastMessage: 'I agree with all the condition and place the order.',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+            await setDoc(newMessageDocExtension, messageData);
+            // await setDoc(fieldUpdate, chatId, {
+            //     DocumentsUpload: {
+            //         ExportCertificate: '',
+            //         ShippingInstructions: '',
+            //         BillOfLading: '',
+            //         InspectionSheet: '',
+            //         DHLTrackingNumber: '',
+            //         InvoiceNumber: randomNumber.toString()
+            //     },
+
+            // });
+            await setDoc(newBookingListDocRef, {
+                DocumentsUpload: {
+                    ExportCertificate: '',
+                    ShippingInstructions: '',
+                    BillOfLading: '',
+                    InspectionSheet: '',
+                    DHLTrackingNumber: '',
+                    InvoiceNumber: randomNumber.toString()
+                },
+                lastMessage: 'I agree with all the condition and place the order.',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+        } catch (error) {
+            console.error('Error updating Proforma Invoice:', error);
+        }
+    };
+
+    return (
+        <Pressable
+            style={({ pressed, hovered }) => [
+
+                {
+                    backgroundColor: hovered ? '#0F7534' : '#16A34A',
+                    opacity: pressed ? 0.5 : 1,
+                    borderRadius: 5,
+                    width: 200,
+                    marginTop: 5,
+                    padding: 5
+                }
+            ]}
+            onPress={handlePress}
+        >
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                flex: 1,
+
+            }}>
+                <Text style={{ color: 'white', fontWeight: '700' }}>Input Delivery Address</Text>
+            </View>
+
+            {
+                modalVisible && (
+                    <Modal
+                        transparent={true}
+                        animationType='fade'
+                        visible={modalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+                        <TouchableWithoutFeedback onPress={handleOutsidePress}>
+                            <View style={{
+                                flex: 3,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                position: 'relative',
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)'// Ensure this is positioned relatively to contain absolute children
+                            }}>
+
+                                <TouchableOpacity
+                                    style={{
+                                        position: 'absolute', // Position absolutely to cover the entire container
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'transparent' // Ensure it's transparent to see below views
+                                    }}
+                                    onPress={() => setModalVisible(false)}
+                                />
+                                <View style={{ width: '100%', maxWidth: 600, height: '100%', maxHeight: 680, backgroundColor: 'white', borderRadius: 2, zIndex: 10 }}>
+                                    <TouchableOpacity style={{ alignSelf: 'flex-end', margin: 15 }} onPress={() => setModalVisible(false)}>
+                                        <AntDesign name="close" size={25} />
+                                    </TouchableOpacity>
+                                    <View style={{ paddingBottom: 10, borderTopLeftRadius: 5, borderTopRightRadius: 5, borderBottomWidth: 1, borderBottomColor: 'blue', marginHorizontal: 40 }}>
+                                        <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18, color: 'blue' }}>Document Delivery Information</Text>
+                                    </View>
+                                    <ScrollView style={{ width: '100%' }}>
+                                        <View style={{ marginBottom: 10, padding: 20, marginHorizontal: 15 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Delivery Information</Text>
+                                                <TouchableOpacity onPress={() => {
+                                                    setIsChecked(prevState => {
+
+                                                        const newState = !prevState;
+                                                        setSelectedCountry({ value: '' });
+                                                        setSelectedCity('');
+                                                        setCityData([]);
+                                                        handleOutsidePress();
+
+                                                        return newState;
+                                                    });
+                                                }}
+
+                                                    style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                                                    <MaterialIcons
+                                                        name={isChecked ? 'check-box' : 'check-box-outline-blank'}
+                                                        size={20}
+                                                        color="black"
+                                                    />
+                                                    <Text>Set as customer's information <Text style={{ color: 'red' }}>*</Text></Text>
+                                                </TouchableOpacity>
+                                            </View>
+
+                                            {isChecked ? (
+                                                <>
+                                                    <View>
+                                                        <Text>Full Name</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={fullNameRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholder="Enter full name"
+                                                            placeholderTextColor={'#CCCCCC'}
+                                                            defaultValue={isChecked ? showData?.fullName : ''}
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10, }}>
+
+                                                        <View style={{
+                                                            flex: 1
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>Country</Text>
+                                                            <Pressable
+                                                                onPress={toggleCountryModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{isChecked ? showData?.country : 'Select Country'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            countryModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {countryModal && (
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+                                                                    overflow: 'scroll',
+                                                                    zIndex: 1
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={countryData}
+                                                                        renderItem={renderCountries}
+                                                                        keyExtractor={(item) => item.label}
+
+                                                                    />
+
+                                                                </View>
+
+
+                                                            )}
+
+                                                        </View>
+
+                                                        <View style={{
+                                                            flex: 1, marginLeft: 10
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>City</Text>
+                                                            <Pressable
+                                                                onPress={toggleCityModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{isChecked ? showData?.city : 'Select City'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            cityModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {cityModal && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+                                                                    overflow: 'scroll',
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={cityData}
+                                                                        renderItem={renderCities}
+                                                                        keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
+                                                                    />
+
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+                                                    </View>
+
+                                                    <View>
+                                                        <Text>Address</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={addressRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholder="Enter Address"
+                                                            placeholderTextColor={'#CCCCCC'}
+                                                            defaultValue={isChecked ? showData?.address : ''}
+                                                        />
+
+                                                    </View>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Text>Telephone Number</Text>
+                                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+                                                        </View>
+                                                        {telephoneInputs.map((inputId, index) => (
+                                                            <View key={inputId}>
+                                                                <TextInput
+                                                                    key={isChecked ? 'controlled' : 'uncontrolled' + inputId}  // Append inputId to ensure uniqueness
+                                                                    style={{
+                                                                        borderWidth: 1,
+                                                                        borderColor: '#CCCCCC',
+                                                                        padding: 10,
+                                                                        borderRadius: 5,
+                                                                        marginBottom: 10,
+                                                                        zIndex: -1
+                                                                    }}
+                                                                    placeholder={`Telephone Number ${index + 1}`}
+                                                                    placeholderTextColor={'#CCCCCC'}
+                                                                    ref={el => {
+                                                                        telephoneRefs.current[inputId] = el;
+                                                                        if (el && !isChecked && index !== 0) {  // Clear text only for non-first inputs when not checked
+                                                                            el.setNativeProps({ text: '' });
+                                                                        }
+                                                                    }}
+                                                                    defaultValue={isChecked && index === 0 ? showData?.telephones : ''}
+                                                                />
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View>
+                                                        <Text>Fax Number</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={faxRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholder="Enter Fax Number"
+                                                            placeholderTextColor={'#CCCCCC'}
+
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ marginBottom: 5 }}>
+                                                        <Text>E-mail</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={emailRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholder="Enter Address"
+                                                            defaultValue={isChecked ? showData?.email : ''}
+                                                        />
+
+                                                    </View>
+                                                </>) : (<>
+                                                    <View>
+                                                        <Text>Full Name</Text>
+                                                        <TextInput
+                                                            ref={fullNameRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholder="Enter full name"
+                                                            placeholderTextColor={'#CCCCCC'}
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10, flex: 1, alignItems: 'center' }}>
+
+                                                        <View style={{ flex: 1 }}>
+                                                            <Text style={{ marginBottom: 2 }}>Country</Text>
+                                                            <Pressable
+                                                                onPress={toggleCountryModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3,
+                                                                    flex: 1
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text style={{ color: selectedCountry?.value ? 'black' : '#ccc' }}>{selectedCountry?.value ? selectedCountry?.label : 'Select Country'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            countryModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {countryModal && (
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ccc',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+                                                                    overflow: 'scroll',
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={countryData}
+                                                                        renderItem={renderCountries}
+                                                                        keyExtractor={(item) => item.label}
+                                                                        horizontal={false}
+                                                                        onScroll
+                                                                    />
+                                                                </View>
+                                                            )}
+
+                                                        </View>
+
+
+                                                        <View style={{
+                                                            flex: 1, marginLeft: 10
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>City</Text>
+                                                            <Pressable
+                                                                onPress={toggleCityModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text style={{ color: '#ccc' }}>{selectedCity ? selectedCity?.label : 'Select City'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            cityModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {cityModal && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ccc',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+                                                                    overflow: 'scroll',
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={cityData}
+                                                                        renderItem={renderCities}
+                                                                        keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
+                                                                    />
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+                                                    </View>
+
+                                                    <View style={{ zIndex: -10 }}>
+                                                        <Text>Address</Text>
+                                                        <TextInput
+                                                            ref={addressRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholder="Enter address"
+                                                            placeholderTextColor={'#CCCCCC'}
+                                                        />
+                                                    </View>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Text>Telephone Number</Text>
+                                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+                                                        </View>
+                                                        {telephoneInputs.map((inputId, index) => (
+                                                            <View key={index}>
+                                                                <TextInput
+                                                                    style={{
+                                                                        borderWidth: 1,
+                                                                        borderColor: '#CCCCCC',
+                                                                        padding: 10,
+                                                                        borderRadius: 5,
+                                                                        marginBottom: 10,
+                                                                        zIndex: -1
+                                                                    }}
+                                                                    placeholder={`Telephone Number ${index + 1}`}
+                                                                    placeholderTextColor={'#CCCCCC'}
+                                                                    ref={el => {
+                                                                        if (el && !telephoneRefs.current[inputId]) {
+                                                                            console.log("Assigning ref for input", inputId);
+                                                                            telephoneRefs.current[inputId] = el;
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View>
+                                                        <Text>Fax Number</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={faxRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholderTextColor={'#CCCCCC'}
+                                                            placeholder="Enter Fax Number"
+
+                                                        />
+                                                    </View>
+                                                    <View style={{ marginBottom: 5 }}>
+                                                        <Text>E-mail</Text>
+                                                        <TextInput
+                                                            ref={emailRef}
+                                                            style={{
+                                                                borderWidth: 1,
+                                                                borderColor: '#CCCCCC',
+                                                                padding: 10,
+                                                                borderRadius: 5,
+                                                                marginBottom: 10,
+                                                                zIndex: -1
+                                                            }}
+                                                            placeholderTextColor={'#CCCCCC'}
+                                                            placeholder="Enter email" />
+                                                    </View>
+                                                </>)}
+
+
+
+
+
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, zIndex: -5 }}>
+                                                {isCheck ? (
+                                                    <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
+                                                ) : (
+                                                    <Feather name='square' size={20} onPress={() => checkButton(true)} />
+                                                )}
+                                                <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
+                                            </View>
+
+                                            <View style={{ marginTop: 15, flexDirection: 'row', zIndex: -5, justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <TouchableOpacity style={{
+                                                    backgroundColor: 'white',
+                                                    padding: 15,
+                                                    borderRadius: 5,
+                                                    alignItems: 'center',
+                                                    marginBottom: 10,
+                                                    flex: 1, // Makes button expand
+                                                    marginRight: 5,
+                                                    zIndex: -1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'center',
+                                                    borderColor: 'black',
+                                                    borderWidth: 2
+                                                }}>
+                                                    <Text style={{ color: 'black', fontWeight: '600', fontSize: 16 }}>Cancel</Text>
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity
+                                                    style={{
+                                                        backgroundColor: '#0642F4',
+                                                        padding: 15,
+                                                        borderRadius: 5,
+                                                        alignItems: 'center',
+                                                        marginBottom: 10,
+                                                        flex: 1, // Makes button expand
+                                                        marginRight: 5,
+                                                        zIndex: -1,
+                                                        flexDirection: 'row',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                    onPress={() => {
+                                                        handleSubmit()
+                                                    }}
+                                                >
+                                                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Finish</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+
+
+
+
+                                    </ScrollView>
+                                </View>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </Modal>
+
+                )
+            }
+        </Pressable>
+    )
+}
 
 const LoadingLeftComponent = () => {
     const styles = StyleSheet.create({
@@ -420,79 +3936,7 @@ const TextInputForChat = ({ scrollViewRef, chatId }) => {
     }, [chatId, inputRef]);
 
     return (
-        <View style={[styles.inputContainer, { zIndex: 999 }]}>
-            {showFileExceeded && (
-                <Modal
-                    animationType="fade"
-                    transparent={true}
-                    visible={showFileExceeded}
-                    onRequestClose={() => setShowFileExceeded(false)}
-                >
-                    <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
-                        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' }}>
-                            <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10, maxWidth: 300, width: '80%' }}>
-                                <Text>File size exceeds the maximum limit.</Text>
-                                <TouchableOpacity onPress={() => setShowFileExceeded(false)}>
-                                    <Text style={{ color: 'blue', marginTop: 10 }}>Close</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
-            )}
-            {isHovered && (
-                <View style={{
-                    position: 'absolute',
-                    backgroundColor: '#333',
-                    padding: 8,
-                    borderRadius: 4,
-                    marginTop: 10,
-                    left: 30,
-                    transform: [{ translateX: -25 }],
-                    top: -40,
-                }}>
-                    <Text style={{ color: '#fff' }}>Upload Files</Text>
-                    <View
-                        style={{
-                            position: 'absolute',
-                            top: 25,
-                            width: 0,
-                            height: 0,
-                            borderStyle: 'solid',
-                            borderTopWidth: 0,
-                            borderRightWidth: 15,
-                            borderBottomWidth: 15,
-                            borderLeftWidth: 15,
-                            borderLeftColor: 'transparent',
-                            borderRightColor: 'transparent',
-                            borderTopColor: 'transparent',
-                            borderBottomColor: '#333',
-                            transform: [{ rotate: '180deg' }],
-                            transition: 'transform 0.5s ease, opacity 0.5s ease',
-                            zIndex: -999
-                        }}
-                    ></View>
-                </View>
-            )}
-            <Pressable
-                onHoverIn={() => setIsHovered(true)}
-                onHoverOut={() => setIsHovered(false)}
-                onPress={() => uploadRemitterFiles()}
-                style={({ pressed, hovered }) => [
-                    {
-                        opacity: pressed ? 0.5 : 1,
-                        backgroundColor: hovered ? '#f1f1f1' : 'transparent',
-                        borderRadius: hovered ? 50 : 0,
-                        margin: 5,
-                        alignItems: 'center',
-                    },
-                    { zIndex: 999 }
-                ]}
-            >
-                <MaterialIcons name={'attach-file'} size={25} style={{ margin: 5, color: '#7b9cff' }} />
-            </Pressable>
-
-            <InvoiceAmendment />
+        <View style={[styles.inputContainer, { zIndex: 999, margin: 5, marginTop: 0, marginRight: 17, borderRadius: 3 }]}>
             <View style={{ flex: 3, flexDirection: 'row', alignItems: 'center' }}>
                 {selectedFile && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
@@ -512,7 +3956,7 @@ const TextInputForChat = ({ scrollViewRef, chatId }) => {
                     multiline
                     numberOfLines={1}
                     showsVerticalScrollIndicator={false}
-                    style={[styles.input, { overflow: 'hidden' }]}  // Set min and max height directly
+                    style={[styles.input, { outlineStyle: 'none' }]}
                     onChange={(e) => {
                         const target = e.nativeEvent.target;
                         target.style.height = '0px';  // Reset the height
@@ -535,48 +3979,122 @@ const TextInputForChat = ({ scrollViewRef, chatId }) => {
 
                 />
 
+                <Pressable
+                    style={({ pressed, hovered }) => [
+                        {
+                            borderRadius: 50,  // Always set borderRadius to 5
+                            backgroundColor: hovered ? '#E5EBFE' : 'transparent',
+                            height: 50,  // Increase height when hovered
+                            width: 50,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+
+                        },
+                    ]}
+                    onPress={() => {
+                        const trimmedMessage = messageValue.trim();  // Trim the message value
+                        if (trimmedMessage.length > 0) {  // Only proceed if the message is not empty
+                            if (selectedFile) {
+                                updateCustomerFiles();  // Update if a file is selected
+                            } else {
+                                handleSend(trimmedMessage);  // Send the trimmed message if no file is selected
+                            }
+                        }
+                        setMessages('');  // Clear the message input in the state
+                        if (inputRef && inputRef.current) {
+                            const fakeEvent = { nativeEvent: { target: inputRef.current } };
+                            resetInput(fakeEvent);  // Reset the input height and overflow using a simulated event
+                        }
+                        setTimeout(() => scrollViewRef.current.scrollToEnd({ animated: true }), 100);
+                    }}
+                >
+                    <Ionicons name="send-sharp" size={20} color="blue" />
+                </Pressable>
+
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+                {showFileExceeded && (
+                    <Modal
+                        animationType="fade"
+                        transparent={true}
+                        visible={showFileExceeded}
+                        onRequestClose={() => setShowFileExceeded(false)}
+                    >
+                        <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
+                            <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' }}>
+                                <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10, maxWidth: 300, width: '80%' }}>
+                                    <Text>File size exceeds the maximum limit.</Text>
+                                    <TouchableOpacity onPress={() => setShowFileExceeded(false)}>
+                                        <Text style={{ color: 'blue', marginTop: 10 }}>Close</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                )}
+                {/* {isHovered && (
+                    <View style={{
+                        position: 'absolute',
+                        backgroundColor: '#333',
+                        padding: 8,
+                        borderRadius: 4,
+                        marginTop: 10,
+                        left: 30,
+                        transform: [{ translateX: -25 }],
+                        top: -40,
+                    }}>
+                        <Text style={{ color: '#fff' }}>Upload Files</Text>
+                        <View
+                            style={{
+                                position: 'absolute',
+                                top: 25,
+                                width: 0,
+                                height: 0,
+                                borderStyle: 'solid',
+                                borderTopWidth: 0,
+                                borderRightWidth: 15,
+                                borderBottomWidth: 15,
+                                borderLeftWidth: 15,
+                                borderLeftColor: 'transparent',
+                                borderRightColor: 'transparent',
+                                borderTopColor: 'transparent',
+                                borderBottomColor: '#333',
+                                transform: [{ rotate: '180deg' }],
+                                transition: 'transform 0.5s ease, opacity 0.5s ease',
+                                zIndex: -999
+                            }}
+                        ></View>
+                    </View>
+                )} */}
+                <Pressable
+                    onHoverIn={() => setIsHovered(true)}
+                    onHoverOut={() => setIsHovered(false)}
+                    onPress={() => uploadRemitterFiles()}
+                    style={({ pressed, hovered }) => [
+                        {
+                            opacity: pressed ? 0.5 : 1,
+                            backgroundColor: hovered ? '#f1f1f1' : 'transparent',
+                            borderRadius: hovered ? 50 : 0,
+                            margin: 5,
+                            alignItems: 'center',
+                        },
+                        { zIndex: 999 }
+                    ]}
+                >
+                    <MaterialIcons name={'attach-file'} size={20} style={{ margin: 5, color: '#7b9cff' }} />
+                </Pressable>
+
+
+
+
 
 
             </View>
 
-
-
-            <Pressable
-                style={({ pressed, hovered }) => [
-                    {
-                        borderRadius: 5,  // Always set borderRadius to 5
-                        backgroundColor: hovered ? '#E5EBFE' : 'transparent',
-                        height: 50,  // Increase height when hovered
-                        width: 50,
-                        alignItems: 'center',
-                        justifyContent: 'center' // Increase width when hovered
-                    },
-                ]}
-                onPress={() => {
-                    const trimmedMessage = messageValue.trim();  // Trim the message value
-                    if (trimmedMessage.length > 0) {  // Only proceed if the message is not empty
-                        if (selectedFile) {
-                            updateCustomerFiles();  // Update if a file is selected
-                        } else {
-                            handleSend(trimmedMessage);  // Send the trimmed message if no file is selected
-                        }
-                    }
-                    setMessages('');  // Clear the message input in the state
-                    if (inputRef && inputRef.current) {
-                        const fakeEvent = { nativeEvent: { target: inputRef.current } };
-                        resetInput(fakeEvent);  // Reset the input height and overflow using a simulated event
-                    }
-                    setTimeout(() => scrollViewRef.current.scrollToEnd({ animated: true }), 100);
-                }}
-            >
-                <Ionicons name="send-sharp" size={25} color="blue" />
-            </Pressable>
-
-
         </View>
     )
 }
-const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, scrollViewRef, modalVisible }) => {
+const ChatD = ({ openModalRequest, updateReadby, handleScroll, scrollViewRef, modalVisible, selectedChatData, invoiceData }) => {
     //BREAKPOINT
     const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
     useEffect(() => {
@@ -1057,6 +4575,9 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
     // if (!showView) {
     //     return null; // Or return a loading component if you want
     // }
+
+
+
     return (
         <View
             style={{ backgroundColor: '#E5EBFE' }}
@@ -1084,7 +4605,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
 
             >
                 {chatMessages && (
-                    <ScrollView
+                    <View
                         style={{ backgroundColor: '#E5EBFE' }}
                     >
                         <TouchableOpacity onPress={loadMoreMessages} style={{ padding: 10, backgroundColor: 'lightgray', alignItems: 'center' }}>
@@ -1105,7 +4626,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                             renderItem={({ item }) => (
                                 <View>
                                     {!item.setOrderButton && !item.setPaymentNotification && !item.orderInvoiceIssue && !item.proformaIssue && !item.amendedInvoiceIssue && !item.shippingInstruction
-                                        && !item.billOfLading && !item.receiverInfoIssue && (
+                                        && !item.billOfLading && !item.receiverInfoIssue && !item.messageType && (
                                             <View
                                                 style={[
                                                     styles.chatContainer,
@@ -1209,7 +4730,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                         </View>
                                     )}
 
-                                    {item.orderInvoiceIssue === true && (
+                                    {/* {item.orderInvoiceIssue === true && (
                                         <View
                                             style={[
                                                 styles.chatContainer,
@@ -1222,8 +4743,8 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                             <Text style={{ color: 'black' }}>{item.text}</Text>
                                             <ViewOrderInvoice />
                                         </View>
-                                    )}
-                                    {item.proformaIssue === true ? (
+                                    )} */}
+                                    {item.messageType === 'IssuedInvoice' ? (
                                         <View
                                             style={[
                                                 styles.chatContainer,
@@ -1233,8 +4754,8 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                                 },
                                             ]}
                                         >
-                                            <Text style={{ color: 'white' }}>{item.text}</Text>
-                                            <ViewInvoice />
+                                            <PreviewInvoice selectedChatData={selectedChatData} invoiceData={invoiceData} />
+
                                         </View>
                                     ) : null}
 
@@ -1251,6 +4772,102 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                         >
                                             <Text style={{ color: 'white' }}>{item.text}</Text>
                                             <ViewOrderInvoice />
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'InputDocDelAdd' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#FFCC00' : '#D40511',
+                                                    alignItems: 'center'
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black', fontWeight: '700' }}>{item.text}</Text>
+
+                                            <DocDelAdd selectedChatId={chatId} userEmail={userEmail} />
+
+
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'InputPayment' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#F1F5FF' : 'white',
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black' }}>{item.text}</Text>
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'InvoiceAmendment' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#F1F5FF' : 'white',
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black' }}>{item.text}</Text>
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'important' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#F1F5FF' : 'white',
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black' }}>{item.text}</Text>
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'FullPayment' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#F1F5FF' : 'white',
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black' }}>{item.text}</Text>
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'RequestInvoice' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#F1F5FF' : 'white',
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black' }}>{item.text}</Text>
+                                        </View>
+                                    ) : null}
+                                    {item.messageType === 'DocDelAdded' ? (
+                                        <View
+                                            style={[
+                                                styles.chatContainer,
+                                                {
+                                                    alignSelf: item.sender === userEmail ? 'flex-end' : 'flex-start',
+                                                    backgroundColor: item.sender === userEmail ? '#F1F5FF' : 'white',
+                                                },
+                                            ]}
+                                        >
+                                            <Text style={{ color: 'black' }}>{item.text}</Text>
                                         </View>
                                     ) : null}
 
@@ -1306,7 +4923,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                             <ReceiverInformation />
                                         </View>
                                     ) : null}
-                                    {/* Add more conditions as needed */}
+
                                     <Text
                                         style={{
                                             color: 'black',
@@ -1324,7 +4941,7 @@ const ChatD = ({ selectedChatI, openModalRequest, updateReadby, handleScroll, sc
                                 </View>
                             )}
                         />
-                    </ScrollView>
+                    </View>
                 )}
             </View>
 
@@ -1400,7 +5017,11 @@ const dataFromCarl = () => {
         }
     }
 }
-const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideLeft, setShowInMobile, hideLeft, activeChatId }) => {
+const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideLeft, setShowInMobile, hideLeft, activeChatId, selectedChatData, invoiceData }) => {
+
+
+
+
     const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
     useEffect(() => {
         const handleDimensionsChange = ({ window }) => {
@@ -1936,6 +5557,9 @@ const InformationData = ({ currentStep, totalSteps, requestToggleRight, setHideL
                                     ].filter(Boolean).join(' + ')}
                                 </Text>
                                 <RequestProformaInvoice activeChatId={chatId} />
+
+                                {invoiceData && Object.keys(invoiceData)?.length > 0 && <PreviewInvoice selectedChatId={activeChatId} selectedChatData={selectedChatData} invoiceData={invoiceData} />}
+                                {activeChatId && <InvoiceAmendment activeChatId={activeChatId} />}
                             </View>
 
                         </View>
@@ -2288,7 +5912,7 @@ const InformationDataLeft = ({ setHideLeft, setShowInMobile, setRightVisible, se
         </View>
     )
 }
-const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClick, notification, setNotification, handleHover }) => {
+const InformationDataRight = ({ chatField, openModalRequest, modalVisible, handleButtonClick, notification, setNotification, handleHover }) => {
 
     console.log('THIS IS INSIDE INFORMATION DATA RIGHT', notification)
 
@@ -2354,7 +5978,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
         }
     }, [chatId]);
 
-    const [chatField, setChatField] = useState([]);
+
     const handleOpenLink = (link) => {
         Linking.openURL(link);
     };
@@ -2387,57 +6011,17 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
             console.error('Error fetching download URL:', error);
         }
     };
-    const [carId, setCarId] = useState('');
+
     const [bookingField, setBookingField] = useState([]);
-    useEffect(() => {
-        // Define the reference to the chat document with the specific chatId
-        const chatRef = doc(projectExtensionFirestore, 'chats', chatId);
-        const bookingRef = doc(projectExtensionFirestore, 'BookingList', chatId);
-        // Listen for real-time updates to the document
-        const unsubscribe = onSnapshot(chatRef, (chatDocSnapshot) => {
-            if (chatDocSnapshot.exists()) {
-                // Extract the carId, carName, and carRefNumber from the document data
-                const vehicleData = chatDocSnapshot.data()?.carData;
-                const chatData = chatDocSnapshot.data();
-                if (chatData) {
-                    setChatField(chatData);
-                }
-                if (vehicleData) {
-                    setCarId(vehicleData.stockID);
-                }
-                const proformaInvoice = chatDocSnapshot.data()?.proformaInvoice;
-                if (proformaInvoice) {
-                    // setProformaIssue(proformaInvoice.proformaIssue);
-                }
-            }
 
-        }, (error) => {
-            console.error('Error listening to chat document:', error);
-        });
-        const unsubscribeBooking = onSnapshot(bookingRef, (bookingDocSnapshot) => {
-            if (bookingDocSnapshot.exists()) {
-                const bookingData = bookingDocSnapshot.data();
-                if (bookingData) {
-                    setBookingField(bookingData);
-                }
-            }
-        }, (error) => {
-            console.error('Error listening to chat document:', error);
-        });
-
-        return () => {
-            // Unsubscribe from the listener when the component unmounts
-            unsubscribe();
-            unsubscribeBooking();
-        };
-    }, [chatId]);
 
     //fetch the cardata
-    const [carData, setCarData] = useState('');
+    const [carData, setCarData] = useState({});
+
     useEffect(() => {
-        if (carId) {
+        if (chatField && chatField.carData) {
             // Create a reference to the document
-            const vehicleDocRef = doc(projectExtensionFirestore, 'VehicleProducts', carId);
+            const vehicleDocRef = doc(projectExtensionFirestore, 'VehicleProducts', chatField.carData.stockID);
 
             // Listen for real-time updates to the document
             const unsubscribe = onSnapshot(vehicleDocRef, (docSnapshot) => {
@@ -2454,7 +6038,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
             // Return a cleanup function to unsubscribe when the component unmounts
             return () => unsubscribe();
         }
-    }, [carId]); //USES NEW DATABASE BUT STILL NEED CHECKING
+    }, [chatField]); //USES NEW DATABASE BUT STILL NEED CHECKING
     // const [showView, setShowView] = useState(false);
     // useEffect(() => {
     //     const timer = setTimeout(() => {
@@ -3263,974 +6847,7 @@ const InformationDataRight = ({ openModalRequest, modalVisible, handleButtonClic
     )
 };
 
-const InvoiceAmendment = () => {
-    const [modalVisible, setModalVisible] = useState(false);
-    const openModalRequest = () => {
-        setModalVisible(!modalVisible);
-    };
-    const { userEmail } = useContext(AuthContext);
-    const { chatId } = useParams();
-    //COUNTRY AND CITY
-    const [countries, setCountries] = useState([]);
-    const [showCountries, setShowCountries] = useState(false);
-    const [selectedCountry, setSelectedCountry] = useState('');
-    const [selectedCountryLabel, setSelectedCountryLabel] = useState('Country');
-    const [filter, setFilter] = useState('');
-    const toggleCountries = () => {
-        setShowCountries(!showCountries);
-        setFilter('');
-        setFilteredCountries(countries);
-        setShowCities(false);
-    };
-    const [showCountriesNotify, setShowCountriesNotify] = useState(false);
-    const [selectedCountryNotify, setSelectedCountryNotify] = useState('');
-    const [selectedCountryNotifyLabel, setSelectedCountryNotifyLabel] = useState('Country');
-    const [filterNotify, setFilterNotify] = useState('');
-    const [filteredCountriesNotify, setFilteredCountriesNotify] = useState(countries);
-    const handleClearNotify = () => {
-        setSelectedCountryNotifyLabel('Country');
-        setSelectedCityNotify('City');
-        setSelectedCountryNotify('');
-    };
-    const toggleCountriesNotify = () => {
-        setShowCountriesNotify(!showCountriesNotify);
-        setFilterNotify('');
-        setFilteredCountriesNotify(countries);
-        setShowCitiesNotify(false);
-    }
 
-    useEffect(() => {
-        try {
-            const countriesData = Country.getAllCountries().map((country) => ({
-                value: country.isoCode,
-                label: country.name
-            }));
-            setFilteredCountries(countriesData);
-            setCountries(countriesData);
-            setFilteredCountriesNotify(countriesData);
-        } catch (error) {
-            console.error('Error Fetching countries:', error)
-        }
-    }, []);
-    const [filteredCountries, setFilteredCountries] = useState(countries);
-    const handleFilterChange = (text) => {
-        setFilter(text);
-        setFilterCities(text);
-        setFilterNotify(text);
-        const filteredData = countries.filter(item =>
-            item.label.toLowerCase().includes(text.toLowerCase()));
-        const filteredDataCities = cities.filter(item => item.label.toLowerCase().includes(text.toLowerCase()));
-        setFilteredCountries(filteredData);
-        setFilteredCities(filteredDataCities);
-        setFilteredCountriesNotify(filteredData);
-        setFilteredCitiesNotify(filteredDataCities);
-    };
-    const [cities, setCities] = useState([]);
-    const [filteredCities, setFilteredCities] = useState(cities);
-    const [showCities, setShowCities] = useState(false);
-    const [selectedCity, setSelectedCity] = useState('City');
-    const [filterCities, setFilterCities] = useState('');
-    const toggleCities = () => {
-        setShowCities(!showCities);
-        setFilterCities('');
-        setFilteredCities(cities);
-        setShowCountries(false);
-    };
-    useEffect(() => {
-        if (selectedCountry) {
-            const countryCities = City.getCitiesOfCountry(selectedCountry);
-            const citiesData = countryCities.map((city) => ({
-                label: city.name
-            }));
-            console.log('All cities inside', citiesData);
-            setCities(citiesData);
-
-            if (citiesData.length <= 0) {
-                setSelectedCity(selectedCountryLabel);
-            }
-        }
-        if (selectedCountryNotify) {
-            const countryCities = City.getCitiesOfCountry(selectedCountryNotify);
-            const citiesData = countryCities.map((city) => ({
-                label: city.name
-            }));
-            console.log('All cities inside', citiesData);
-            setCities(citiesData);
-
-            if (citiesData.length <= 0) {
-                setSelectedCityNotify(selectedCountryNotifyLabel);
-            }
-        }
-    }, [selectedCountry, selectedCountryNotify]);
-    const [showCitiesNotify, setShowCitiesNotify] = useState(false);
-    const [selectedCityNotify, setSelectedCityNotify] = useState('City');
-    const [filterCitiesNotify, setFilterCitiesNotify] = useState('');
-    const [filteredCitiesNotify, setFilteredCitiesNotify] = useState(cities);
-    const toggleCitiesNotify = () => {
-        setShowCitiesNotify(!showCitiesNotify)
-        setFilterCitiesNotify('');
-        setFilteredCitiesNotify(cities);
-        setShowCountriesNotify(false);
-    };
-    const handleClear = () => {
-        setSelectedCountryLabel('Country');
-        setSelectedCountry('');
-        setSelectedCity('');
-    };
-    //COUNTRY AND CITY
-
-    //is CHECKEDNOTIFY
-    const [isChecked, setChecked] = useState(false);
-    const [isCheckedNotify, setCheckedNotify] = useState(false);
-
-    //if false
-    const [fullNameNotifyInput, setFullNameNotifyInput] = useState('');
-    const [addressNotify, setAddressNotify] = useState('');
-    const [telNumberNotify, setTelNumberNotify] = useState('');
-    const [emailNotify, setEmailNotify] = useState('');
-
-    //fetching data from STOCKID
-
-    //if true
-    const [fullNameDB, setFullNameDB] = useState('');
-    const [countryDB, setCountryDB] = useState('Country');
-    const [cityDB, setCityDB] = useState('City');
-    const [telNumberDB, setTelNumberDB] = useState('');
-    const [addressDB, setAddressDB] = useState('');
-    //if false
-    const [fullName, setFullName] = useState('');
-    const [address, setAddress] = useState('');
-    const [telNumber, setTelNumber] = useState('');
-
-
-    useEffect(() => {
-        const fetchUserData = async () => {
-            const userDocRef = doc(projectExtensionFirestore, 'accounts', userEmail);
-            try {
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    setFullNameDB(userData.textFirst + ' ' + userData.textLast);
-                    setTelNumberDB('+' + userData.textPhoneNumber);
-                    setAddressDB(userData.textZip + ' ' + userData.textStreet + ',' + ' ' + userData.city);
-                    setCountryDB(userData.country);
-                    setCityDB(userData.city);
-                } else {
-                    console.log('No user with that Email')
-                }
-            } catch (error) {
-                console.error('Error fetching user data:', error)
-            }
-        };
-        if (userEmail) {
-            fetchUserData();
-        }
-    }, [userEmail])
-    //fetching the user's information
-
-    //fetching data from STOCKID carId = STOCKID
-    const [carId, setCarId] = useState(null);
-    useEffect(() => {
-        const fetchCarId = async () => {
-            try {
-                const vehicleIdDocRef = doc(projectExtensionFirestore, 'chats', chatId);
-                const docSnapshot = await getDoc(vehicleIdDocRef);
-
-                if (docSnapshot.exists()) {
-                    const carIdValue = docSnapshot.data().carData.stockID;
-                    setCarId(carIdValue);
-                } else {
-                    console.log('Document does not exist');
-                }
-            } catch (error) {
-                console.error('Error getting document:', error);
-            }
-        }
-
-        fetchCarId(); // Don't forget to call the function!
-    }, [projectExtensionFirestore, chatId]);
-    //fetching data from STOCKID carId = STOCKID
-
-
-    const styles = StyleSheet.create({
-        container: {
-            flexDirection: 'row',
-            alignItems: 'center',
-        },
-        step: {
-            height: 10,
-            width: '30%',
-            backgroundColor: '#ccc',
-        },
-        completed: {
-            backgroundColor: 'green',
-        },
-        circle: {
-            width: 30,
-            height: 30,
-            borderRadius: 15,
-            backgroundColor: '#ff4d4d',
-            justifyContent: 'center',
-            alignItems: 'center',
-        },
-        innerCircle: {
-            width: 20,
-            height: 20,
-            borderRadius: 10,
-            backgroundColor: '#fff',
-        },
-        innerCircleCompleted: {
-            backgroundColor: 'green',
-        },
-        line: {
-            height: 10,
-            width: '30%',
-            backgroundColor: '#ccc',
-            flexShrink: 1,
-        },
-    });
-
-    const [inputEmail, setInputEmail] = useState('');
-    const [inputEmailNotify, setInputEmailNotify] = useState('');
-    const setOrderInvoice = async () => {
-
-        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
-        const { datetime } = response.data;
-
-        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
-        const customerInfo = {
-            fullName: isChecked ? fullNameDB : fullName,
-            country: isChecked ? countryDB : selectedCountryLabel,
-            city: isChecked ? cityDB : selectedCity,
-            address: isChecked ? addressDB : address,
-            telNumber: isChecked ? telNumberDB : telNumber,
-            email: inputEmail,
-        };
-
-        const infoCustomerInput = {
-            fullName: isCheckedNotify ? (isChecked ? fullNameDB : fullName) : fullNameNotifyInput,
-            country: isCheckedNotify ? (isChecked ? countryDB : selectedCountryLabel) : selectedCountryNotifyLabel,
-            city: isCheckedNotify ? (isChecked ? cityDB : selectedCity) : selectedCityNotify,
-            address: isCheckedNotify ? (isChecked ? addressDB : address) : addressNotify,
-            telNumber: isCheckedNotify ? (isChecked ? telNumberDB : telNumber) : telNumberNotify,
-            email: inputEmailNotify,
-        };
-
-        try {
-            const orderRef = doc(projectExtensionFirestore, 'chats', chatId);
-
-            // Create a new message document in the chat conversation with the formatted timestamp as the document ID
-            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', chatId, 'messages'));
-            const messageData = {
-                sender: userEmail, // Sender's email
-                text: `REQUEST AMENDMENT INFORMATION      
-
-Customer Information
-            Full Name: ${isChecked ? fullNameDB : fullName}
-            Country: ${isChecked ? countryDB : selectedCountryLabel}
-            City: ${isChecked ? cityDB : selectedCity}
-            Address: ${isChecked ? addressDB : address}
-            Tel. Number: ${isChecked ? telNumberDB : telNumber}
-            Email: ${inputEmail}
-            
-Notify Party
-            Full Name: ${isCheckedNotify ? (isChecked ? fullNameDB : fullName) : fullNameNotifyInput}
-            Country: ${isCheckedNotify ? (isChecked ? countryDB : selectedCountryLabel) : selectedCountryNotifyLabel}
-            City: ${isCheckedNotify ? (isChecked ? cityDB : selectedCity) : selectedCityNotify}
-            Address: ${isCheckedNotify ? (isChecked ? addressDB : address) : addressNotify}
-            Tel. Number: ${isCheckedNotify ? (isChecked ? telNumberDB : telNumber) : telNumberNotify}
-            Email: ${inputEmailNotify}
-            `,
-                timestamp: formattedTime,
-                requestAmendInvoice: true,
-                infoCustomerInput,
-                customerInfo
-            };
-            await updateDoc(orderRef, {
-                orderInvoice: {
-                    orderInvoiceIssue: true,
-                    customerInfo,
-                    notifyParty: isCheckedNotify ? customerInfo : infoCustomerInput,
-                    dateIssued: formattedTime, // Add formatted date
-                },
-            });
-            await setDoc(newMessageDocExtension, messageData);
-        } catch (error) {
-            console.error('Error updating Proforma Invoice:', error);
-        }
-    };
-
-    //STEP TRACKER
-    const [currentStep, setCurrentStep] = useState(1);
-    const addStep = () => {
-        setCurrentStep(currentStep + 1);
-    };
-    return (
-        <View>
-            <TouchableOpacity onPress={() => openModalRequest()}>
-                <MaterialCommunityIcons name={'file-document-edit'} size={25} style={{ margin: 5, color: '#7b9cff' }} />
-            </TouchableOpacity>
-            <Modal
-                animationType="fade"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={openModalRequest}
-            >
-                <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', alignItems: 'center' }}>
-                    <View style={{ backgroundColor: 'white', width: 992, height: '90%', padding: 10, borderRadius: 10 }}>
-                        <ScrollView>
-                            <View style={{ marginTop: 5 }}>
-
-
-                                <View>
-                                    {currentStep === 1 && (
-
-                                        <View style={{ flexDirection: 'column', zIndex: -2 }}>
-                                            <View style={{}}>
-                                                <Text style={{ fontWeight: '700', color: 'red' }}>*Make Necessary Changes</Text>
-                                            </View>
-                                            <View style={{ flex: 1, marginTop: 5 }}>
-                                                <View style={{ flexDirection: 'row' }}>
-                                                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#4169E1' }}>
-                                                        Customer Information
-                                                    </Text>
-                                                    <TouchableOpacity onPress={() => {
-                                                        setChecked(prev => {
-                                                            if (prev && isChecked) {
-                                                                setFullNameDB(fullNameDB);
-                                                                setCityDB(cityDB);
-                                                                setCountryDB(countryDB);
-                                                                setAddressDB(addressDB);
-                                                                setTelNumberDB(telNumberDB);
-                                                            } else {
-                                                                setFullName(' ');
-                                                                setSelectedCountryLabel('Country')
-                                                                setSelectedCity('City')
-                                                                setAddress(' ')
-                                                                setTelNumber(' ')
-                                                            }
-                                                            return !prev;
-                                                        });
-                                                    }} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
-                                                        <MaterialIcons
-                                                            name={isChecked ? 'check-box' : 'check-box-outline-blank'}
-                                                            size={20}
-                                                            color="black"
-                                                        />
-                                                        <Text>Set as customer's information <Text style={{ color: 'red' }}>*</Text></Text>
-                                                    </TouchableOpacity>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Full Name</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 8, height: 35 }}>
-                                                            {isChecked ? (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingLeft: 5, fontSize: 16 }}
-                                                                    value={fullNameDB}
-                                                                    onChangeText={(text) => setFullNameDB(text)}
-                                                                />
-                                                            ) : (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingLeft: 5, fontSize: 16 }}
-                                                                    value={fullName}
-                                                                    onChangeText={(text) => setFullName(text)}
-                                                                />
-                                                            )}
-
-                                                        </View>
-                                                    </View>
-
-                                                </View>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text style={{ fontSize: 16, fontWeight: '500' }}>Country</Text>
-                                                        <View style={{ flex: 1, zIndex: 2 }}>
-                                                            <TouchableOpacity onPress={toggleCountries} style={{ borderWidth: 1, borderRadius: 5 }}>
-                                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 5, zIndex: -1, height: 40 }}>
-                                                                    <View style={{ alignSelf: 'center' }}>
-                                                                        {isChecked ? (
-                                                                            <Text style={{ textAlignVertical: 'center' }}>{countryDB}</Text>
-                                                                        ) : (
-                                                                            <Text style={{ textAlignVertical: 'center' }}>{selectedCountry ? selectedCountryLabel : 'Country'}</Text>
-                                                                        )}
-                                                                    </View>
-                                                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                                                                        <TouchableOpacity onPress={handleClear} style={{ alignSelf: 'center', marginRight: 5 }}>
-                                                                            <AntDesign name="close" size={15} />
-                                                                        </TouchableOpacity>
-                                                                        <AntDesign
-                                                                            name="down"
-                                                                            size={15}
-                                                                            style={[
-                                                                                { transitionDuration: '0.3s' },
-                                                                                showCountries && {
-                                                                                    transform: [{ rotate: '180deg' }],
-                                                                                },
-                                                                            ]}
-                                                                        />
-                                                                    </View>
-                                                                </View>
-                                                            </TouchableOpacity>
-                                                            {showCountries && (
-                                                                <View style={{
-                                                                    marginTop: 5,
-                                                                    position: 'absolute',
-                                                                    top: '100%',
-                                                                    left: 0,
-                                                                    elevation: 5,
-                                                                    width: '100%',
-                                                                    maxHeight: 200,
-                                                                    backgroundColor: "white",
-                                                                    borderWidth: 1,
-                                                                    borderColor: '#ccc',
-                                                                    shadowColor: '#000',
-                                                                    shadowOffset: { width: 0, height: 4 },
-                                                                    shadowOpacity: 0.25,
-                                                                    shadowRadius: 4,
-                                                                    zIndex: 3
-                                                                }}>
-                                                                    <View style={{
-                                                                        flexDirection: 'row',
-                                                                        alignItems: 'center',
-                                                                        backgroundColor: '#fff',
-                                                                        borderWidth: 0.5,
-                                                                        borderColor: '#000',
-                                                                        height: 40,
-                                                                        borderRadius: 5,
-                                                                        margin: 10,
-                                                                        zIndex: 3
-                                                                    }}>
-                                                                        <AntDesign name="search1" size={20} style={{ margin: 5 }} />
-                                                                        <TextInput
-                                                                            placeholder='Search Country'
-                                                                            style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5 }}
-                                                                            textAlignVertical='center'
-                                                                            placeholderTextColor={'gray'}
-                                                                            value={filter}
-                                                                            onChangeText={handleFilterChange}
-                                                                        />
-                                                                    </View>
-                                                                    <ScrollView>
-                                                                        <FlatList
-                                                                            data={filteredCountries}
-                                                                            keyExtractor={(item) => item.value} // Use item.label as the key
-                                                                            renderItem={({ item }) => (
-                                                                                <TouchableOpacity onPress={() => {
-                                                                                    setSelectedCountryLabel(item.label);
-                                                                                    setSelectedCountry(item.value);
-                                                                                    setShowCountries(false);
-                                                                                    setFilteredCountries(countries);
-                                                                                    setSelectedCity('City')
-                                                                                }}>
-                                                                                    <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
-                                                                                        <Text>{item.label}</Text>
-                                                                                    </View>
-                                                                                </TouchableOpacity>
-                                                                            )}
-                                                                        />
-
-                                                                    </ScrollView>
-                                                                </View>
-                                                            )}
-
-                                                        </View>
-                                                    </View>
-                                                    <View style={{ flex: 1, marginLeft: 5 }}>
-                                                        <Text style={{ fontSize: 16, fontWeight: '500' }}>City</Text>
-                                                        <View style={{ flex: 1, zIndex: 2, }}>
-                                                            <TouchableOpacity onPress={selectedCountry ? toggleCities : null} disabled={!selectedCountry || selectedCountryLabel === 'Country'} style={{ borderWidth: 1, borderRadius: 5 }}>
-
-                                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 5, zIndex: -1, height: 40 }}>
-                                                                    {isChecked ? (
-                                                                        <Text style={{ textAlignVertical: 'center' }}>{cityDB}</Text>
-                                                                    ) : (
-                                                                        <Text style={{ textAlignVertical: 'center' }}>{selectedCity ? selectedCity : 'City'}</Text>
-                                                                    )}
-                                                                    <View style={{ justifyContent: 'center', alignItems: 'flex-end' }}>
-                                                                        <AntDesign
-                                                                            name="down"
-                                                                            size={15}
-                                                                            style={[
-                                                                                { transitionDuration: '0.3s' },
-                                                                                showCities && {
-                                                                                    transform: [{ rotate: '180deg' }],
-                                                                                },
-                                                                            ]}
-                                                                        />
-                                                                    </View>
-                                                                </View>
-
-                                                            </TouchableOpacity>
-                                                            {showCities && (
-                                                                <View
-                                                                    style={{
-                                                                        marginTop: 5,
-                                                                        position: 'absolute',
-                                                                        top: '100%',
-                                                                        left: 0,
-                                                                        elevation: 5,
-                                                                        width: '100%',
-                                                                        maxHeight: 200,
-                                                                        backgroundColor: 'white',
-                                                                        borderWidth: 1,
-                                                                        borderColor: '#ccc',
-                                                                        elevation: 5,
-                                                                        zIndex: 2
-                                                                    }}>
-                                                                    <View style={{
-                                                                        flexDirection: 'row',
-                                                                        alignItems: 'center',
-                                                                        backgroundColor: '#fff',
-                                                                        borderWidth: 0.5,
-                                                                        borderColor: '#000',
-                                                                        height: 40,
-                                                                        borderRadius: 5,
-                                                                        margin: 10,
-                                                                        zIndex: 3
-                                                                    }}>
-                                                                        <AntDesign name="search1" size={20} style={{ margin: 5 }} />
-                                                                        <TextInput
-                                                                            placeholder='Search Cities'
-                                                                            style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5 }}
-                                                                            textAlignVertical='center'
-                                                                            placeholderTextColor={'gray'}
-                                                                            value={filterCities}
-                                                                            onChangeText={handleFilterChange}
-                                                                        />
-                                                                    </View>
-                                                                    <ScrollView>
-                                                                        <FlatList
-                                                                            data={filteredCities}
-                                                                            keyExtractor={(item, index) => index.toString()}
-                                                                            renderItem={({ item }) => (
-                                                                                <TouchableOpacity onPress={() => {
-                                                                                    setSelectedCity(item.label)
-                                                                                    setShowCities(false);
-                                                                                    setFilteredCities(cities);
-                                                                                }}>
-                                                                                    <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
-                                                                                        <Text>{item.label}</Text>
-                                                                                    </View>
-                                                                                </TouchableOpacity>
-                                                                            )}
-                                                                        />
-                                                                    </ScrollView>
-                                                                </View>
-                                                            )}
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Address</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-                                                            {isChecked ? (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={addressDB}
-                                                                    onChangeText={(text) => setAddressDB(text)}
-                                                                />
-                                                            ) : (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={address}
-                                                                    onChangeText={(text) => setAddress(text)}
-                                                                />
-                                                            )}
-
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Tel. Number</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-                                                            {isChecked ? (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={telNumberDB}
-                                                                    onChangeText={(telNumberDB) => setTelNumberDB(telNumberDB)}
-                                                                />
-                                                            ) : (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={telNumber}
-                                                                    onChangeText={(text) => setTelNumber(text)}
-                                                                />
-                                                            )}
-                                                        </View>
-                                                    </View>
-                                                </View>
-
-                                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Email</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-                                                            <TextInput
-                                                                style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                value={inputEmail}
-                                                                onChangeText={(text) => setInputEmail(text)}
-                                                            />
-                                                        </View>
-                                                    </View>
-                                                </View>
-
-                                            </View>
-
-                                            <View style={{ flex: 1, marginLeft: 5, marginTop: 5, zIndex: -2 }}>
-                                                <View style={{ flexDirection: 'row' }}>
-                                                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#4169E1' }}>
-                                                        Notify Party
-                                                    </Text>
-                                                    <TouchableOpacity onPress={() => {
-                                                        setCheckedNotify(prev => {
-                                                            if (prev && isCheckedNotify) {
-                                                                setFullNameDB(fullNameDB);
-                                                                setFullName(fullName);
-                                                                setCityDB(cityDB);
-                                                                setCountryDB(countryDB);
-                                                                setAddressDB(addressDB);
-                                                                setTelNumberDB(telNumberDB);
-                                                                setSelectedCountryLabel(selectedCountryLabel)
-                                                                setSelectedCity(selectedCity)
-                                                                setAddress(address)
-                                                                setTelNumber(telNumber)
-                                                            } else {
-                                                                setFullNameNotifyInput(' ');
-                                                                setSelectedCountryNotifyLabel('Country');
-                                                                setSelectedCountryNotify('');
-                                                                setSelectedCityNotify('City');
-                                                                setAddressNotify('');
-                                                                setTelNumberNotify('');
-                                                            }
-                                                            return !prev;
-                                                        });
-                                                    }} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
-                                                        <MaterialIcons
-                                                            name={isCheckedNotify ? 'check-box' : 'check-box-outline-blank'}
-                                                            size={20}
-                                                            color="black"
-                                                        />
-                                                        <Text>Same as customer <Text style={{ color: 'red' }}>*</Text></Text>
-                                                    </TouchableOpacity>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Full Name</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-                                                            {isCheckedNotify ? (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={isChecked ? fullNameDB : fullName}
-                                                                    onChangeText={(text) => {
-                                                                        setFullNameDB(text);
-                                                                        setFullName(text);
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={fullNameNotifyInput}
-                                                                    onChangeText={(text) => setFullNameNotifyInput(text)}
-                                                                />
-                                                            )}
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text style={{ fontSize: 16, fontWeight: '500' }}>Country</Text>
-                                                        <View style={{ flex: 1, zIndex: 2 }}>
-                                                            <TouchableOpacity onPress={toggleCountriesNotify} style={{ borderWidth: 1, borderRadius: 5 }}>
-                                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 5, zIndex: -1, height: 40 }}>
-                                                                    <View style={{ alignSelf: 'center' }}>
-                                                                        {isCheckedNotify ? (
-                                                                            <Text style={{ textAlignVertical: 'center' }}>
-                                                                                {isChecked ? countryDB : selectedCountryLabel}
-                                                                            </Text>
-                                                                        ) : (
-                                                                            <Text style={{ textAlignVertical: 'center' }}>
-                                                                                {selectedCountryNotifyLabel}
-                                                                            </Text>
-                                                                        )}
-                                                                    </View>
-                                                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                                                                        <TouchableOpacity onPress={handleClearNotify} style={{ alignSelf: 'center', marginRight: 5 }}>
-                                                                            <AntDesign name="close" size={15} />
-                                                                        </TouchableOpacity>
-                                                                        <AntDesign
-                                                                            name="down"
-                                                                            size={15}
-                                                                            style={[
-                                                                                { transitionDuration: '0.3s' },
-                                                                                showCountriesNotify && {
-                                                                                    transform: [{ rotate: '180deg' }],
-                                                                                },
-                                                                            ]}
-                                                                        />
-                                                                    </View>
-                                                                </View>
-                                                            </TouchableOpacity>
-                                                            {showCountriesNotify && (
-                                                                <View style={{
-                                                                    marginTop: 5,
-                                                                    position: 'absolute',
-                                                                    top: '100%',
-                                                                    left: 0,
-                                                                    elevation: 5,
-                                                                    width: '100%',
-                                                                    maxHeight: 200,
-                                                                    backgroundColor: "white",
-                                                                    borderWidth: 1,
-                                                                    borderColor: '#ccc',
-                                                                    shadowColor: '#000',
-                                                                    shadowOffset: { width: 0, height: 4 },
-                                                                    shadowOpacity: 0.25,
-                                                                    shadowRadius: 4,
-                                                                    elevation: 5,
-                                                                    zIndex: 3
-                                                                }}>
-                                                                    <View style={{
-                                                                        flexDirection: 'row',
-                                                                        alignItems: 'center',
-                                                                        backgroundColor: '#fff',
-                                                                        borderWidth: 0.5,
-                                                                        borderColor: '#000',
-                                                                        height: 40,
-                                                                        borderRadius: 5,
-                                                                        margin: 10,
-                                                                        zIndex: 3
-                                                                    }}>
-                                                                        <AntDesign name="search1" size={20} style={{ margin: 5 }} />
-                                                                        <TextInput
-                                                                            placeholder='Search Country'
-                                                                            style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5 }}
-                                                                            textAlignVertical='center'
-                                                                            placeholderTextColor={'gray'}
-                                                                            value={filterNotify}
-                                                                            onChangeText={handleFilterChange}
-                                                                        />
-                                                                    </View>
-                                                                    <ScrollView>
-
-                                                                        <FlatList
-                                                                            data={filteredCountriesNotify}
-                                                                            keyExtractor={(item) => item.label} // Use item.label as the key
-                                                                            renderItem={({ item }) => (
-                                                                                <TouchableOpacity onPress={() => {
-                                                                                    setSelectedCountryNotifyLabel(item.label)
-                                                                                    setSelectedCountryNotify(item.value)
-                                                                                    setShowCountriesNotify(false);
-                                                                                    setFilteredCountriesNotify(countries);
-                                                                                    setSelectedCityNotify('City')
-                                                                                }}>
-                                                                                    <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
-                                                                                        <Text>{item.label}</Text>
-                                                                                    </View>
-                                                                                </TouchableOpacity>
-                                                                            )}
-                                                                        />
-                                                                    </ScrollView>
-                                                                </View>
-                                                            )}
-
-                                                        </View>
-                                                    </View>
-                                                    <View style={{ flex: 1, marginLeft: 5 }}>
-                                                        <Text style={{ fontSize: 16, fontWeight: '500' }}>City</Text>
-                                                        <View style={{ flex: 1, zIndex: 2, }}>
-                                                            <TouchableOpacity onPress={selectedCountryNotify ? toggleCitiesNotify : null} disabled={!selectedCountryNotify || selectedCountryNotifyLabel === 'Country'} style={{ borderWidth: 1, borderRadius: 5 }}>
-
-                                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 5, zIndex: -1, height: 40 }}>
-
-                                                                    {isCheckedNotify ? (
-                                                                        <Text style={{ textAlignVertical: 'center' }}>{
-                                                                            isChecked ? cityDB : selectedCity
-                                                                        }</Text>
-                                                                    ) : (
-                                                                        <Text style={{ textAlignVertical: 'center' }}> {selectedCityNotify}</Text>
-                                                                    )}
-                                                                    <View style={{ justifyContent: 'center', alignItems: 'flex-end' }}>
-                                                                        <AntDesign
-                                                                            name="down"
-                                                                            size={15}
-                                                                            style={[
-                                                                                { transitionDuration: '0.3s' },
-                                                                                showCitiesNotify && {
-                                                                                    transform: [{ rotate: '180deg' }],
-                                                                                },
-                                                                            ]}
-                                                                        />
-                                                                    </View>
-                                                                </View>
-
-                                                            </TouchableOpacity>
-                                                            {showCitiesNotify && (
-                                                                <View
-                                                                    style={{
-                                                                        marginTop: 5,
-                                                                        position: 'absolute',
-                                                                        top: '100%',
-                                                                        left: 0,
-                                                                        elevation: 5,
-                                                                        width: '100%',
-                                                                        maxHeight: 150,
-                                                                        backgroundColor: 'white',
-                                                                        borderWidth: 1,
-                                                                        borderColor: '#ccc',
-                                                                        elevation: 5,
-                                                                        zIndex: 2
-                                                                    }}>
-                                                                    <View style={{
-                                                                        flexDirection: 'row',
-                                                                        alignItems: 'center',
-                                                                        backgroundColor: '#fff',
-                                                                        borderWidth: 0.5,
-                                                                        borderColor: '#000',
-                                                                        height: 40,
-                                                                        borderRadius: 5,
-                                                                        margin: 10,
-                                                                        zIndex: 3
-                                                                    }}>
-                                                                        <AntDesign name="search1" size={20} style={{ margin: 5 }} />
-                                                                        <TextInput
-                                                                            placeholder='Search Cities'
-                                                                            style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5 }}
-                                                                            textAlignVertical='center'
-                                                                            placeholderTextColor={'gray'}
-                                                                            value={filterCitiesNotify}
-                                                                            onChangeText={handleFilterChange}
-                                                                        />
-                                                                    </View>
-                                                                    <ScrollView>
-                                                                        <FlatList
-                                                                            data={filteredCitiesNotify}
-                                                                            keyExtractor={(item, index) => index.toString()}
-                                                                            renderItem={({ item }) => (
-                                                                                <TouchableOpacity onPress={() => {
-
-                                                                                    setSelectedCityNotify(item.label);
-                                                                                    setShowCitiesNotify(false);
-                                                                                    setFilteredCitiesNotify(cities);
-                                                                                }}>
-                                                                                    <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
-                                                                                        <Text>{item.label}</Text>
-                                                                                    </View>
-                                                                                </TouchableOpacity>
-                                                                            )}
-                                                                        />
-                                                                    </ScrollView>
-                                                                </View>
-                                                            )}
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Address</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-                                                            {isCheckedNotify ? (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={isChecked ? addressDB : address}
-                                                                    onChangeText={(text) => { setAddress(text); setAddressDB(text); }}
-                                                                />
-                                                            ) : (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={addressNotify}
-                                                                    onChangeText={(text) => setAddressNotify(text)}
-                                                                />
-                                                            )}
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Tel. Number</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-
-                                                            {isCheckedNotify ? (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={isChecked ? telNumberDB : telNumber}
-                                                                    onChangeText={(text) => { setTelNumber(text); setTelNumberDB(text); }}
-                                                                />
-                                                            ) : (
-                                                                <TextInput
-                                                                    style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                    value={telNumberNotify}
-                                                                    onChangeText={(text) => setTelNumberNotify(text)}
-                                                                />
-                                                            )}
-                                                        </View>
-                                                    </View>
-                                                </View>
-
-
-                                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text>Email</Text>
-                                                        <View style={{ borderWidth: 0.5, backgroundColor: '#F5F7F9', borderRadius: 5, padding: 5, height: 35 }}>
-                                                            <TextInput
-                                                                style={{ height: '100%', outlineStyle: 'none', width: '100%', paddingRight: 5, fontSize: 16 }}
-                                                                value={inputEmailNotify}
-                                                                onChangeText={(text) => setInputEmailNotify(text)}
-                                                            />
-                                                        </View>
-                                                    </View>
-                                                </View>
-
-                                            </View>
-                                        </View>
-
-                                    )}
-
-                                    {currentStep === 2 && (
-                                        <View style={{ zIndex: -2 }}>
-                                            <View style={{ width: '100%', justifyContent: 'center', alignItems: 'center', marginTop: 20 }}>
-                                                <View style={{
-                                                    borderRadius: 90, marginTop: -20
-                                                }}>
-                                                    <Entypo name="check" size={100} color={'#fff'} style={{ position: 'absolute', top: 20, left: 25, zIndex: 2 }} />
-                                                    <View style={{ width: 150, height: 150, borderRadius: 150, backgroundColor: '#00cc00' }} />
-                                                </View>
-                                                <View style={{ marginTop: 5 }}>
-                                                    <Text style={{ fontSize: 18, fontWeight: '800' }}>Edit Confirmed</Text>
-                                                </View>
-                                                <View style={{ marginTop: 5 }}>
-                                                    <Text style={{ fontSize: 16 }}>Please wait for the sales person to issue another Invoice.</Text>
-                                                </View>
-                                                <View style={{ marginTop: 5 }}>
-                                                    <Text style={{ fontSize: 16 }}>Thank you for your patience</Text>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    )}
-                                </View>
-
-                                <View style={{ marginTop: 5, zIndex: -1 }}>
-                                    <TouchableOpacity style={{ backgroundColor: '#7b9cff', padding: 5, justifyContent: 'center', alignItems: 'center', borderRadius: 5, height: 35 }} onPress={() => {
-                                        if (currentStep === 2) {
-                                            openModalRequest();
-                                            setOrderInvoice();
-                                            setCurrentStep(1);
-                                        } else {
-                                            addStep();
-                                        }
-                                    }}>
-                                        <Text style={{ color: '#fff', fontWeight: '600' }}>{currentStep === 2 ? 'Close' : 'Confirm Changes'}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-        </View>
-    )
-};
 
 const AnimatedEntypo = Animated.createAnimatedComponent(Entypo);
 const AnimatedAntDesign = Animated.createAnimatedComponent(AntDesign);
@@ -5474,23 +8091,28 @@ const ProfileOptions = () => {
     );
 };
 const RequestProformaInvoice = ({ activeChatId }) => {
+    let formData
+    let formDataNotify
     const { userEmail } = useContext(AuthContext);
-
     const styles = StyleSheet.create({
         input: {
             height: 40,
             borderColor: 'gray',
             borderWidth: 1,
             marginTop: 5,
-            marginBottom: 15,
+            marginBottom: 10,
             padding: 10,
             borderRadius: 5
         }
     });
     const [showData, setShowData] = useState({});
     const [selectedCountry, setSelectedCountry] = useState({ value: '', label: 'Select Country' });
+    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedCountryNotify, setSelectedCountryNotify] = useState({ value: '', label: 'Select Country' });
+    const [selectedCityNotify, setSelectedCityNotify] = useState('');
     const [userData, setUserData] = useState(null);
     const [isChecked, setIsChecked] = useState(false);
+    const [isCheckedNotify, setIsCheckedNotify] = useState(false);
     useEffect(() => {
         const fetchUserData = async () => {
             const userDocRef = doc(projectExtensionFirestore, 'accounts', userEmail);
@@ -5509,7 +8131,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
             setShowData({
                 fullName: `${userData?.textFirst} ${userData?.textLast}`,
                 country: selectedCountry.value ? selectedCountry?.label : userData?.country,
-                city: userData?.city,
+                city: selectedCity ? selectedCity?.label : userData?.city,
                 address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}`,
                 email: userData?.textEmail,
                 telephones: userData?.textPhoneNumber
@@ -5518,13 +8140,32 @@ const RequestProformaInvoice = ({ activeChatId }) => {
         if (userEmail) {
             fetchUserData();
         }
-    }, [userEmail, isChecked, selectedCountry])
+    }, [userEmail, isChecked, selectedCountry, selectedCity])
     //fetch customer information
+
+
+    const handleOutsidePress = () => {
+        if (countryModal) setCountryModal(false);
+        if (cityModal) setCityModal(false);
+        if (countryModalNotify) setCountryModalNotify(false);
+        if (cityModalNotify) setCityModalNotify(false)
+    };
 
     //fetch countries
     const [countryData, setCountryData] = useState([]);
     const [countryModal, setCountryModal] = useState(false);
+    const [countryModalNotify, setCountryModalNotify] = useState(false);
 
+    const handleCountrySelect = (item) => {
+        if (countryModalNotify === true) {
+            setSelectedCountryNotify(item);
+            toggleCountryModalNotify();
+        } else if (countryModal === true) {
+            setSelectedCountry(item);
+            toggleCountryModal();
+
+        }
+    };
 
     const renderCountries = ({ item }) => (
         <Pressable style={{
@@ -5532,8 +8173,9 @@ const RequestProformaInvoice = ({ activeChatId }) => {
             borderBottomWidth: 1,
             borderBottomColor: '#eee',
         }}
-            onPress={() => { setSelectedCountry(item); toggleCountryModal(); }}
+            onPress={() => handleCountrySelect(item)}
         >
+
             <Text style={{
                 fontSize: 16,
                 color: '#333'
@@ -5543,6 +8185,9 @@ const RequestProformaInvoice = ({ activeChatId }) => {
 
     const toggleCountryModal = () => {
         setCountryModal(!countryModal)
+    }
+    const toggleCountryModalNotify = () => {
+        setCountryModalNotify(!countryModalNotify)
     }
     useEffect(() => {
         try {
@@ -5562,29 +8207,53 @@ const RequestProformaInvoice = ({ activeChatId }) => {
     //fetch cities
     const [cityData, setCityData] = useState([]);
     const [cityModal, setCityModal] = useState(false);
+    const [cityModalNotify, setCityModalNotify] = useState(false);
     const toggleCityModal = () => {
         setCityModal(!cityModal)
     };
-    console.log('CITIES', cityData)
+    const toggleCityModalNotify = () => {
+        setCityModalNotify(!cityModalNotify)
+    };
+    const handleCitySelect = (item) => {
+        if (cityModalNotify === true) {
+            setSelectedCityNotify(item);
+            toggleCityModalNotify();
+        } else if (cityModal === true) {
+            setSelectedCity(item);
+            toggleCityModal();
+
+        } else {
+            return;
+        }
+    };
     useEffect(() => {
         if (selectedCountry.value) {
-            const countryCities = City.getCitiesOfCountry(selectedCountry.value);
+            const countryCities = City.getCitiesOfCountry(selectedCountry?.value);
             const citiesData = countryCities.map((city) => ({
                 label: city.name
             }));
-            console.log('All cities inside', citiesData);
+
             setCityData(citiesData);
+        } else if (selectedCountryNotify.value) {
+            const countryCities = City.getCitiesOfCountry(selectedCountryNotify?.value);
+            const citiesData = countryCities.map((city) => ({
+                label: city.name
+            }));
+
+            setCityData(citiesData);
+        } else {
+            return;
         }
 
-    }, [selectedCountry]);
-    const [selectedCity, setSelectedCity] = useState('');
+    }, [selectedCountry, selectedCountryNotify]);
+
     const renderCities = ({ item }) => (
         <Pressable style={{
             padding: 10,
             borderBottomWidth: 1,
             borderBottomColor: '#eee',
         }}
-            onPress={() => { setSelectedCity(item); toggleCityModal(); }}
+            onPress={() => handleCitySelect(item)}
         >
             <Text style={{
                 fontSize: 16,
@@ -5599,71 +8268,194 @@ const RequestProformaInvoice = ({ activeChatId }) => {
     //variables ref
 
     const fullNameRef = useRef(null);
-    const countryRef = useRef(null);
-    const cityRef = useRef(null);
+
     const addressRef = useRef(null);
     const emailRef = useRef(null);
     const [telephoneInputs, setTelephoneInputs] = useState([0]); // Array of input indices
-    const telephoneRefs = useRef({}); // Object to store refs
-
+    const telephoneRefs = useRef({ 0: '' }); // Initialize the first input with an empty string
     const addTelephoneInput = () => {
+        // Check if there are already 3 inputs
+        if (telephoneInputs.length >= 3) {
+            alert('Max Telephone numbers.');
+            return; // Stop the function if the limit is reached
+        }
         const newInputId = Object.keys(telephoneRefs.current).length;
-        // Directly mutate the ref object to add a new input reference placeholder
-        telephoneRefs.current[newInputId] = null;
-        // Force update to render the new input
+        // Initialize new input reference with an empty string instead of null
+        telephoneRefs.current[newInputId] = '';
         setTelephoneInputs(prev => [...prev, newInputId]);
     };
+    const faxRef = useRef(null);
+
+    const fullNameNotifyRef = useRef(null);
+
+    const addressNotifyRef = useRef(null);
+    const emailNotifyRef = useRef(null);
+    const [telephoneInputsNotify, setTelephoneInputsNotify] = useState([0]); // Array of input indices
+    const telephoneNotifyRefs = useRef({ 0: '' }); // Initialize the first input with an empty string
+    const addTelephoneInputNotify = () => {
+        // Check if there are already 3 inputs
+        if (telephoneInputsNotify.length >= 3) {
+            alert('Max Telephone numbers.');
+            return; // Stop the function if the limit is reached
+        }
+        const newInputId = Object.keys(telephoneNotifyRefs.current).length;
+        // Initialize new input reference with an empty string instead of null
+        telephoneNotifyRefs.current[newInputId] = '';
+        setTelephoneInputsNotify(prev => [...prev, newInputId]);
+    };
+    const faxRefNotify = useRef(null);
+    //fetch ip address
+    const [ip, setIp] = useState('');
+    const [ipCountry, setIpCountry] = useState('');
+
+    // useEffect to fetch IP and Country
+    useEffect(() => {
+        async function fetchIpAndCountry() {
+            try {
+                // Fetch the IP address
+                const ipResponse = await axios.get('https://api.ipify.org?format=json');
+                const fetchedIp = ipResponse.data.ip;
+                setIp(fetchedIp);
+
+                // Fetch IP Country
+                if (fetchedIp) {
+                    const countryResponse = await axios.get(`https://ipapi.co/${fetchedIp}/json/`);
+                    const fetchedIpCountry = countryResponse.data.country_name;
+                    setIpCountry(fetchedIpCountry);
+                }
+            } catch (error) {
+                console.error("Error fetching IP information:", error);
+            }
+        }
+
+        fetchIpAndCountry();
+    }, []);
+    //fetch ip address
+
     const handleSubmit = async () => {
+
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const { datetime } = response.data;
+
+        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+
         console.log("Refs at submission:", telephoneRefs.current);
         const telephones = telephoneInputs.map(inputId =>
             telephoneRefs.current[inputId] ? telephoneRefs.current[inputId].value : 'Ref not set'
         );
+        const telephonesNotify = telephoneInputsNotify.map(inputId =>
+            telephoneNotifyRefs.current[inputId] ? telephoneNotifyRefs.current[inputId].value : 'Ref not set'
+        );
         console.log("Telephone values:", telephones);
-        let formData
 
-        if (isChecked === true) {
+
+        if (isChecked) {
+            // If isCheckedNotify and isChecked are true, use user data if available
             formData = {
-                fullName: `${userData?.textFirst} ${userData?.textLast}` || fullNameRef.current ? fullNameRef.current.value : '', // Adds a space between the first and last name
+                fullName: `${userData?.textFirst} ${userData?.textLast}` || (fullNameRef.current ? fullNameRef.current.value : ''),
                 country: selectedCountry?.label || userData?.country,
-                city: userData?.city,
-                address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}` || addressRef.current ? addressRef.current.value : '', // Adds spaces and commas as needed
-                email: userData?.textEmail || emailRef.current ? emailRef.current.value : '',
-                telephones
+                city: selectedCity?.label || userData?.city,
+                address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}` || (addressRef.current ? addressRef.current.value : ''),
+                fax: faxRef.current ? faxRef.current.value : '',
+                email: userData?.textEmail || (emailRef.current ? emailRef.current.value : ''),
+                telephones: telephones
             };
-
         } else {
+            // If isCheckedNotify is true but isChecked is false, use form inputs directly
             formData = {
                 fullName: fullNameRef.current ? fullNameRef.current.value : '',
-                country: selectedCountry ? selectedCountry?.label : '',
-                city: cityRef.current ? cityRef.current.value : '',
+                country: selectedCountry ? selectedCountry.label : '',
+                city: selectedCity ? selectedCity.label : '',
                 address: addressRef.current ? addressRef.current.value : '',
+                fax: faxRef.current ? faxRef.current.value : '',
                 email: emailRef.current ? emailRef.current.value : '',
-                telephones
+                telephones: telephones
             };
         }
 
-        console.log("Form Data:", formData);
-
+        if (isCheckedNotify) {
+            if (isChecked) {
+                // If isCheckedNotify and isChecked are true, use user data if available
+                formDataNotify = {
+                    fullName: `${userData?.textFirst} ${userData?.textLast}` || (fullNameRef.current ? fullNameRef.current.value : ''),
+                    country: selectedCountry?.label || userData?.country,
+                    city: selectedCity?.label || userData?.city,
+                    address: `${userData?.textStreet}, ${userData?.textZip} ${userData?.city}, ${userData?.country}` || (addressRef.current ? addressRef.current.value : ''),
+                    fax: faxRef.current ? faxRef.current.value : '',
+                    email: userData?.textEmail || (emailRef.current ? emailRef.current.value : ''),
+                    telephones: telephones
+                };
+            } else {
+                // If isCheckedNotify is true but isChecked is false, use form inputs directly
+                formDataNotify = {
+                    fullName: fullNameRef.current ? fullNameRef.current.value : '',
+                    country: selectedCountry ? selectedCountry.label : '',
+                    city: selectedCity ? selectedCity.label : '',
+                    address: addressRef.current ? addressRef.current.value : '',
+                    fax: faxRef.current ? faxRef.current.value : '',
+                    email: emailRef.current ? emailRef.current.value : '',
+                    telephones: telephones
+                };
+            }
+        } else {
+            // If isCheckedNotify is false, you might want to handle this case differently or use default values
+            formDataNotify = {
+                fullName: fullNameNotifyRef.current ? fullNameNotifyRef.current.value : '',
+                country: selectedCountryNotify ? selectedCountryNotify.label : '',
+                city: selectedCityNotify ? selectedCityNotify.label : '',
+                address: addressNotifyRef.current ? addressNotifyRef.current.value : '',
+                fax: faxRefNotify.current ? faxRefNotify.current.value : '',
+                email: emailNotifyRef.current ? emailNotifyRef.current.value : '',
+                telephones: telephonesNotify
+            };
+        }
 
         try {
             const orderRef = doc(projectExtensionFirestore, 'chats', activeChatId);
+            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', activeChatId, 'messages'));
+            const messageData = {
+                sender: userEmail, // Sender's email
+                text: `Request for Proforma Invoice`,
+                timestamp: formattedTime,
+                messageType: 'RequestInvoice',
+                ip: ip,
+                ipCountry: ipCountry
+            };
 
+            await setDoc(newMessageDocExtension, messageData, { merge: true });
             await updateDoc(orderRef, {
                 requestInvoice: {
-                    consignee: formData,
-                    notifyParty: formData
-                }
+                    consignee: {
+                        formData,
+                        sameAsBuyer: isChecked
+                    },
+                    notifyParty: {
+                        formDataNotify,
+                        sameAsConsignee: isCheckedNotify,
+                    }
+                },
+
             })
+            const fieldUpdate = collection(projectExtensionFirestore, 'chats');
+
+            await updateDoc(doc(fieldUpdate, activeChatId), {
+                lastMessage: 'Request for Proforma Invoice',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+            // setModalVisible(false);
         } catch (error) {
             console.error('Error updating Proforma Invoice:', error);
         }
-
     };
     //variables ref
 
     const [modalVisible, setModalVisible] = useState(false);
     const handlePress = () => {
-        setModalVisible(true)
+        setModalVisible(true);
+        handleOutsidePress();
     };
     const [isCheck, setIsCheck] = useState(false);
     const checkButton = (option) => {
@@ -5799,68 +8591,1333 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                         visible={modalVisible}
                         onRequestClose={() => setModalVisible(false)}
                     >
+                        <TouchableWithoutFeedback style={{ flex: 1 }} onPress={handleOutsidePress}>
+                            <View style={{
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                position: 'relative',
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)'// Ensure this is positioned relatively to contain absolute children
+                            }}>
 
-                        <View style={{
-                            flex: 1,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            position: 'relative',
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)'// Ensure this is positioned relatively to contain absolute children
-                        }}>
+                                <TouchableOpacity
+                                    style={{
+                                        position: 'absolute', // Position absolutely to cover the entire container
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'transparent' // Ensure it's transparent to see below views
+                                    }}
+                                    onPress={() => setModalVisible(false)}
+                                />
+                                <View
+                                    style={{
+                                        backgroundColor: '#fff',
+                                        padding: 10,
+                                        width: '100%',
+                                        maxWidth: 600,
+                                        borderRadius: 10,
+                                        shadowOpacity: 0.25,
+                                        shadowRadius: 3.84,
+                                        elevation: 5,
+                                        height: '100%',
+                                        maxHeight: 850,
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <View style={{
+                                        justifyContent: 'center',
+                                        borderBottomColor: 'blue',
+                                        borderBottomWidth: 2,
+                                        marginBottom: 20,
+                                        marginHorizontal: 10
+                                    }}>
+                                        <Text style={{ color: 'blue', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Proforma Invoice</Text>
+                                    </View>
+                                    <ScrollView style={{ width: '100%' }}>
+                                        <View style={{ marginBottom: 10 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Customer Information</Text>
+                                            <TouchableOpacity onPress={() => {
+                                                setIsChecked(prevState => {
 
-                            <TouchableOpacity
-                                style={{
-                                    position: 'absolute', // Position absolutely to cover the entire container
-                                    width: '100%',
-                                    height: '100%',
-                                    backgroundColor: 'transparent' // Ensure it's transparent to see below views
-                                }}
-                                onPress={() => setModalVisible(false)}
-                            />
-                            <View
-                                style={{
-                                    backgroundColor: '#fff',
-                                    padding: 10,
-                                    width: '100%',
-                                    maxWidth: 600,
-                                    borderRadius: 10,
-                                    shadowOpacity: 0.25,
-                                    shadowRadius: 3.84,
-                                    elevation: 5,
-                                    height: '100%',
-                                    maxHeight: 850,
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <View style={{
-                                    justifyContent: 'center',
-                                    borderBottomColor: 'blue',
-                                    borderBottomWidth: 2,
-                                    marginBottom: 20,
-                                    marginHorizontal: 10
-                                }}>
-                                    <Text style={{ color: 'blue', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Proforma Invoice</Text>
+                                                    const newState = !prevState;
+                                                    setSelectedCountry({ value: '' });
+                                                    setSelectedCity('');
+                                                    setCityData([]);
+                                                    handleOutsidePress();
+
+                                                    return newState;
+                                                });
+                                            }}
+
+                                                style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                                                <MaterialIcons
+                                                    name={isChecked ? 'check-box' : 'check-box-outline-blank'}
+                                                    size={20}
+                                                    color="black"
+                                                />
+                                                <Text>Set as customer's information <Text style={{ color: 'red' }}>*</Text></Text>
+                                            </TouchableOpacity>
+                                            {isChecked ? (
+                                                <>
+                                                    <View>
+                                                        <Text>Full Name</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={fullNameRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter full name"
+                                                            defaultValue={isChecked ? showData?.fullName : ''}
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10, }}>
+
+                                                        <View style={{
+                                                            flex: 1
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>Country</Text>
+                                                            <Pressable
+                                                                onPress={toggleCountryModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{isChecked ? showData?.country : 'Select Country'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            countryModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {countryModal && (
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 40, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={countryData}
+                                                                        renderItem={renderCountries}
+                                                                        keyExtractor={(item) => item.label}
+                                                                    />
+
+                                                                </View>
+
+
+                                                            )}
+
+                                                        </View>
+
+                                                        <View style={{
+                                                            flex: 1, marginLeft: 10
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>City</Text>
+                                                            <Pressable
+                                                                onPress={toggleCityModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{isChecked ? showData?.city : 'Select City'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            cityModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {cityModal && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 40, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={cityData}
+                                                                        renderItem={renderCities}
+                                                                        keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
+                                                                    />
+
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+                                                    </View>
+
+                                                    <View>
+                                                        <Text>Address</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={addressRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter Address"
+                                                            defaultValue={isChecked ? showData?.address : ''}
+                                                        />
+
+                                                    </View>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Text>Telephone Number</Text>
+                                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+                                                        </View>
+                                                        {telephoneInputs.map((inputId, index) => (
+                                                            <View key={inputId}>
+                                                                <TextInput
+                                                                    key={isChecked ? 'controlled' : 'uncontrolled' + inputId}  // Append inputId to ensure uniqueness
+                                                                    style={styles.input}
+                                                                    placeholder={`Telephone Number ${index + 1}`}
+                                                                    ref={el => {
+                                                                        telephoneRefs.current[inputId] = el;
+                                                                        if (el && !isChecked && index !== 0) {  // Clear text only for non-first inputs when not checked
+                                                                            el.setNativeProps({ text: '' });
+                                                                        }
+                                                                    }}
+                                                                    defaultValue={isChecked && index === 0 ? showData?.telephones : ''}
+                                                                />
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View>
+                                                        <Text>Fax Number</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={faxRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter Fax Number"
+
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ marginBottom: 5 }}>
+                                                        <Text>E-mail</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={emailRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter Address"
+                                                            defaultValue={isChecked ? showData?.email : ''}
+                                                        />
+
+                                                    </View>
+                                                </>) : (<>
+                                                    <View>
+                                                        <Text>Full Name</Text>
+                                                        <TextInput
+                                                            ref={fullNameRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter full name"
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
+
+                                                        <View style={{
+                                                            flex: 1
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>Country</Text>
+                                                            <Pressable
+                                                                onPress={toggleCountryModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{selectedCountry?.value ? selectedCountry?.label : 'Select Country'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            countryModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {countryModal && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 40, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={countryData}
+                                                                        renderItem={renderCountries}
+                                                                        keyExtractor={(item) => item.label}
+                                                                    />
+
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+
+
+                                                        <View style={{
+                                                            flex: 1, marginLeft: 10
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>City</Text>
+                                                            <Pressable
+                                                                onPress={toggleCityModal}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{selectedCity ? selectedCity?.label : 'Select City'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            cityModal && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {cityModal && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 40, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={cityData}
+                                                                        renderItem={renderCities}
+                                                                        keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
+                                                                    />
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+                                                    </View>
+
+                                                    <View>
+                                                        <Text>Address</Text>
+                                                        <TextInput
+                                                            ref={addressRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter address"
+                                                        />
+                                                    </View>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Text>Telephone Number</Text>
+                                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+                                                        </View>
+                                                        {telephoneInputs.map((inputId, index) => (
+                                                            <View key={index}>
+                                                                <TextInput
+                                                                    style={styles.input}
+                                                                    placeholder={`Telephone Number ${index + 1}`}
+                                                                    ref={el => {
+                                                                        if (el && !telephoneRefs.current[inputId]) {
+                                                                            console.log("Assigning ref for input", inputId);
+                                                                            telephoneRefs.current[inputId] = el;
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View>
+                                                        <Text>Fax Number</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={faxRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter Fax Number"
+
+                                                        />
+                                                    </View>
+                                                    <View style={{ marginBottom: 5 }}>
+                                                        <Text>E-mail</Text>
+                                                        <TextInput
+                                                            ref={emailRef}
+                                                            style={styles.input} placeholder="Enter email" />
+                                                    </View>
+                                                </>)}
+
+                                        </View>
+
+                                        <View style={{ marginBottom: 10 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Notify Party</Text>
+                                            <TouchableOpacity onPress={() => {
+                                                setIsCheckedNotify(prevState => {
+
+                                                    const newState = !prevState;
+                                                    setSelectedCountryNotify({ value: '' });
+                                                    setSelectedCityNotify('');
+                                                    setCityData([]);
+                                                    handleOutsidePress();
+                                                    return newState;
+                                                });
+                                            }}
+
+                                                style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                                                <MaterialIcons
+                                                    name={isCheckedNotify ? 'check-box' : 'check-box-outline-blank'}
+                                                    size={20}
+                                                    color="black"
+                                                />
+                                                <Text>Same as consignee</Text>
+                                            </TouchableOpacity>
+                                            {isCheckedNotify ? (
+                                                <>
+
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <View>
+                                                        <Text>Full Name</Text>
+                                                        <TextInput
+                                                            ref={fullNameNotifyRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter full name"
+                                                        />
+                                                    </View>
+
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
+
+                                                        <View style={{
+                                                            flex: 1
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>Country</Text>
+                                                            <Pressable
+                                                                onPress={toggleCountryModalNotify}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{selectedCountryNotify?.value ? selectedCountryNotify?.label : 'Select Country'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            countryModalNotify && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {countryModalNotify && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={countryData}
+                                                                        renderItem={renderCountries}
+                                                                        keyExtractor={(item) => item.label}
+                                                                    />
+
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+
+                                                        <View style={{
+                                                            flex: 1, marginLeft: 10
+                                                        }}>
+                                                            <Text style={{ marginBottom: 2 }}>City</Text>
+                                                            <Pressable
+                                                                onPress={toggleCityModalNotify}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+                                                                    <Text>{selectedCityNotify ? selectedCityNotify?.label : 'Select City'}</Text>
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            cityModalNotify && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {cityModalNotify && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={cityData}
+                                                                        renderItem={renderCities}
+                                                                        keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
+                                                                    />
+                                                                </View>
+
+
+
+                                                            )}
+
+                                                        </View>
+
+                                                    </View>
+
+                                                    <View>
+                                                        <Text>Address</Text>
+                                                        <TextInput
+                                                            ref={addressNotifyRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter address"
+                                                        />
+                                                    </View>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Text>Telephone Number</Text>
+                                                            <Button title="Add Telephone" onPress={addTelephoneInputNotify} />
+                                                        </View>
+                                                        {telephoneInputsNotify.map((inputId, index) => (
+                                                            <View key={index}>
+                                                                <TextInput
+                                                                    style={styles.input}
+                                                                    placeholder={`Telephone Number ${index + 1}`}
+                                                                    ref={el => {
+                                                                        if (el && !telephoneNotifyRefs.current[inputId]) {
+                                                                            console.log("Assigning ref for input", inputId);
+                                                                            telephoneNotifyRefs.current[inputId] = el;
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View>
+                                                        <Text>Fax Number</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={faxRefNotify}
+                                                            style={styles.input}
+                                                            placeholder="Enter Fax Number"
+
+                                                        />
+                                                    </View>
+                                                    <View style={{ marginBottom: 5 }}>
+                                                        <Text>E-mail</Text>
+                                                        <TextInput
+                                                            ref={emailNotifyRef}
+                                                            style={styles.input} placeholder="Enter email" />
+                                                    </View>
+                                                </>
+                                            )}
+
+                                        </View>
+
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, zIndex: -5 }}>
+                                            {isCheck ? (
+                                                <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
+                                            ) : (
+                                                <Feather name='square' size={20} onPress={() => checkButton(true)} />
+                                            )}
+                                            <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
+                                        </View>
+
+                                        <View style={{ marginTop: 20, flexDirection: 'row', paddingHorizontal: 20, zIndex: -5 }}>
+                                            <TouchableOpacity style={{ backgroundColor: 'white', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, borderColor: 'black', borderWidth: 2 }}>
+                                                <Text style={{ color: 'black', fontWeight: '600', fontSize: 16 }}>Cancel</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={{ backgroundColor: '#7b9cff', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, marginLeft: '5%' }}
+                                                onPress={async () => {
+                                                    await handleSubmit();
+                                                    setModalVisible(false)
+                                                }}
+                                            >
+                                                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Finish</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </ScrollView>
                                 </View>
-                                <ScrollView style={{ width: '100%' }}>
-                                    <View style={{ marginBottom: 10 }}>
-                                        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Customer Information</Text>
-                                        <TouchableOpacity onPress={() => { setIsChecked(prevState => !prevState); setSelectedCountry({ value: '' }) }} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
-                                            <MaterialIcons
-                                                name={isChecked ? 'check-box' : 'check-box-outline-blank'}
-                                                size={20}
-                                                color="black"
-                                            />
-                                            <Text>Set as customer's information <Text style={{ color: 'red' }}>*</Text></Text>
-                                        </TouchableOpacity>
-                                        {isChecked ? (<>
-                                            <View style={{ marginBottom: 5 }}>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </Modal>
+
+                )
+            }
+        </Pressable>
+    )
+}
+const InvoiceAmendment = ({ activeChatId }) => {
+
+    let formData
+    let formDataNotify
+    const { userEmail } = useContext(AuthContext);
+    const styles = StyleSheet.create({
+        input: {
+            height: 40,
+            borderColor: 'gray',
+            borderWidth: 1,
+            marginTop: 5,
+            marginBottom: 10,
+            padding: 10,
+            borderRadius: 5
+        }
+    });
+    const [showData, setShowData] = useState({});
+    const [chatId, setChatId] = useState(activeChatId);
+    const [showDataNotify, setShowDataNotify] = useState({})
+    const [selectedCountry, setSelectedCountry] = useState({ value: '', label: 'Select Country' });
+    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedCountryNotify, setSelectedCountryNotify] = useState({ value: '', label: 'Select Country' });
+    const [selectedCityNotify, setSelectedCityNotify] = useState('');
+    const [userData, setUserData] = useState(null);
+    const [userDataNotify, setUserDataNotify] = useState(null);
+    const [isChecked, setIsChecked] = useState(false);
+    const [isCheckedNotify, setIsCheckedNotify] = useState(false);
+    console.log('chat id inside request', activeChatId)
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const userDocRef = doc(projectExtensionFirestore, 'chats', activeChatId);
+            try {
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUserData(userDoc.data());
+                    const data = userDoc.data();
+                    setShowData({
+                        fullName: data?.orderInvoice.customerInfo?.fullName,
+                        country: data?.orderInvoice.customerInfo?.country,
+                        city: data?.orderInvoice.customerInfo?.city,
+                        address: data?.orderInvoice.customerInfo?.address,
+                        email: data?.orderInvoice.customerInfo?.email,
+                        telephones: data?.orderInvoice.customerInfo?.telNumber
+                    });
+                    setUserDataNotify(userDoc.data());
+                } else {
+                    console.log('No user with that Email')
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error)
+            }
+        };
+
+        if (activeChatId) {
+            fetchUserData();
+        }
+    }, [activeChatId])
+
+    //fetch customer information
+
+
+    const handleOutsidePress = () => {
+        if (countryModal) setCountryModal(false);
+        if (cityModal) setCityModal(false);
+        if (countryModalNotify) setCountryModalNotify(false);
+        if (cityModalNotify) setCityModalNotify(false)
+    };
+
+    //fetch countries
+    const [countryData, setCountryData] = useState([]);
+    const [countryModal, setCountryModal] = useState(false);
+    const [countryModalNotify, setCountryModalNotify] = useState(false);
+
+    const handleCountrySelect = (item) => {
+        if (countryModalNotify === true) {
+            setSelectedCountryNotify(item);
+            toggleCountryModalNotify();
+        } else if (countryModal === true) {
+            setSelectedCountry(item);
+            toggleCountryModal();
+
+        }
+    };
+
+    const renderCountries = ({ item }) => (
+        <Pressable style={{
+            padding: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+        }}
+            onPress={() => handleCountrySelect(item)}
+        >
+
+            <Text style={{
+                fontSize: 16,
+                color: '#333'
+            }}>{item.label}</Text>
+        </Pressable>
+    );
+
+    const toggleCountryModal = () => {
+        setCountryModal(!countryModal)
+    }
+    const toggleCountryModalNotify = () => {
+        setCountryModalNotify(!countryModalNotify)
+    }
+    useEffect(() => {
+        try {
+            const countriesData = Country.getAllCountries().map((country) => ({
+                value: country.isoCode,
+                label: country.name
+            }));
+            const defaultOption = { value: '', label: 'Select Country' };
+            setCountryData([defaultOption, ...countriesData]);
+        } catch (error) {
+            console.error('Error Fetching countries:', error)
+        }
+    }, []);
+
+    //fetch countries
+
+    //fetch cities
+    const [cityData, setCityData] = useState([]);
+    const [cityModal, setCityModal] = useState(false);
+    const [cityModalNotify, setCityModalNotify] = useState(false);
+    const toggleCityModal = () => {
+        setCityModal(!cityModal)
+    };
+    const toggleCityModalNotify = () => {
+        setCityModalNotify(!cityModalNotify)
+    };
+    const handleCitySelect = (item) => {
+        if (cityModalNotify === true) {
+            setSelectedCityNotify(item);
+            toggleCityModalNotify();
+        } else if (cityModal === true) {
+            setSelectedCity(item);
+            toggleCityModal();
+
+        } else {
+            return;
+        }
+    };
+    useEffect(() => {
+        if (selectedCountry.value) {
+            const countryCities = City.getCitiesOfCountry(selectedCountry?.value);
+            const citiesData = countryCities.map((city) => ({
+                label: city.name
+            }));
+
+            setCityData(citiesData);
+        } else if (selectedCountryNotify.value) {
+            const countryCities = City.getCitiesOfCountry(selectedCountryNotify?.value);
+            const citiesData = countryCities.map((city) => ({
+                label: city.name
+            }));
+
+            setCityData(citiesData);
+        } else {
+            return;
+        }
+
+    }, [selectedCountry, selectedCountryNotify]);
+
+    const renderCities = ({ item }) => (
+        <Pressable style={{
+            padding: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+        }}
+            onPress={() => handleCitySelect(item)}
+        >
+            <Text style={{
+                fontSize: 16,
+                color: '#333'
+            }}>{item.label}</Text>
+        </Pressable>
+    );
+    //fetch cities
+
+
+
+    //variables ref
+
+    const fullNameRef = useRef(null);
+    const countryRef = useRef(null);
+    const cityRef = useRef(null);
+    const addressRef = useRef(null);
+    const emailRef = useRef(null);
+    const initialTelephones = showData?.telephones;
+    console.log('telephones', initialTelephones)
+    useEffect(() => {
+        // Check if initialTelephones is a string and not empty
+        if (typeof initialTelephones === 'string' && initialTelephones.trim().length > 0) {
+          const telephonesArray = initialTelephones.split(',').map(tel => tel.trim());
+          telephonesArray.forEach((tel, index) => {
+            telephoneRefs.current[index] = tel; // Store each telephone number in refs
+          });
+          setTelephoneInputs(telephonesArray.map((_, index) => index)); // Create an index array for rendering inputs
+        }
+      }, [initialTelephones]);
+      
+      
+
+    const [telephoneInputs, setTelephoneInputs] = useState([0]); // Array of input indices
+    const telephoneRefs = useRef({ 0: '' }); // Initialize the first input with an empty string
+    const addTelephoneInput = () => {
+        if (telephoneInputs.length >= 3) {
+            Alert.alert('Max Telephone numbers.');
+            return; // Stop the function if the limit is reached
+        }
+        const newInputId = Object.keys(telephoneRefs.current).length;
+        telephoneRefs.current[newInputId] = ''; // Initialize new input reference with an empty string
+        setTelephoneInputs(prev => [...prev, newInputId]); // Increase input counter
+    };
+
+
+    const faxRef = useRef(null);
+
+    const fullNameNotifyRef = useRef(null);
+    const addressNotifyRef = useRef(null);
+    const emailNotifyRef = useRef(null);
+    const [telephoneInputsNotify, setTelephoneInputsNotify] = useState([0]); // Array of input indices
+    const telephoneNotifyRefs = useRef({ 0: '' }); // Initialize the first input with an empty string
+    const addTelephoneInputNotify = () => {
+        // Check if there are already 3 inputs
+        if (telephoneInputsNotify.length >= 3) {
+            alert('Max Telephone numbers.');
+            return; // Stop the function if the limit is reached
+        }
+        const newInputId = Object.keys(telephoneNotifyRefs.current).length;
+        // Initialize new input reference with an empty string instead of null
+        telephoneNotifyRefs.current[newInputId] = '';
+        setTelephoneInputsNotify(prev => [...prev, newInputId]);
+    };
+    const faxRefNotify = useRef(null);
+    //fetch ip address
+    const [ip, setIp] = useState('');
+    const [ipCountry, setIpCountry] = useState('');
+
+    // useEffect to fetch IP and Country
+    useEffect(() => {
+        async function fetchIpAndCountry() {
+            try {
+                // Fetch the IP address
+                const ipResponse = await axios.get('https://api.ipify.org?format=json');
+                const fetchedIp = ipResponse.data.ip;
+                setIp(fetchedIp);
+
+                // Fetch IP Country
+                if (fetchedIp) {
+                    const countryResponse = await axios.get(`https://ipapi.co/${fetchedIp}/json/`);
+                    const fetchedIpCountry = countryResponse.data.country_name;
+                    setIpCountry(fetchedIpCountry);
+                }
+            } catch (error) {
+                console.error("Error fetching IP information:", error);
+            }
+        }
+
+        fetchIpAndCountry();
+    }, []);
+    //fetch ip address
+
+    const handleSubmit = async () => {
+
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const { datetime } = response.data;
+
+        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+
+        console.log("Refs at submission:", telephoneRefs.current);
+        const telephones = telephoneInputs.map(inputId =>
+            telephoneRefs.current[inputId] ? telephoneRefs.current[inputId].value : 'Ref not set'
+        );
+        const telephonesNotify = telephoneInputsNotify.map(inputId =>
+            telephoneNotifyRefs.current[inputId] ? telephoneNotifyRefs.current[inputId].value : 'Ref not set'
+        );
+        console.log("Telephone values:", telephones);
+
+
+
+
+
+        // userData?.orderInvoice.customerInfo.telNumber
+
+        if (isChecked) {
+            // If isCheckedNotify and isChecked are true, use user data if available
+            formData = {
+                fullName: userData?.orderInvoice.customerInfo.fullName || (fullNameRef.current ? fullNameRef.current.value : ''),
+                country: selectedCountry?.label || userData?.orderInvoice.customerInfo.country,
+                city: selectedCity?.label || userData?.orderInvoice.customerInfo.city,
+                address: userData?.orderInvoice.customerInfo.address || (addressRef.current ? addressRef.current.value : ''),
+                fax: faxRef.current ? faxRef.current.value : '',
+                email: userData?.orderInvoice.customerInfo.email || (emailRef.current ? emailRef.current.value : ''),
+                telephones: telephones
+            };
+        } else {
+            // If isCheckedNotify is true but isChecked is false, use form inputs directly
+            formData = {
+                fullName: fullNameRef.current ? fullNameRef.current.value : '',
+                country: selectedCountry ? selectedCountry.label : '',
+                city: selectedCity ? selectedCity.label : '',
+                address: addressRef.current ? addressRef.current.value : '',
+                fax: faxRef.current ? faxRef.current.value : '',
+                email: emailRef.current ? emailRef.current.value : '',
+                telephones: telephones
+            };
+        }
+
+        if (isCheckedNotify) {
+            if (isChecked) {
+                // If isCheckedNotify and isChecked are true, use user data if available
+                formData = {
+                    fullName: userData?.orderInvoice.customerInfo.fullname || (fullNameRef.current ? fullNameRef.current.value : ''),
+                    country: selectedCountry?.label || userData?.orderInvoice.customerInfo.country,
+                    city: selectedCity?.label || userData?.orderInvoice.customerInfo.city,
+                    address: userData?.orderInvoice.customerInfo.address || (addressRef.current ? addressRef.current.value : ''),
+                    fax: faxRef.current ? faxRef.current.value : '',
+                    email: userData?.orderInvoice.customerInfo.email || (emailRef.current ? emailRef.current.value : ''),
+                    telephones: telephones
+                };
+            } else {
+                // If isCheckedNotify is true but isChecked is false, use form inputs directly
+                formDataNotify = {
+                    fullName: fullNameRef.current ? fullNameRef.current.value : '',
+                    country: selectedCountry ? selectedCountry.label : '',
+                    city: selectedCity ? selectedCity.label : '',
+                    address: addressRef.current ? addressRef.current.value : '',
+                    fax: faxRef.current ? faxRef.current.value : '',
+                    email: emailRef.current ? emailRef.current.value : '',
+                    telephones: telephones
+                };
+            }
+        } else {
+            // If isCheckedNotify is false, you might want to handle this case differently or use default values
+            formDataNotify = {
+                fullName: userDataNotify?.orderInvoice.notifyParty.fullName || fullNameNotifyRef.current ? fullNameNotifyRef.current.value : '',
+                country: userDataNotify?.orderInvoice.notifyParty.country || selectedCountryNotify ? selectedCountryNotify.label : '',
+                city: userDataNotify?.orderInvoice.notifyParty.city || selectedCityNotify ? selectedCityNotify.label : '',
+                address: addressNotifyRef.current ? addressNotifyRef.current.value : '',
+                fax: faxRefNotify.current ? faxRefNotify.current.value : '',
+                email: emailNotifyRef.current ? emailNotifyRef.current.value : '',
+                telephones: telephonesNotify
+            };
+        }
+
+        try {
+            const orderRef = doc(projectExtensionFirestore, 'chats', activeChatId);
+            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', activeChatId, 'messages'));
+            const messageData = {
+                sender: userEmail, // Sender's email
+                text: `Request for Invoice Amendment`,
+                timestamp: formattedTime,
+                messageType: 'InvoiceAmendment',
+                ip: ip,
+                ipCountry: ipCountry
+            };
+
+            await setDoc(newMessageDocExtension, messageData, { merge: true });
+            await updateDoc(orderRef, {
+                requestAmendment: true,
+                invoiceAmendment: {
+                    consignee: {
+                        fullName: formData.fullName,
+                        country: formData.country,
+                        city: formData.city,
+                        address: formData.address,
+                        fax: formData.fax,
+                        email: formData.email,
+                        telephones: formData.telephones,
+                        sameAsBuyer: isChecked
+                    },
+                    notifyParty: {
+                        fullName: formDataNotify.fullName,
+                        country: formDataNotify.country,
+                        city: formDataNotify.city,
+                        address: formDataNotify.address,
+                        fax: formDataNotify.fax,
+                        email: formDataNotify.email,
+                        telephones: formDataNotify.telephones,
+                        sameAsConsignee: isCheckedNotify,
+                    }
+
+                },
+
+            })
+            const fieldUpdate = collection(projectExtensionFirestore, 'chats');
+
+            await updateDoc(doc(fieldUpdate, activeChatId), {
+                lastMessage: 'Request for Proforma Invoice',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+            // setModalVisible(false);
+        } catch (error) {
+            console.error('Error updating Proforma Invoice:', error);
+        }
+    };
+    //variables ref
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const handlePress = () => {
+
+        setModalVisible(true);
+        handleOutsidePress();
+    };
+    const [isCheck, setIsCheck] = useState(false);
+    const checkButton = (option) => {
+        setIsCheck(option);
+
+    }
+    const setOrderInvoice = async () => {
+        const response = await axios.get('https://worldtimeapi.org/api/timezone/Asia/Tokyo');
+        const { datetime } = response.data;
+        const formattedTime = moment(datetime).format('YYYY/MM/DD [at] HH:mm:ss');
+        const randomNumber = Math.floor(10000 + Math.random() * 90000);
+        const bookingListCollectionRef = collection(projectExtensionFirestore, 'BookingList');
+
+        const customerInfo = {
+            fullName: fullName || fullNameDB,
+            country: selectedCountryLabel || countryDB,
+            city: selectedCity || cityDB,
+            address: address || addressDB,
+            telNumber: telNumber || telNumberDB,
+            email: userEmailInput || userEmailInputDB,
+        };
+
+
+        const infoCustomerInput = {
+            fullName: fullNameNotifyInput,
+            country: selectedCountryNotifyLabel,
+            city: selectedCityNotify,
+            address: addressNotify,
+            telNumber: telNumberNotify,
+            email: emailNotify,
+        };
+
+        try {
+            const orderRef = doc(projectExtensionFirestore, 'chats', chatId);
+            const invoiceRef = doc(projectExtensionFirestore, 'IssuedInvoice', chatField?.invoiceNumber);
+            const vehicleRef = doc(projectExtensionFirestore, 'VehicleProducts', carData?.stockID);
+            const newBookingListDocRef = doc(bookingListCollectionRef, chatId);
+            // const fieldUpdate = collection(projectExtensionFirestore, 'chats');
+            const newMessageDocExtension = doc(collection(projectExtensionFirestore, 'chats', chatId, 'messages'));
+            const messageData = {
+                sender: userEmail, // Sender's email
+                text: "I agree with all the condition and place the order.",
+                timestamp: formattedTime,
+                orderInvoiceIssue: true,
+                setPaymentNotification: true,
+                ip: ip,
+                ipCountry: ipCountry
+            };
+            await updateDoc(invoiceRef, {
+                orderPlaced: true,
+
+            });
+            await updateDoc(vehicleRef, {
+                reservedTo: userEmail,
+                stockStatus: 'Reserved'
+            })
+
+            await updateDoc(orderRef, {
+                orderInvoice: {
+                    proformaIssue: true,
+                    customerInfo,
+                    notifyParty: isCheckedNotify ? customerInfo : infoCustomerInput,
+                    dateIssued: formattedTime, // Add formatted date
+                },
+                lastMessage: 'I agree with all the condition and place the order.',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+            await setDoc(newMessageDocExtension, messageData);
+            // await setDoc(fieldUpdate, chatId, {
+            //     DocumentsUpload: {
+            //         ExportCertificate: '',
+            //         ShippingInstructions: '',
+            //         BillOfLading: '',
+            //         InspectionSheet: '',
+            //         DHLTrackingNumber: '',
+            //         InvoiceNumber: randomNumber.toString()
+            //     },
+
+            // });
+            await setDoc(newBookingListDocRef, {
+                DocumentsUpload: {
+                    ExportCertificate: '',
+                    ShippingInstructions: '',
+                    BillOfLading: '',
+                    InspectionSheet: '',
+                    DHLTrackingNumber: '',
+                    InvoiceNumber: randomNumber.toString()
+                },
+                lastMessage: 'I agree with all the condition and place the order.',
+                lastMessageDate: formattedTime,
+                lastMessageSender: userEmail,
+                read: false,
+                readBy: [],
+            });
+        } catch (error) {
+            console.error('Error updating Proforma Invoice:', error);
+        }
+    };
+
+    return (
+        <Pressable
+            style={({ pressed, hovered }) => [
+
+                {
+                    backgroundColor: hovered ? '#0F7534' : '#16A34A',
+                    opacity: pressed ? 0.5 : 1,
+                    borderRadius: 5,
+                    width: 200,
+                    marginTop: 5,
+                    padding: 5
+                }
+            ]}
+            onPress={handlePress}
+        >
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                flex: 1,
+            }}>
+                <Text style={{ color: 'white', fontWeight: '700' }}>Request Invoice Amendment</Text>
+            </View>
+
+            {
+                modalVisible && (
+                    <Modal
+                        transparent={true}
+                        animationType='fade'
+                        visible={modalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+                        <TouchableWithoutFeedback style={{ flex: 1 }} onPress={handleOutsidePress}>
+                            <View style={{
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                position: 'relative',
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)'// Ensure this is positioned relatively to contain absolute children
+                            }}>
+
+                                <TouchableOpacity
+                                    style={{
+                                        position: 'absolute', // Position absolutely to cover the entire container
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'transparent' // Ensure it's transparent to see below views
+                                    }}
+                                    onPress={() => setModalVisible(false)}
+                                />
+                                <View
+                                    style={{
+                                        backgroundColor: '#fff',
+                                        padding: 10,
+                                        width: '100%',
+                                        maxWidth: 600,
+                                        borderRadius: 10,
+                                        shadowOpacity: 0.25,
+                                        shadowRadius: 3.84,
+                                        elevation: 5,
+                                        height: '100%',
+                                        maxHeight: 850,
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <View style={{
+                                        justifyContent: 'center',
+                                        borderBottomColor: 'blue',
+                                        borderBottomWidth: 2,
+                                        marginBottom: 20,
+                                        marginHorizontal: 10
+                                    }}>
+                                        <Text style={{ color: 'blue', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Requesnt Invoice Amendment</Text>
+                                    </View>
+                                    <ScrollView style={{ width: '100%' }}>
+                                        <View style={{ marginBottom: 10 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Customer Information</Text>
+                                            {/* <TouchableOpacity onPress={() => {
+                                                setIsChecked(prevState => {
+
+                                                    const newState = !prevState;
+                                                    setSelectedCountry({ value: '' });
+                                                    setSelectedCity('');
+                                                    setCityData([]);
+                                                    handleOutsidePress();
+
+                                                    return newState;
+                                                });
+                                            }}
+
+                                                style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                                                <MaterialIcons
+                                                    name={isChecked ? 'check-box' : 'check-box-outline-blank'}
+                                                    size={20}
+                                                    color="black"
+                                                />
+                                                <Text>Set as customer's information <Text style={{ color: 'red' }}>*</Text></Text>
+                                            </TouchableOpacity> */}
+
+
+                                            <View>
                                                 <Text>Full Name</Text>
                                                 <TextInput
                                                     key={isChecked ? 'controlled' : 'uncontrolled'}
                                                     ref={fullNameRef}
                                                     style={styles.input}
                                                     placeholder="Enter full name"
-                                                    defaultValue={isChecked ? showData?.fullName : ''}
+                                                    defaultValue={showData?.fullName}
                                                 />
                                             </View>
 
@@ -5869,6 +9926,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                 <View style={{
                                                     flex: 1
                                                 }}>
+                                                    <Text style={{ marginBottom: 2 }}>Country</Text>
                                                     <Pressable
                                                         onPress={toggleCountryModal}
                                                         style={{
@@ -5882,7 +9940,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                         }}
                                                     >
                                                         <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                                                            <Text>{isChecked ? showData?.country : 'Select Country'}</Text>
+                                                            <Text>{showData?.country ? showData?.country : 'Select Country'}</Text>
                                                         </View>
                                                         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
                                                             <TouchableOpacity>
@@ -5902,8 +9960,6 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                         </View>
                                                     </Pressable>
                                                     {countryModal && (
-
-
                                                         <View style={{
                                                             position: 'absolute',
                                                             top: 40, // Adjust according to the height of the Pressable
@@ -5925,7 +9981,6 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                         </View>
 
 
-
                                                     )}
 
                                                 </View>
@@ -5933,6 +9988,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                 <View style={{
                                                     flex: 1, marginLeft: 10
                                                 }}>
+                                                    <Text style={{ marginBottom: 2 }}>City</Text>
                                                     <Pressable
                                                         onPress={toggleCityModal}
                                                         style={{
@@ -5946,7 +10002,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                         }}
                                                     >
                                                         <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                                                            <Text>{isChecked ? showData?.city : 'Select City'}</Text>
+                                                            <Text>{showData?.city ? showData?.city : 'Select City'}</Text>
                                                         </View>
                                                         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
                                                             <TouchableOpacity>
@@ -5983,7 +10039,7 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                             <FlatList
                                                                 data={cityData}
                                                                 renderItem={renderCities}
-                                                                keyExtractor={(item) => item.label}
+                                                                keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
                                                             />
 
                                                         </View>
@@ -5995,34 +10051,43 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                 </View>
                                             </View>
 
-                                            <View style={{ marginBottom: 5 }}>
+                                            <View>
                                                 <Text>Address</Text>
                                                 <TextInput
                                                     key={isChecked ? 'controlled' : 'uncontrolled'}
                                                     ref={addressRef}
                                                     style={styles.input}
                                                     placeholder="Enter Address"
-                                                    defaultValue={isChecked ? showData?.address : ''}
+                                                    defaultValue={showData?.address}
                                                 />
 
                                             </View>
-                                            {telephoneInputs.map((inputId, index) => (
-                                                <View key={inputId} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-                                                    <TextInput
-                                                        key={isChecked ? 'controlled' : 'uncontrolled' + inputId}  // Append inputId to ensure uniqueness
-                                                        style={styles.input}
-                                                        placeholder={`Telephone Number ${index + 1}`}
-                                                        ref={el => {
-                                                            telephoneRefs.current[inputId] = el;
-                                                            if (el && !isChecked) {
-                                                                el.setNativeProps({ text: '' });
-                                                            }
-                                                        }}
-                                                        defaultValue={isChecked ? showData?.telephones : ''}
-                                                    />
+                                            <View>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    <Text>Telephone Number</Text>
+                                                    <Button title="Add Telephone" onPress={addTelephoneInput} />
                                                 </View>
-                                            ))}
-                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
+                                                {telephoneInputs.map((inputId, index) => (
+                                                    <View key={inputId}>
+                                                        <TextInput
+                                                            style={styles.input}
+                                                            placeholder={`Telephone Number ${index + 1}`}
+                                                            ref={el => telephoneRefs.current[inputId] = el}
+                                                            defaultValue={telephoneRefs.current[inputId]}
+                                                        />
+                                                    </View>
+                                                ))}
+                                            </View>
+                                            <View>
+                                                <Text>Fax Number</Text>
+                                                <TextInput
+                                                    key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                    ref={faxRef}
+                                                    style={styles.input}
+                                                    placeholder="Enter Fax Number"
+                                                    defaultValue={showData?.fax ? showData?.fax : ''}
+                                                />
+                                            </View>
 
                                             <View style={{ marginBottom: 5 }}>
                                                 <Text>E-mail</Text>
@@ -6031,242 +10096,284 @@ const RequestProformaInvoice = ({ activeChatId }) => {
                                                     ref={emailRef}
                                                     style={styles.input}
                                                     placeholder="Enter Address"
-                                                    defaultValue={isChecked ? showData?.email : ''}
+                                                    defaultValue={showData?.email}
                                                 />
 
                                             </View>
-                                        </>) : (<>
-                                            <View style={{ marginBottom: 5 }}>
-                                                <Text>Full Name</Text>
-                                                <TextInput
-                                                    ref={fullNameRef}
-                                                    style={styles.input}
-                                                    placeholder="Enter full name"
+
+
+
+
+
+                                        </View>
+
+                                        <View style={{ marginBottom: 10 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Notify Party</Text>
+                                            <TouchableOpacity onPress={() => {
+                                                setIsCheckedNotify(prevState => {
+
+                                                    const newState = !prevState;
+                                                    setSelectedCountryNotify({ value: '' });
+                                                    setSelectedCityNotify('');
+                                                    setCityData([]);
+                                                    handleOutsidePress();
+                                                    return newState;
+                                                });
+                                            }}
+
+                                                style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 5 }}>
+                                                <MaterialIcons
+                                                    name={isCheckedNotify ? 'check-box' : 'check-box-outline-blank'}
+                                                    size={20}
+                                                    color="black"
                                                 />
-                                            </View>
+                                                <Text>Same as consignee</Text>
+                                            </TouchableOpacity>
+                                            {isCheckedNotify ? (
+                                                <>
 
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <View>
+                                                        <Text>Full Name</Text>
+                                                        <TextInput
+                                                            ref={fullNameNotifyRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter full name"
+                                                            defaultValue={userDataNotify?.orderInvoice.notifyParty.fullName}
+                                                        />
+                                                    </View>
 
-                                                <View style={{
-                                                    flex: 1
-                                                }}>
-                                                    <Pressable
-                                                        onPress={toggleCountryModal}
-                                                        style={{
-                                                            padding: 10,
-                                                            backgroundColor: '#fff',
-                                                            flexDirection: 'row',
-                                                            alignItems: 'center',
-                                                            borderColor: '#d5d5d5',
-                                                            borderWidth: 1,
-                                                            borderRadius: 3
-                                                        }}
-                                                    >
-                                                        <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                                                            <Text>{selectedCountry?.value ? selectedCountry?.label : 'Select Country'}</Text>
-                                                        </View>
-                                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
-                                                            <TouchableOpacity>
-                                                                <AntDesign name="close" size={15} color="blue" />
-                                                            </TouchableOpacity>
-                                                            <AntDesign
-                                                                name="down"
-                                                                size={15}
-                                                                style={[
-                                                                    { transitionDuration: '0.3s' },
-                                                                    countryModal && {
-                                                                        transform: [{ rotate: '180deg' }],
-                                                                    },
-                                                                ]}
-                                                                color="blue"
-                                                            />
-                                                        </View>
-                                                    </Pressable>
-                                                    {countryModal && (
-
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 }}>
 
                                                         <View style={{
-                                                            position: 'absolute',
-                                                            top: 40, // Adjust according to the height of the Pressable
-                                                            left: 0,
-                                                            right: 0,
-                                                            backgroundColor: 'white',
-                                                            borderColor: '#ddd',
-                                                            borderWidth: 2,
-                                                            maxHeight: 200,
-
-                                                            zIndex: 10
+                                                            flex: 1
                                                         }}>
-                                                            <FlatList
-                                                                data={countryData}
-                                                                renderItem={renderCountries}
-                                                                keyExtractor={(item) => item.label}
-                                                            />
+                                                            <Text style={{ marginBottom: 2 }}>Country</Text>
+                                                            <Pressable
+                                                                onPress={toggleCountryModalNotify}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+
+                                                                    <Text>
+
+                                                                        {selectedCountryNotify?.value
+                                                                            ? selectedCountryNotify?.label : userDataNotify?.orderInvoice.notifyParty.country
+                                                                        }
+                                                                    </Text>
+
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            countryModalNotify && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {countryModalNotify && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={countryData}
+                                                                        renderItem={renderCountries}
+                                                                        keyExtractor={(item) => item.label}
+                                                                    />
+
+                                                                </View>
+
+
+
+                                                            )}
 
                                                         </View>
-
-
-
-                                                    )}
-
-                                                </View>
-
-
-                                                <View style={{
-                                                    flex: 1, marginLeft: 10
-                                                }}>
-                                                    <Pressable
-                                                        onPress={toggleCityModal}
-                                                        style={{
-                                                            padding: 10,
-                                                            backgroundColor: '#fff',
-                                                            flexDirection: 'row',
-                                                            alignItems: 'center',
-                                                            borderColor: '#d5d5d5',
-                                                            borderWidth: 1,
-                                                            borderRadius: 3
-                                                        }}
-                                                    >
-                                                        <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
-                                                            <Text>{selectedCity ? selectedCity.label : 'Select City'}</Text>
-                                                        </View>
-                                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
-                                                            <TouchableOpacity>
-                                                                <AntDesign name="close" size={15} color="blue" />
-                                                            </TouchableOpacity>
-                                                            <AntDesign
-                                                                name="down"
-                                                                size={15}
-                                                                style={[
-                                                                    { transitionDuration: '0.3s' },
-                                                                    cityModal && {
-                                                                        transform: [{ rotate: '180deg' }],
-                                                                    },
-                                                                ]}
-                                                                color="blue"
-                                                            />
-                                                        </View>
-                                                    </Pressable>
-                                                    {cityModal && (
-
 
                                                         <View style={{
-                                                            position: 'absolute',
-                                                            top: 40, // Adjust according to the height of the Pressable
-                                                            left: 0,
-                                                            right: 0,
-                                                            backgroundColor: 'white',
-                                                            borderColor: '#ddd',
-                                                            borderWidth: 2,
-                                                            maxHeight: 200,
-
-                                                            zIndex: 10
+                                                            flex: 1, marginLeft: 10
                                                         }}>
-                                                            <FlatList
-                                                                data={cityData}
-                                                                renderItem={renderCities}
-                                                                keyExtractor={(item) => item.label}
-                                                            />
+                                                            <Text style={{ marginBottom: 2 }}>City</Text>
+                                                            <Pressable
+                                                                onPress={toggleCityModalNotify}
+                                                                style={{
+                                                                    padding: 10,
+                                                                    backgroundColor: '#fff',
+                                                                    flexDirection: 'row',
+                                                                    alignItems: 'center',
+                                                                    borderColor: '#d5d5d5',
+                                                                    borderWidth: 1,
+                                                                    borderRadius: 3
+                                                                }}
+                                                            >
+                                                                <View style={{ flex: 3, justifyContent: 'flex-start', width: '100%' }}>
+
+                                                                    <Text>
+                                                                        {selectedCityNotify
+                                                                            ? selectedCityNotify.label
+                                                                            : (userDataNotify?.orderInvoice.notifyParty.city ? userDataNotify?.orderInvoice.notifyParty.city : 'Select City')}
+                                                                    </Text>
+
+                                                                </View>
+                                                                <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', flexDirection: 'row' }}>
+                                                                    <TouchableOpacity>
+                                                                        <AntDesign name="close" size={15} color="blue" />
+                                                                    </TouchableOpacity>
+                                                                    <AntDesign
+                                                                        name="down"
+                                                                        size={15}
+                                                                        style={[
+                                                                            { transitionDuration: '0.3s' },
+                                                                            cityModalNotify && {
+                                                                                transform: [{ rotate: '180deg' }],
+                                                                            },
+                                                                        ]}
+                                                                        color="blue"
+                                                                    />
+                                                                </View>
+                                                            </Pressable>
+                                                            {cityModalNotify && (
+
+
+                                                                <View style={{
+                                                                    position: 'absolute',
+                                                                    top: 60, // Adjust according to the height of the Pressable
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    backgroundColor: 'white',
+                                                                    borderColor: '#ddd',
+                                                                    borderWidth: 2,
+                                                                    maxHeight: 200,
+
+                                                                    zIndex: 10
+                                                                }}>
+                                                                    <FlatList
+                                                                        data={cityData}
+                                                                        renderItem={renderCities}
+                                                                        keyExtractor={(item, index) => `${item.propertyName || ''}-${index}`}
+                                                                    />
+                                                                </View>
+
+
+
+                                                            )}
 
                                                         </View>
 
+                                                    </View>
 
+                                                    <View>
+                                                        <Text>Address</Text>
+                                                        <TextInput
+                                                            ref={addressNotifyRef}
+                                                            style={styles.input}
+                                                            placeholder="Enter address"
+                                                            defaultValue={userDataNotify?.orderInvoice.notifyParty.address}
+                                                        />
+                                                    </View>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Text>Telephone Number</Text>
+                                                            <Button title="Add Telephone" onPress={addTelephoneInputNotify} />
+                                                        </View>
+                                                        {telephoneInputsNotify.map((inputId, index) => (
+                                                            <View key={index}>
+                                                                <TextInput
+                                                                    style={styles.input}
+                                                                    placeholder={`Telephone Number ${index + 1}`}
+                                                                    ref={el => {
+                                                                        if (el && !telephoneNotifyRefs.current[inputId]) {
+                                                                            console.log("Assigning ref for input", inputId);
+                                                                            telephoneNotifyRefs.current[inputId] = el;
+                                                                        }
+                                                                    }}
+                                                                    defaultValue={userDataNotify?.orderInvoice.notifyParty.telNumber}
+                                                                />
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <View>
+                                                        <Text>Fax Number</Text>
+                                                        <TextInput
+                                                            key={isChecked ? 'controlled' : 'uncontrolled'}
+                                                            ref={faxRefNotify}
+                                                            style={styles.input}
+                                                            placeholder="Enter Fax Number"
+                                                            defaultValue={userDataNotify?.orderInvoice.notifyParty.fax ? userDataNotify?.orderInvoice.notifyParty.fax : ''}
 
-                                                    )}
+                                                        />
+                                                    </View>
+                                                    <View style={{ marginBottom: 5 }}>
+                                                        <Text>E-mail</Text>
+                                                        <TextInput
+                                                            ref={emailNotifyRef}
+                                                            style={styles.input} placeholder="Enter email"
+                                                            defaultValue={userDataNotify?.orderInvoice.notifyParty.email}
+                                                        />
 
-                                                </View>
-                                            </View>
+                                                    </View>
+                                                </>
+                                            )}
 
-                                            <View style={{ marginBottom: 5 }}>
-                                                <Text>Address</Text>
-                                                <TextInput
-                                                    ref={addressRef}
-                                                    style={styles.input}
-                                                    placeholder="Enter address"
-                                                />
-                                            </View>
-                                            {telephoneInputs.map((inputId, index) => (
-                                                <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-                                                    <TextInput
-                                                        style={styles.input}
-                                                        placeholder={`Telephone Number ${index + 1}`}
-                                                        ref={el => {
-                                                            if (el && !telephoneRefs.current[inputId]) {
-                                                                console.log("Assigning ref for input", inputId);
-                                                                telephoneRefs.current[inputId] = el;
-                                                            }
-                                                        }}
-                                                    />
-                                                </View>
-                                            ))}
-
-                                            <Button title="Add Telephone" onPress={addTelephoneInput} />
-                                            <View style={{ marginBottom: 5 }}>
-                                                <Text>E-mail</Text>
-                                                <TextInput
-                                                    ref={emailRef}
-                                                    style={styles.input} placeholder="Enter email" />
-                                            </View>
-                                        </>)}
-
-                                    </View>
-
-                                    <View style={{ marginBottom: 10 }}>
-                                        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 5 }}>Notify Party</Text>
-
-                                        <View style={{ marginBottom: 5 }}>
-                                            <Text>Full Name</Text>
-                                            <TextInput style={styles.input} placeholder="Enter full name" />
                                         </View>
 
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                            <View style={{ flex: 1, marginRight: 10 }}>
-                                                <Text>Country</Text>
-                                                <TextInput style={styles.input} placeholder="Enter country" />
-                                            </View>
-                                            <View style={{ flex: 1 }}>
-                                                <Text>City</Text>
-                                                <TextInput style={styles.input} placeholder="Enter city" />
-                                            </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, zIndex: -5 }}>
+                                            {isCheck ? (
+                                                <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
+                                            ) : (
+                                                <Feather name='square' size={20} onPress={() => checkButton(true)} />
+                                            )}
+                                            <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
                                         </View>
 
-                                        <View style={{ marginBottom: 5 }}>
-                                            <Text>Address</Text>
-                                            <TextInput style={styles.input} placeholder="Enter address" />
-                                        </View>
-                                        <View style={{ marginBottom: 5 }}>
-                                            <Text>Tel. Number</Text>
-                                            <TextInput style={styles.input} placeholder="Enter telephone number" />
-                                        </View>
-                                        <View style={{ marginBottom: 5 }}>
-                                            <Text>E-mail</Text>
-                                            <TextInput style={styles.input} placeholder="Enter email" />
-                                        </View>
-                                    </View>
+                                        <View style={{ marginTop: 20, flexDirection: 'row', paddingHorizontal: 20, zIndex: -5 }}>
+                                            <TouchableOpacity style={{ backgroundColor: 'white', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, borderColor: 'black', borderWidth: 2 }}>
+                                                <Text style={{ color: 'black', fontWeight: '600', fontSize: 16 }}>Cancel</Text>
+                                            </TouchableOpacity>
 
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                        {isCheck ? (
-                                            <Feather name='check-square' size={20} onPress={() => checkButton(false)} />
-                                        ) : (
-                                            <Feather name='square' size={20} onPress={() => checkButton(true)} />
-                                        )}
-                                        <Text style={{ marginLeft: 8, fontSize: 14 }}>I agree to Privacy Policy and Terms of Agreement</Text>
-                                    </View>
-
-                                    <View style={{ marginTop: 20, flexDirection: 'row', paddingHorizontal: 20 }}>
-                                        <TouchableOpacity style={{ backgroundColor: 'white', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, borderColor: 'black', borderWidth: 2 }}>
-                                            <Text style={{ color: 'black', fontWeight: '600', fontSize: 16 }}>Cancel</Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity style={{ backgroundColor: '#7b9cff', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, marginLeft: '5%' }}
-                                            onPress={handleSubmit}
-                                        >
-                                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Finish</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </ScrollView>
+                                            <TouchableOpacity
+                                                style={{ backgroundColor: '#7b9cff', padding: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, marginLeft: '5%' }}
+                                                onPress={async () => {
+                                                    await handleSubmit();
+                                                    setModalVisible(false)
+                                                }}
+                                            >
+                                                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Finish</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </ScrollView>
+                                </View>
                             </View>
-                        </View>
+                        </TouchableWithoutFeedback>
                     </Modal>
 
                 )
@@ -6279,7 +10386,7 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
     const { userEmail } = useContext(AuthContext);
 
     const { chatId } = useParams();
-
+    console.log('car data inside order item', carData?.stockID)
     //fetch ip address
     const [ip, setIp] = useState('');
     const [ipCountry, setIpCountry] = useState('');
@@ -6498,8 +10605,22 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
     const [countryDB, setCountryDB] = useState('');
     const [cityDB, setCityDB] = useState('');
     const [telNumberDB, setTelNumberDB] = useState('');
+    const [telNumberDBArr, setTelNumberDBArr] = useState([])
+    const [faxNumberDB, setFaxNumberDB] = useState('');
     const [addressDB, setAddressDB] = useState('');
-    const [userEmailInputDB, setUserEmailInputDB] = useState(userEmail || '')
+    const [userEmailInputDB, setUserEmailInputDB] = useState('')
+
+
+    const [fullNameDBNotify, setFullNameDBNotify] = useState('');
+    const [countryDBNotify, setCountryDBNotify] = useState('');
+    const [cityDBNotify, setCityDBNotify] = useState('');
+    const [telNumberDBNotify, setTelNumberDBNotify] = useState('');
+    const [telNumberDBArrNotify, setTelNumberDBArrNotify] = useState([])
+    const [faxNumberDBNotify, setFaxNumberDBNotify] = useState('');
+    const [addressDBNotify, setAddressDBNotify] = useState('');
+    const [userEmailInputDBNotify, setUserEmailInputDBNotify] = useState('');
+
+
     //if false
     const [fullName, setFullName] = useState('');
     const [address, setAddress] = useState('');
@@ -6507,28 +10628,64 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
     const [userEmailInput, setUserEmailInput] = useState('');
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            const userDocRef = doc(projectExtensionFirestore, 'accounts', userEmail);
-            try {
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    setFullNameDB(userData.textFirst + ' ' + userData.textLast);
-                    setTelNumberDB('+' + userData.textPhoneNumber);
-                    setAddressDB(userData.textZip + ' ' + userData.textStreet + ',' + ' ' + userData.city);
-                    setCountryDB(userData.country);
-                    setCityDB(userData.city);
-                } else {
-                    console.log('No user with that Email')
-                }
-            } catch (error) {
-                console.error('Error fetching user data:', error)
+        const fetchUserData = () => {
+            const invoice = chatField?.requestInvoice?.consignee?.formData;
+            setFullNameDB(invoice?.fullName || '');
+            const telephones = invoice?.telephones;
+            if (telephones && Array.isArray(telephones)) {
+                const formattedTelephones = telephones.map(number => `+${number}`).join(', ');
+                setTelNumberDB(formattedTelephones);
+                setTelNumberDBArr(telephones);
             }
+            setFaxNumberDB(invoice?.fax || '');
+            setAddressDB(invoice?.address || '');
+            setCountryDB(invoice?.country || '');
+            setCityDB(invoice?.city || '');
+            setUserEmailInputDB(invoice?.email || '');
         };
-        if (userEmail) {
+
+        const fetchUserNotify = () => {
+            const notify = chatField?.requestInvoice?.notifyParty?.formDataNotify;
+            setFullNameDBNotify(notify?.fullName || '');
+            const telephonesNotify = notify?.telephones;
+            if (telephonesNotify && Array.isArray(telephonesNotify)) {
+                const formattedTelephones = telephonesNotify.map(number => `+${number}`).join(', ');
+                setTelNumberDBNotify(formattedTelephones);
+                setTelNumberDBArrNotify(telephonesNotify);
+            }
+            setFaxNumberDBNotify(notify?.fax || '');
+            setAddressDBNotify(notify?.address || '');
+            setCountryDBNotify(notify?.country || '');
+            setCityDBNotify(notify?.city || '');
+            setUserEmailInputDBNotify(notify?.email || '');
+        };
+
+        if (chatField && chatField.requestInvoice) {
             fetchUserData();
+            fetchUserNotify();
+        } else {
+            // Set all states to empty strings if chatField or chatField.requestInvoice is not present
+            setFullNameDB('');
+            setTelNumberDB('');
+            setTelNumberDBArr([]);
+            setFaxNumberDB('');
+            setAddressDB('');
+            setCountryDB('');
+            setCityDB('');
+            setUserEmailInputDB('');
+
+            setFullNameDBNotify('');
+            setTelNumberDBNotify('');
+            setTelNumberDBArrNotify([]);
+            setFaxNumberDBNotify('');
+            setAddressDBNotify('');
+            setCountryDBNotify('');
+            setCityDBNotify('');
+            setUserEmailInputDBNotify('');
         }
-    }, [userEmail, isChecked, isCheckedNotify])
+    }, [chatField]);
+
+
     //fetching the user's information
 
     //fetching data from STOCKID carId = STOCKID
@@ -6606,7 +10763,7 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
             country: selectedCountryLabel || countryDB,
             city: selectedCity || cityDB,
             address: address || addressDB,
-            telNumber: telNumber || telNumberDB,
+            telNumber: telNumberDBArr,
             email: userEmailInput || userEmailInputDB,
         };
 
@@ -6634,7 +10791,8 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                 orderInvoiceIssue: true,
                 setPaymentNotification: true,
                 ip: ip,
-                ipCountry: ipCountry
+                ipCountry: ipCountry,
+                messageType: 'important'
             };
             await updateDoc(invoiceRef, {
                 orderPlaced: true,
@@ -6649,8 +10807,16 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                 orderInvoice: {
                     proformaIssue: true,
                     customerInfo,
-                    notifyParty: isCheckedNotify ? customerInfo : infoCustomerInput,
-                    dateIssued: formattedTime, // Add formatted date
+                    notifyParty: {
+                        address: addressDBNotify,
+                        city: cityDBNotify,
+                        country: countryDBNotify,
+                        email: userEmailInputDBNotify,
+                        telNumber: telNumberDBArrNotify,
+                        fullName: fullNameDBNotify
+                    },
+                    dateIssued: formattedTime,
+
                 },
                 lastMessage: 'I agree with all the condition and place the order.',
                 lastMessageDate: formattedTime,
@@ -7471,23 +11637,25 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                             <View style={{ marginBottom: 20 }}>
                                 <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 10 }}>Customer Information</Text>
                                 <View style={{ backgroundColor: '#ffffff', padding: 10, borderRadius: 5 }}>
-                                    <InfoRow label="Full Name" value={fullName || fullNameDB} />
-                                    <InfoRow label="Country" value={selectedCountryLabel || countryDB} />
-                                    <InfoRow label="City" value={selectedCity || cityDB} />
-                                    <InfoRow label="Address" value={address || addressDB} />
-                                    <InfoRow label="Tel. Number" value={telNumber || telNumberDB} />
-                                    <InfoRow label="E-mail" value={userEmailInput || userEmailInputDB} />
+                                    <InfoRow label="Full Name" value={fullNameDB} />
+                                    <InfoRow label="Country" value={countryDB} />
+                                    <InfoRow label="City" value={cityDB} />
+                                    <InfoRow label="Address" value={addressDB} />
+                                    <InfoRow label="Tel. Number" value={telNumberDB} />
+                                    <InfoRow label="Fax Number" value={faxNumberDB} />
+                                    <InfoRow label="E-mail" value={userEmailInputDB} />
                                 </View>
                             </View>
                             <View>
                                 <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 10 }}>Notify Party</Text>
                                 <View style={{ backgroundColor: '#ffffff', padding: 10, borderRadius: 5 }}>
-                                    <InfoRow label="Full Name" value={fullNameNotifyInput || fullNameDB} />
-                                    <InfoRow label="Country" value={selectedCountryNotifyLabel || countryDB} />
-                                    <InfoRow label="City" value={selectedCityNotify || cityDB} />
-                                    <InfoRow label="Address" value={addressNotify || addressDB} />
-                                    <InfoRow label="Tel. Number" value={telNumberDB} />
-                                    <InfoRow label="E-mail" value={emailNotify || userEmailInputDB} />
+                                    <InfoRow label="Full Name" value={fullNameDBNotify} />
+                                    <InfoRow label="Country" value={countryDBNotify} />
+                                    <InfoRow label="City" value={cityDBNotify} />
+                                    <InfoRow label="Address" value={addressDBNotify} />
+                                    <InfoRow label="Tel. Number" value={telNumberDBNotify} />
+                                    <InfoRow label="Fax Number" value={faxNumberDBNotify} />
+                                    <InfoRow label="E-mail" value={userEmailInputDBNotify} />
                                 </View>
                             </View>
                         </View>
@@ -7506,8 +11674,8 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
                             </TouchableOpacity>
 
                             <TouchableOpacity style={{ backgroundColor: '#7b9cff', padding: 5, justifyContent: 'center', alignItems: 'center', borderRadius: 5, flex: 1, height: 50, marginLeft: '5%' }}
-                                onPress={() => {
-                                    setOrderInvoice();
+                                onPress={async () => {
+                                    await setOrderInvoice();
                                     addStep();
                                     openModalRequest();
                                     updateSteps();
@@ -7531,6 +11699,13 @@ const OrderItem = ({ toggleModal, openModalRequest, handleButtonClick, chatField
 }
 
 const ProfileFormChatGroup = () => {
+
+
+
+
+
+
+
     const hideThis = false
 
     const [getStep, setGetStep] = useState(0);
@@ -7701,6 +11876,70 @@ const ProfileFormChatGroup = () => {
         }
     };
 
+
+
+    //temp
+    const [selectedChatData, setSelectedChatData] = useState({});
+    const [invoiceData, setInvoiceData] = useState({});
+    const [invoiceNumber, setInvoiceNumber] = useState('');
+    useEffect(() => {
+
+        if (chatId) {
+            const chatDocRef = doc(projectExtensionFirestore, 'chats', chatId);
+
+            const unsubscribe = onSnapshot(chatDocRef, (docSnapshot) => {
+                try {
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        setSelectedChatData(data);
+                        setInvoiceNumber(data?.invoiceNumber)
+                    } else {
+                        console.log('No such document!');
+                        setSelectedChatData({});
+                    }
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                }
+            });
+
+
+            return () => unsubscribe();
+        } else {
+
+            setSelectedChatData({});
+        }
+    }, [chatId]);
+
+
+    console.log('invoice data', invoiceData)
+    useEffect(() => {
+        if (!invoiceNumber) {
+            setInvoiceData({}); // Clear the invoice data if no invoiceNumber is present
+            return;
+        }
+
+        const invoiceDocRef = doc(projectExtensionFirestore, 'IssuedInvoice', invoiceNumber);
+        const unsubscribe = onSnapshot(invoiceDocRef, (docSnapshot) => {
+            try {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    setInvoiceData(data); // Set the invoice data from the snapshot
+                } else {
+                    console.log('No such invoice document!');
+                    setInvoiceData({}); // Clear the invoice data if no document is found
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        });
+
+        return () => unsubscribe(); // Clean up the listener when the component unmounts or invoiceNumber changes
+    }, [invoiceNumber]);
+
+
+
+    //temp
+
     // Function to handle the ScrollView's scroll event
     const handleScroll = (event) => {
         // Calculate whether the user has scrolled to the bottom
@@ -7803,7 +12042,7 @@ const ProfileFormChatGroup = () => {
 
     //     )
     // };
-    const [modalVisible, setModalVisible] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
     const openModalRequest = () => {
         setModalVisible(!modalVisible);
     }
@@ -7858,7 +12097,7 @@ const ProfileFormChatGroup = () => {
         }
     }, [screenWidth])
     const [hideLeft, setHideLeft] = useState(false)
-    const [activeChatId, setActiveChatId] = useState(null);
+    const [activeChatId, setActiveChatId] = useState(chatId);
     //
 
     const [chatField, setChatField] = useState([]);
@@ -8224,7 +12463,7 @@ const ProfileFormChatGroup = () => {
                                                 <View style={{ flexDirection: 'column', flex: 3, height: '100%', zIndex: -10 }}>
 
                                                     <View style={{ position: 'sticky' }}>
-                                                        <InformationData currentStep={chatField.stepIndicator} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} />
+                                                        <InformationData activeChatId={activeChatId} selectedChatData={selectedChatData} invoiceData={invoiceData} currentStep={chatField.stepIndicator} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} />
                                                     </View>
 
                                                     <ScrollView
@@ -8240,9 +12479,9 @@ const ProfileFormChatGroup = () => {
                                                                 ref={scrollViewRef}
                                                                 onContentSizeChange={() => scrollViewRef.current.scrollToEnd({ animated: true })}
                                                             >
-                                                                <ChatD selectedChatId={selectedChatId} openModalRequest={openModalRequest} handleScroll={handleScroll} scrollViewRef={scrollViewRef} modalVisible={modalVisible} />
+                                                                <ChatD selectedChatData={selectedChatData} invoiceData={invoiceData} selectedChatId={selectedChatId} openModalRequest={openModalRequest} handleScroll={handleScroll} scrollViewRef={scrollViewRef} modalVisible={modalVisible} />
                                                             </ScrollView>
-                                                            <View>
+                                                            <View style={{ backgroundColor: '#E5EBFE' }}>
                                                                 <TextInputForChat scrollViewRef={scrollViewRef} chatId={chatId} />
                                                             </View>
                                                         </View>
@@ -8262,6 +12501,8 @@ const ProfileFormChatGroup = () => {
                                                             notification={notification}
                                                             setNotification={setNotification}
                                                             handleHover={handleHover}
+                                                            chatField={chatField}
+
                                                         />
                                                     </ScrollView>
                                                 ) : null}
@@ -8469,7 +12710,7 @@ const ProfileFormChatGroup = () => {
                                         <View style={{ flexDirection: 'column', flex: 3, height: '100%', zIndex: -10, minWidth: 300 }}>
 
                                             <View style={{ position: 'sticky' }}>
-                                                <InformationData currentStep={chatField.stepIndicator} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} activeChatId={activeChatId} />
+                                                <InformationData activeChatId={activeChatId} selectedChatData={selectedChatData} invoiceData={invoiceData} currentStep={chatField.stepIndicator} totalSteps={totalSteps} requestToggleRight={requestToggleRight} setShowInMobile={setShowInMobile} setHideLeft={setHideLeft} hideLeft={hideLeft} />
                                             </View>
 
                                             <ScrollView style={{ height: '100%', backgroundColor: '#E5EBFE' }}
@@ -8479,15 +12720,13 @@ const ProfileFormChatGroup = () => {
                                                 onContentSizeChange={() => scrollViewRef.current.scrollToEnd({ animated: true })}
 
                                             >
-                                                <ChatD selectedChatId={selectedChatId} openModalRequest={openModalRequest} handleScroll={handleScroll} scrollViewRef={scrollViewRef} modalVisible={modalVisible} />
+                                                <ChatD selectedChatData={selectedChatData} invoiceData={invoiceData} selectedChatId={selectedChatId} openModalRequest={openModalRequest} handleScroll={handleScroll} scrollViewRef={scrollViewRef} modalVisible={modalVisible} />
                                             </ScrollView>
-                                            <View>
+                                            <View style={{ backgroundColor: '#E5EBFE' }}>
                                                 <TextInputForChat scrollViewRef={scrollViewRef} chatId={chatId} />
                                             </View>
 
                                         </View>
-
-
                                         {rightVisible ? (
                                             <ScrollView ref={scrollViewRightRef} style={screenWidth < 1260 ? styles.scrollViewSmallScreen : styles.scrollViewDefault}>
                                                 <InformationDataRight
@@ -8499,6 +12738,7 @@ const ProfileFormChatGroup = () => {
                                                     notification={notification}
                                                     setNotification={setNotification}
                                                     handleHover={handleHover}
+                                                    chatField={chatField}
                                                 />
                                             </ScrollView>
                                         ) : null}
@@ -8785,8 +13025,7 @@ const styles = StyleSheet.create({
         maxWidth: '60%',
     },
     inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+
         borderTopColor: 'gray',
         padding: 5,
         position: 'sticky',
@@ -8795,7 +13034,7 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        backgroundColor: '#f4f4f4',
+        backgroundColor: '#fff',
         padding: 10,
         margin: 5,
         borderRadius: 5,
